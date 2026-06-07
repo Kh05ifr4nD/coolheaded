@@ -31,10 +31,11 @@ jobs:
       matrix: ${{ steps.discover.outputs.matrix }}
     steps:
       - uses: actions/checkout@v6
+      - uses: cachix/install-nix-action@v31
       - id: discover
         env:
           INPUTS: ${{ inputs.inputs }}
-        run: deno run --allow-env --allow-read --allow-write .github/ci/discoverFlakeInputUpdates.ts
+        run: nix develop -c deno run --allow-env --allow-read --allow-write .github/ci/discoverFlakeInputUpdates.ts
   update:
     needs: discover
     if: needs.discover.outputs.hasUpdates == 'true'
@@ -54,9 +55,9 @@ jobs:
       - run: |
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-      - run: deno run --allow-run .github/ci/prepareUpdateBranch.ts "update/flakeInput/${{ matrix.name }}"
+      - run: nix develop -c deno run --allow-run .github/ci/prepareUpdateBranch.ts "update/flakeInput/${{ matrix.name }}"
       - id: update
-        run: deno run --allow-env --allow-read --allow-run --allow-write .github/ci/runFlakeInputUpdate.ts "${{ matrix.name }}"
+        run: nix develop -c deno run --allow-env --allow-read --allow-run --allow-write .github/ci/runFlakeInputUpdate.ts "${{ matrix.name }}"
       - if: steps.update.outputs.updated == 'true'
         run: nix flake check --print-build-logs
       - if: steps.update.outputs.updated == 'true'
