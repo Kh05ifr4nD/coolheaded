@@ -44,6 +44,7 @@ jobs:
       matrix: ${{ fromJson(needs.discover.outputs.matrix) }}
     permissions:
       contents: write
+      issues: write
       pull-requests: write
     steps:
       - uses: actions/checkout@v6

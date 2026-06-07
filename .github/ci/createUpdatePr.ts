@@ -68,6 +68,49 @@ function labelArgs(labels: readonly string[]): readonly string[] {
   ]);
 }
 
+function labelColor(label: string): string {
+  switch (label) {
+    case "automated": {
+      return "ededed";
+    }
+    case "deno-deps": {
+      return "3178c6";
+    }
+    case "dependencies": {
+      return "0366d6";
+    }
+    case "flake-input": {
+      return "5319e7";
+    }
+    case "package": {
+      return "0e8a16";
+    }
+    default: {
+      return "ededed";
+    }
+  }
+}
+
+async function ensureLabels(labels: readonly string[]): Promise<void> {
+  await Promise.all(
+    labels.map((label: string): Promise<unknown> =>
+      run([
+        "gh",
+        "label",
+        "create",
+        label,
+        "--color",
+        labelColor(label),
+        "--description",
+        "Managed by update automation",
+        "--force",
+      ], {
+        capture: false,
+      })
+    ),
+  );
+}
+
 async function createOrUpdatePr(config: UpdatePrConfig): Promise<void> {
   if (config.dryRun) {
     await writeStdout(JSON.stringify(config, null, 2));
@@ -108,6 +151,7 @@ async function createOrUpdatePr(config: UpdatePrConfig): Promise<void> {
   });
 
   const prNumber = await existingPrNumber(config.branch);
+  await ensureLabels(config.labels);
   const prCommand = prNumber === undefined
     ? [
       "gh",
