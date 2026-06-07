@@ -34,7 +34,7 @@ jobs:
       - id: discover
         env:
           INPUTS: ${{ inputs.inputs }}
-        run: deno run --allow-env --allow-read .github/ci/discoverFlakeInputUpdates.ts
+        run: deno run --allow-env --allow-read --allow-write .github/ci/discoverFlakeInputUpdates.ts
   update:
     needs: discover
     if: needs.discover.outputs.hasUpdates == 'true'

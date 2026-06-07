@@ -35,7 +35,7 @@ jobs:
       - id: discover
         env:
           PACKAGES: ${{ inputs.packages }}
-        run: nix develop -c deno run --allow-env --allow-run .github/ci/discoverPackageUpdates.ts
+        run: nix develop -c deno run --allow-env --allow-run --allow-write .github/ci/discoverPackageUpdates.ts
   update:
     needs: discover
     if: needs.discover.outputs.hasUpdates == 'true'

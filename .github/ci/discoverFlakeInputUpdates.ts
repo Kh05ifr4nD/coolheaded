@@ -1,4 +1,4 @@
-#!/usr/bin/env -S deno run --allow-env --allow-read
+#!/usr/bin/env -S deno run --allow-env --allow-read --allow-write
 
 import { isRecord, readJson, writeOutput } from "./lib.ts";
 

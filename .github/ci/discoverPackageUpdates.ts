@@ -1,4 +1,4 @@
-#!/usr/bin/env -S deno run --allow-env --allow-run
+#!/usr/bin/env -S deno run --allow-env --allow-run --allow-write
 
 import { currentSystem, isRecord, run, writeOutput } from "./lib.ts";
 
