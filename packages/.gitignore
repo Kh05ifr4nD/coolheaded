@@ -1,0 +1,8 @@
+!/*/
+!/*/generatedPackage.nix
+!/*/package.nix
+!/*/patch/
+!/*/patch/*.patch
+!/*/pin.json
+!/*/update.ts
+!/*/uv.lock

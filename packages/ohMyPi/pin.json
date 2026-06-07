@@ -1,0 +1,8 @@
+{
+  "version": "15.9.1",
+  "hashes": {
+    "aarch64-darwin": "sha256-YfguWZQvo6r9mzU8P5rMeXHndnDP8OB3K8M+lnxPGgE=",
+    "aarch64-linux": "sha256-oHUQcF7C0Uvs/PEXtHeJuVdDwgGg7JEhMfIfub+ACtw=",
+    "x86_64-linux": "sha256-G24js2McZBpdoQByGuc7wPJ1D0neoMM/iRok9BodrrE="
+  }
+}

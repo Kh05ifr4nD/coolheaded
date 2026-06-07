@@ -1,0 +1,10 @@
+{
+  "version": "1.6.0",
+  "hashes": {
+    "aarch64-darwin": "sha512-oGtN1b0Qbxr125wBE8MezeX7ITgSrweRQDR4f6W72KdZEG1Gu+d0fC7ugrNS2+mP6NBThTCQ4BdpYEvx/fr+tw==",
+    "aarch64-linux": "sha512-oGtN1b0Qbxr125wBE8MezeX7ITgSrweRQDR4f6W72KdZEG1Gu+d0fC7ugrNS2+mP6NBThTCQ4BdpYEvx/fr+tw==",
+    "x86_64-linux": "sha512-oGtN1b0Qbxr125wBE8MezeX7ITgSrweRQDR4f6W72KdZEG1Gu+d0fC7ugrNS2+mP6NBThTCQ4BdpYEvx/fr+tw=="
+  },
+  "sourceHash": "sha256-mPy7qA6L6FW2aBClm4MP5GlAQJMrrydRozkoS/RD/hw=",
+  "npmDepsHash": "sha256-YrCJBYv8d0fekeOczSDv5+U1KqqUEI/gpl1XHDBfj8U="
+}

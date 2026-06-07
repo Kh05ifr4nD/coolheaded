@@ -1,0 +1,52 @@
+name: Update Deno Dependencies
+on:
+  workflow_call:
+    inputs:
+      autoMerge:
+        required: false
+        type: boolean
+        default: true
+  workflow_dispatch:
+    inputs:
+      autoMerge:
+        description: "Enable GitHub auto-merge"
+        required: false
+        type: boolean
+        default: true
+  schedule:
+    - cron: "0 5 * * *"
+jobs:
+  update:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+      pull-requests: write
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          fetch-depth: 0
+      - uses: cachix/install-nix-action@v31
+      - run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+      - run: nix develop -c deno run --allow-run .github/ci/prepareUpdateBranch.ts update/denoDeps
+      - id: update
+        run: nix develop -c deno run --allow-env --allow-read --allow-run --allow-write .github/ci/runDenoDepsUpdate.ts
+      - if: steps.update.outputs.updated == 'true'
+        run: nix develop -c deno task check
+      - if: steps.update.outputs.updated == 'true'
+        run: nix develop -c deno task lint
+      - if: steps.update.outputs.updated == 'true'
+        run: nix develop -c deno task test
+      - if: steps.update.outputs.updated == 'true'
+        run: nix flake check --print-build-logs
+      - if: steps.update.outputs.updated == 'true'
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          nix develop -c deno run --allow-env --allow-run .github/ci/createUpdatePr.ts \
+            --branch update/denoDeps \
+            --title "deno.lock: update dependencies" \
+            --body "${{ steps.update.outputs.changelog }}" \
+            --labels "dependencies,automated,deno-deps" \
+            --auto-merge "${{ inputs.autoMerge }}"

@@ -1,0 +1,48 @@
+name: Update All
+on:
+  workflow_dispatch:
+    inputs:
+      packages:
+        description: "Space-separated package attrs"
+        required: false
+        default: ""
+      inputs:
+        description: "Space-separated flake inputs"
+        required: false
+        default: ""
+      updatePackages:
+        required: false
+        type: boolean
+        default: true
+      updateFlakeInputs:
+        required: false
+        type: boolean
+        default: true
+      updateDenoDeps:
+        required: false
+        type: boolean
+        default: true
+      autoMerge:
+        required: false
+        type: boolean
+        default: true
+  schedule:
+    - cron: "0 2 * * *"
+jobs:
+  packages:
+    if: inputs.updatePackages != false
+    uses: ./.github/workflows/updatePackages.yml
+    with:
+      autoMerge: ${{ inputs.autoMerge != false }}
+      packages: ${{ inputs.packages }}
+  flakeInputs:
+    if: inputs.updateFlakeInputs != false
+    uses: ./.github/workflows/updateFlakeInputs.yml
+    with:
+      autoMerge: ${{ inputs.autoMerge != false }}
+      inputs: ${{ inputs.inputs }}
+  denoDeps:
+    if: inputs.updateDenoDeps != false
+    uses: ./.github/workflows/updateDenoDeps.yml
+    with:
+      autoMerge: ${{ inputs.autoMerge != false }}

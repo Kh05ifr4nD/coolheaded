@@ -1,0 +1,111 @@
+{
+  "compilerOptions": {
+    "allowUnreachableCode": false,
+    "allowUnusedLabels": false,
+    "exactOptionalPropertyTypes": true,
+    "noFallthroughCasesInSwitch": true,
+    "noImplicitAny": true,
+    "noImplicitOverride": true,
+    "noImplicitReturns": true,
+    "noImplicitThis": true,
+    "noPropertyAccessFromIndexSignature": true,
+    "noUncheckedIndexedAccess": true,
+    "noUnusedLocals": true,
+    "noUnusedParameters": true,
+    "strict": true,
+    "strictBindCallApply": true,
+    "strictFunctionTypes": true,
+    "strictNullChecks": true,
+    "strictPropertyInitialization": true,
+    "types": [
+      "./tsReset.d.ts"
+    ],
+    "useUnknownInCatchVariables": true,
+    "verbatimModuleSyntax": true
+  },
+  "fmt": {
+    "exclude": [
+      "AGENTS.md",
+      "README.md"
+    ]
+  },
+  "imports": {
+    "@jsr/std__assert": "npm:@jsr/std__assert",
+    "@jsr/std__cli": "npm:@jsr/std__cli",
+    "@jsr/std__fs": "npm:@jsr/std__fs",
+    "@jsr/std__jsonc": "npm:@jsr/std__jsonc",
+    "@jsr/std__path": "npm:@jsr/std__path",
+    "@jsr/std__testing": "npm:@jsr/std__testing",
+    "@total-typescript/ts-reset": "npm:@total-typescript/ts-reset",
+    "coolheaded/": "./src/",
+    "coolheadedCi/": "./.github/ci/",
+    "effect": "npm:effect",
+    "fast-check": "npm:fast-check"
+  },
+  "lint": {
+    "rules": {
+      "exclude": [
+        "jsx-boolean-value",
+        "jsx-button-has-type",
+        "jsx-curly-braces",
+        "jsx-key",
+        "jsx-no-children-prop",
+        "jsx-no-comment-text-nodes",
+        "jsx-no-duplicate-props",
+        "jsx-no-unescaped-entities",
+        "jsx-no-useless-fragment",
+        "jsx-props-no-spread-multi",
+        "jsx-void-dom-elements-no-children",
+        "react-no-danger",
+        "react-no-danger-with-children",
+        "react-rules-of-hooks",
+        "require-await"
+      ],
+      "include": [
+        "ban-untagged-todo",
+        "camelcase",
+        "default-param-last",
+        "eqeqeq",
+        "explicit-function-return-type",
+        "explicit-module-boundary-types",
+        "guard-for-in",
+        "no-await-in-loop",
+        "no-eval",
+        "no-explicit-any",
+        "no-inferrable-types",
+        "no-non-null-asserted-optional-chain",
+        "no-non-null-assertion",
+        "no-self-compare",
+        "no-sparse-arrays",
+        "no-sync-fn-in-async-fn",
+        "no-throw-literal",
+        "no-top-level-await",
+        "no-undef",
+        "no-useless-rename",
+        "single-var-declarator",
+        "triple-slash-reference"
+      ],
+      "tags": [
+        "jsr",
+        "recommended",
+        "workspace"
+      ]
+    }
+  },
+  "lock": {
+    "frozen": true
+  },
+  "nodeModulesDir": "auto",
+  "tasks": {
+    "check": "deno check .github/ci/**/*.ts packages/*/update.ts src/**/*.ts tests/**/*.ts",
+    "install": "deno install",
+    "lint": "deno lint && deno task lint:oxlint",
+    "lint:oxlint": "oxlint",
+    "test": "deno test --allow-env --allow-read --allow-run --allow-write"
+  },
+  "test": {
+    "include": [
+      "tests/**/*.ts"
+    ]
+  }
+}
