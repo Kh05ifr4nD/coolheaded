@@ -25,7 +25,7 @@ function pyprojectContents(version: string): string {
 name = "mineruProject"
 version = "${version}"
 requires-python = ">=3.13,<3.14"
-dependencies = ["mineru[all]==${version}"]
+dependencies = ["mineru==${version}"]
 
 [tool.uv.extra-build-dependencies]
 pylatexenc = ["setuptools"]

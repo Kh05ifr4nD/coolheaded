@@ -8,6 +8,7 @@
   sox,
   tbb,
   cudaPackages,
+  withAll ? false,
 }:
 let
   pname = "mineru";
@@ -17,7 +18,7 @@ let
       name = "mineruProject";
       inherit (pin) version;
       requires-python = ">=3.13,<3.14";
-      dependencies = [ "mineru[all]==${pin.version}" ];
+      dependencies = [ "mineru${lib.optionalString withAll "[all]"}==${pin.version}" ];
     };
     tool.uv.extra-build-dependencies = {
       pylatexenc = [ "setuptools" ];
@@ -28,7 +29,7 @@ let
     final: prev:
     let
       sitePackages = "lib/python${python313.pythonVersion}/site-packages";
-      enableCudaWheelOverrides = packageLib.system == "x86_64-linux";
+      enableCudaWheelOverrides = withAll && packageLib.system == "x86_64-linux";
     in
     {
       opencv-python-headless = prev.opencv-python-headless.overrideAttrs (oldAttrs: {
@@ -174,7 +175,7 @@ packageLib.mkUvApplication {
   inherit packageOverrides pname pyproject;
 
   python = python313;
-  extras = [ "all" ];
+  extras = lib.optionals withAll [ "all" ];
 
   installCheck = ''
     "$out/bin/mineru" --help > /dev/null
