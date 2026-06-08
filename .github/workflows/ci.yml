@@ -52,6 +52,10 @@ jobs:
       - run: nix develop -c deno task check
       - run: nix develop -c deno task lint
       - run: nix develop -c deno task test
+      - name: Realize bun2nix cache entry creator
+        run: |
+          system="$(nix eval --impure --raw --expr builtins.currentSystem)"
+          nix build --no-link --inputs-from . "bun2nix#packages.$system.cacheEntryCreator" --print-build-logs
       - run: nix flake check --no-build
   buildPackages:
     needs: discoverPackages

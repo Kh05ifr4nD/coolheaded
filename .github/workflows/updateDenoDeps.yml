@@ -51,6 +51,11 @@ jobs:
       - if: steps.update.outputs.updated == 'true'
         run: nix develop -c deno task test
       - if: steps.update.outputs.updated == 'true'
+        name: Realize bun2nix cache entry creator
+        run: |
+          system="$(nix eval --impure --raw --expr builtins.currentSystem)"
+          nix build --no-link --inputs-from . "bun2nix#packages.$system.cacheEntryCreator" --print-build-logs
+      - if: steps.update.outputs.updated == 'true'
         run: nix flake check --print-build-logs
       - if: steps.update.outputs.updated == 'true'
         env:
