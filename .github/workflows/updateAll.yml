@@ -1,4 +1,6 @@
 name: Update All
+permissions:
+  contents: read
 on:
   workflow_dispatch:
     inputs:
@@ -32,17 +34,20 @@ jobs:
   packages:
     if: inputs.updatePackages != false
     uses: ./.github/workflows/updatePackages.yml
+    secrets: inherit
     with:
       autoMerge: ${{ inputs.autoMerge != false }}
       packages: ${{ inputs.packages }}
   flakeInputs:
     if: inputs.updateFlakeInputs != false
     uses: ./.github/workflows/updateFlakeInputs.yml
+    secrets: inherit
     with:
       autoMerge: ${{ inputs.autoMerge != false }}
       inputs: ${{ inputs.inputs }}
   denoDeps:
     if: inputs.updateDenoDeps != false
     uses: ./.github/workflows/updateDenoDeps.yml
+    secrets: inherit
     with:
       autoMerge: ${{ inputs.autoMerge != false }}

@@ -1,4 +1,6 @@
 name: Update Packages
+permissions:
+  contents: read
 on:
   workflow_call:
     inputs:
@@ -30,7 +32,17 @@ jobs:
       hasUpdates: ${{ steps.discover.outputs.hasUpdates }}
       matrix: ${{ steps.discover.outputs.matrix }}
     steps:
+      - name: Require update token
+        env:
+          COOLHEADED_UPDATE_TOKEN: ${{ secrets.COOLHEADED_UPDATE_TOKEN }}
+        run: |
+          test -n "$COOLHEADED_UPDATE_TOKEN" || {
+            echo "COOLHEADED_UPDATE_TOKEN repository secret is required"
+            exit 1
+          }
       - uses: actions/checkout@v6
+        with:
+          persist-credentials: false
       - uses: cachix/install-nix-action@v31
       - id: discover
         env:
@@ -48,9 +60,18 @@ jobs:
       issues: write
       pull-requests: write
     steps:
+      - name: Require update secrets
+        env:
+          COOLHEADED_UPDATE_TOKEN: ${{ secrets.COOLHEADED_UPDATE_TOKEN }}
+        run: |
+          test -n "$COOLHEADED_UPDATE_TOKEN" || {
+            echo "COOLHEADED_UPDATE_TOKEN repository secret is required"
+            exit 1
+          }
       - uses: actions/checkout@v6
         with:
           fetch-depth: 0
+          token: ${{ secrets.COOLHEADED_UPDATE_TOKEN }}
       - uses: cachix/install-nix-action@v31
       - run: |
           git config user.name "github-actions[bot]"
@@ -64,7 +85,7 @@ jobs:
         run: nix develop -c deno task check
       - if: steps.update.outputs.updated == 'true'
         env:
-          GH_TOKEN: ${{ github.token }}
+          GH_TOKEN: ${{ secrets.COOLHEADED_UPDATE_TOKEN }}
         run: |
           cat > body.md <<'EOF'
           Automated package update for ${{ matrix.name }} from ${{ matrix.currentVersion }} to ${{ steps.update.outputs.newVersion }}.

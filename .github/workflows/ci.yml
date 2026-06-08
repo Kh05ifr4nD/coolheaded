@@ -1,0 +1,75 @@
+name: CI
+permissions:
+  contents: read
+on:
+  pull_request:
+  push:
+    branches:
+      - main
+  workflow_dispatch:
+jobs:
+  discoverPackages:
+    runs-on: ubuntu-latest
+    outputs:
+      matrix: ${{ steps.discover.outputs.matrix }}
+    steps:
+      - name: Require update token
+        env:
+          COOLHEADED_UPDATE_TOKEN: ${{ secrets.COOLHEADED_UPDATE_TOKEN }}
+        run: |
+          test -n "$COOLHEADED_UPDATE_TOKEN" || {
+            echo "COOLHEADED_UPDATE_TOKEN repository secret is required"
+            exit 1
+          }
+      - uses: actions/checkout@v6
+        with:
+          persist-credentials: false
+      - uses: cachix/install-nix-action@v31
+      - id: discover
+        run: |
+          system="$(nix eval --impure --raw --expr builtins.currentSystem)"
+          matrix="$(
+            nix eval --json ".#checks.$system" \
+              | jq -c '{include: (keys | map(select(. != "pre-commit" and . != "treefmt") | {package: .}))}'
+          )"
+          printf 'matrix=%s\n' "$matrix" >> "$GITHUB_OUTPUT"
+  check:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Require update token
+        env:
+          COOLHEADED_UPDATE_TOKEN: ${{ secrets.COOLHEADED_UPDATE_TOKEN }}
+        run: |
+          test -n "$COOLHEADED_UPDATE_TOKEN" || {
+            echo "COOLHEADED_UPDATE_TOKEN repository secret is required"
+            exit 1
+          }
+      - uses: actions/checkout@v6
+        with:
+          persist-credentials: false
+      - uses: cachix/install-nix-action@v31
+      - run: nix fmt -- --ci
+      - run: nix develop -c deno task check
+      - run: nix develop -c deno task lint
+      - run: nix develop -c deno task test
+      - run: nix flake check --no-build
+  buildPackages:
+    needs: discoverPackages
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix: ${{ fromJson(needs.discoverPackages.outputs.matrix) }}
+    steps:
+      - name: Require update token
+        env:
+          COOLHEADED_UPDATE_TOKEN: ${{ secrets.COOLHEADED_UPDATE_TOKEN }}
+        run: |
+          test -n "$COOLHEADED_UPDATE_TOKEN" || {
+            echo "COOLHEADED_UPDATE_TOKEN repository secret is required"
+            exit 1
+          }
+      - uses: actions/checkout@v6
+        with:
+          persist-credentials: false
+      - uses: cachix/install-nix-action@v31
+      - run: nix build ".#checks.$(nix eval --impure --raw --expr builtins.currentSystem).${{ matrix.package }}" --print-build-logs
