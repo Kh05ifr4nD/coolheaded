@@ -76,4 +76,14 @@ jobs:
         with:
           persist-credentials: false
       - uses: cachix/install-nix-action@v31
+      - name: Free runner disk space for mineru
+        if: matrix.package == 'mineru'
+        run: |
+          df -h /
+          sudo rm -rf /opt/ghc /usr/local/lib/android /usr/share/dotnet
+          if [ -n "${AGENT_TOOLSDIRECTORY:-}" ]; then
+            sudo rm -rf "$AGENT_TOOLSDIRECTORY"
+          fi
+          docker system prune --all --force --volumes || true
+          df -h /
       - run: nix build ".#checks.$(nix eval --impure --raw --expr builtins.currentSystem).${{ matrix.package }}" --print-build-logs
