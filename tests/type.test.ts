@@ -1,8 +1,5 @@
 import type { IsAny, IsExact, IsUnknown } from "./testingTypes.ts";
-import type {
-  npmHashConfigForSystems,
-  npmHashesForSystems,
-} from "coolheaded/npmUpdater.ts";
+import type { npmHashConfigForSystems, npmHashesForSystems } from "coolheaded/npmUpdater.ts";
 import type { Effect } from "effect";
 import type { InvalidNpmMetadataError } from "coolheaded/npmRegistry.ts";
 import type { PackageHashConfig } from "coolheaded/packageConfig.ts";
@@ -25,16 +22,10 @@ assertType<
 assertType<IsAny<PackageHashConfig>>(false);
 assertType<IsUnknown<PackageHashConfig>>(false);
 assertType<
-  IsExact<
-    NpmHashesEffect,
-    Effect.Effect<Record<string, string>, InvalidNpmMetadataError>
-  >
+  IsExact<NpmHashesEffect, Effect.Effect<Record<string, string>, InvalidNpmMetadataError>>
 >(true);
 assertType<IsAny<NpmHashesEffect>>(false);
 assertType<IsUnknown<NpmHashesEffect>>(false);
-assertType<
-  IsExact<
-    NpmHashConfigEffect,
-    Effect.Effect<PackageHashConfig, InvalidNpmMetadataError>
-  >
->(true);
+assertType<IsExact<NpmHashConfigEffect, Effect.Effect<PackageHashConfig, InvalidNpmMetadataError>>>(
+  true,
+);

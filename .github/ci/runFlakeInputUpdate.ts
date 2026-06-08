@@ -29,15 +29,12 @@ async function lockedRevision(name: string): Promise<string> {
 async function runFlakeInputUpdate(name: string): Promise<void> {
   await run(["nix", "flake", "update", name], { capture: false });
 
-  if (!await gitHasChanges(["flake.lock"])) {
+  if (!(await gitHasChanges(["flake.lock"]))) {
     await writeOutput("updated", "false");
     return;
   }
 
-  assertOnlyChangedFiles(
-    await changedFiles(),
-    (file: string): boolean => file === "flake.lock",
-  );
+  assertOnlyChangedFiles(await changedFiles(), (file: string): boolean => file === "flake.lock");
   await writeOutput("updated", "true");
   await writeOutput("newVersion", await lockedRevision(name));
 }

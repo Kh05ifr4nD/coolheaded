@@ -21,10 +21,7 @@ async function writeStderr(text: string): Promise<void> {
   await Deno.stderr.write(new globalThis.TextEncoder().encode(`${text}\n`));
 }
 
-async function run(
-  command: readonly string[],
-  options: RunOptions = {},
-): Promise<RunResult> {
+async function run(command: readonly string[], options: RunOptions = {}): Promise<RunResult> {
   const [executable, ...args] = command;
   if (executable === undefined) {
     throw new Error("Missing command executable");
@@ -73,9 +70,7 @@ async function gitHasChanges(paths: readonly string[] = []): Promise<boolean> {
 
 async function changedFiles(): Promise<readonly string[]> {
   const result = await run(["git", "diff", "--name-only"], { capture: true });
-  return result.stdout.split("\n").filter((line: string): boolean =>
-    line.length > 0
-  );
+  return result.stdout.split("\n").filter((line: string): boolean => line.length > 0);
 }
 
 async function writeOutput(key: string, value: string): Promise<void> {
@@ -88,9 +83,7 @@ async function writeOutput(key: string, value: string): Promise<void> {
   const delimiter = `coolheaded_${key}_${globalThis.crypto.randomUUID()}`;
   await Deno.writeTextFile(
     outputPath,
-    value.includes("\n")
-      ? `${key}<<${delimiter}\n${value}\n${delimiter}\n`
-      : `${key}=${value}\n`,
+    value.includes("\n") ? `${key}<<${delimiter}\n${value}\n${delimiter}\n` : `${key}=${value}\n`,
     { append: true },
   );
 }
@@ -116,13 +109,9 @@ function assertOnlyChangedFiles(
   files: readonly string[],
   allowed: (file: string) => boolean,
 ): void {
-  const unexpectedFiles = files.filter((file: string): boolean =>
-    !allowed(file)
-  );
+  const unexpectedFiles = files.filter((file: string): boolean => !allowed(file));
   if (unexpectedFiles.length > 0) {
-    throw new Error(
-      `Unexpected changed files: ${unexpectedFiles.join(", ")}`,
-    );
+    throw new Error(`Unexpected changed files: ${unexpectedFiles.join(", ")}`);
   }
 }
 

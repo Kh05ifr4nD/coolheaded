@@ -1,8 +1,4 @@
-import {
-  requestedOrLatestVersion,
-  runUpdateScript,
-  scriptPath,
-} from "coolheaded/updateScript.ts";
+import { requestedOrLatestVersion, runUpdateScript, scriptPath } from "coolheaded/updateScript.ts";
 import { Effect } from "effect";
 import type { SupportedSystem } from "coolheaded/system.ts";
 import { latestGitHubVersion } from "coolheaded/latestVersion.ts";
@@ -54,10 +50,7 @@ function hexToSRI(hex: string): string {
   return `sha256-${globalThis.btoa(String.fromCodePoint(...bytes))}`;
 }
 
-function assetHash(
-  checksums: string,
-  asset: string,
-): Effect.Effect<string, Error> {
+function assetHash(checksums: string, asset: string): Effect.Effect<string, Error> {
   const line = checksums
     .split("\n")
     .find((entry: string): boolean => entry.trim().endsWith(` ${asset}`));
@@ -90,8 +83,7 @@ function updateProgram(args: readonly string[]): Effect.Effect<void, Error> {
     (version: string): Effect.Effect<void, Error> =>
       Effect.flatMap(
         Effect.flatMap(fetchChecksums(version), packageHashes),
-        (hashes): Effect.Effect<void> =>
-          writePackageHashConfig(PIN_FILE_PATH, { hashes, version }),
+        (hashes): Effect.Effect<void> => writePackageHashConfig(PIN_FILE_PATH, { hashes, version }),
       ),
   );
 }

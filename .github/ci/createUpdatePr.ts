@@ -18,11 +18,10 @@ function valueAfter(args: readonly string[], name: string): string | undefined {
 }
 
 function labelsFrom(value: string | undefined): readonly string[] {
-  return (value ?? "dependencies,automated").split(",").map((
-    label: string,
-  ): string => label.trim()).filter((label: string): boolean =>
-    label.length > 0
-  );
+  return (value ?? "dependencies,automated")
+    .split(",")
+    .map((label: string): string => label.trim())
+    .filter((label: string): boolean => label.length > 0);
 }
 
 function parseConfig(args: readonly string[]): UpdatePrConfig {
@@ -30,9 +29,7 @@ function parseConfig(args: readonly string[]): UpdatePrConfig {
   const title = valueAfter(args, "--title");
   const body = valueAfter(args, "--body") ?? "";
   if (branch === undefined || title === undefined) {
-    throw new Error(
-      "Usage: createUpdatePr.ts --branch <branch> --title <title> [--body <body>]",
-    );
+    throw new Error("Usage: createUpdatePr.ts --branch <branch> --title <title> [--body <body>]");
   }
 
   return {
@@ -46,26 +43,16 @@ function parseConfig(args: readonly string[]): UpdatePrConfig {
 }
 
 async function existingPrNumber(branch: string): Promise<string | undefined> {
-  const result = await run([
-    "gh",
-    "pr",
-    "list",
-    "--head",
-    branch,
-    "--json",
-    "number",
-    "--jq",
-    ".[0].number // empty",
-  ], { capture: true });
+  const result = await run(
+    ["gh", "pr", "list", "--head", branch, "--json", "number", "--jq", ".[0].number // empty"],
+    { capture: true },
+  );
 
   return result.stdout.length === 0 ? undefined : result.stdout;
 }
 
 function labelArgs(labels: readonly string[]): readonly string[] {
-  return labels.flatMap((label: string): readonly string[] => [
-    "--label",
-    label,
-  ]);
+  return labels.flatMap((label: string): readonly string[] => ["--label", label]);
 }
 
 function labelColor(label: string): string {
@@ -93,20 +80,24 @@ function labelColor(label: string): string {
 
 async function ensureLabels(labels: readonly string[]): Promise<void> {
   await Promise.all(
-    labels.map((label: string): Promise<unknown> =>
-      run([
-        "gh",
-        "label",
-        "create",
-        label,
-        "--color",
-        labelColor(label),
-        "--description",
-        "Managed by update automation",
-        "--force",
-      ], {
-        capture: false,
-      })
+    labels.map(
+      (label: string): Promise<unknown> =>
+        run(
+          [
+            "gh",
+            "label",
+            "create",
+            label,
+            "--color",
+            labelColor(label),
+            "--description",
+            "Managed by update automation",
+            "--force",
+          ],
+          {
+            capture: false,
+          },
+        ),
     ),
   );
 }
@@ -129,57 +120,35 @@ async function createOrUpdatePr(config: UpdatePrConfig): Promise<void> {
     return;
   }
 
-  await run([
-    "git",
-    "commit",
-    "--signoff",
-    "-m",
-    config.title,
-    "-m",
-    config.body,
-  ], {
+  await run(["git", "commit", "--signoff", "-m", config.title, "-m", config.body], {
     capture: false,
   });
-  await run([
-    "git",
-    "push",
-    "--force-with-lease",
-    "origin",
-    `HEAD:${config.branch}`,
-  ], {
+  await run(["git", "push", "--force-with-lease", "origin", `HEAD:${config.branch}`], {
     capture: false,
   });
 
   const prNumber = await existingPrNumber(config.branch);
   await ensureLabels(config.labels);
-  const prCommand = prNumber === undefined
-    ? [
-      "gh",
-      "pr",
-      "create",
-      "--base",
-      "main",
-      "--head",
-      config.branch,
-      "--title",
-      config.title,
-      "--body",
-      config.body,
-      ...labelArgs(config.labels),
-    ]
-    : [
-      "gh",
-      "pr",
-      "edit",
-      prNumber,
-      "--title",
-      config.title,
-      "--body",
-      config.body,
-    ];
+  const prCommand =
+    prNumber === undefined
+      ? [
+          "gh",
+          "pr",
+          "create",
+          "--base",
+          "main",
+          "--head",
+          config.branch,
+          "--title",
+          config.title,
+          "--body",
+          config.body,
+          ...labelArgs(config.labels),
+        ]
+      : ["gh", "pr", "edit", prNumber, "--title", config.title, "--body", config.body];
   await run(prCommand, { capture: false });
 
-  const updatedPrNumber = prNumber ?? await existingPrNumber(config.branch);
+  const updatedPrNumber = prNumber ?? (await existingPrNumber(config.branch));
   if (config.autoMerge && updatedPrNumber !== undefined) {
     await run(["gh", "pr", "merge", updatedPrNumber, "--auto", "--squash"], {
       capture: false,

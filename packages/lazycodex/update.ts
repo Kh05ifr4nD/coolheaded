@@ -1,8 +1,4 @@
-import {
-  requestedOrLatestVersion,
-  runUpdateScript,
-  scriptPath,
-} from "coolheaded/updateScript.ts";
+import { requestedOrLatestVersion, runUpdateScript, scriptPath } from "coolheaded/updateScript.ts";
 import { Effect } from "effect";
 import { latestNpmVersion } from "coolheaded/latestVersion.ts";
 import { npmPackageHashConfig } from "coolheaded/npmPackageUpdater.ts";
@@ -20,8 +16,7 @@ function updateProgram(args: readonly string[]): Effect.Effect<void, Error> {
     (version: string): Effect.Effect<void, Error> =>
       Effect.flatMap(
         npmPackageHashConfig(LAZYCODEX_NPM_PACKAGE_NAME, version),
-        (config): Effect.Effect<void> =>
-          writePackageHashConfig(PIN_FILE_PATH, config),
+        (config): Effect.Effect<void> => writePackageHashConfig(PIN_FILE_PATH, config),
       ),
   );
 }

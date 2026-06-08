@@ -1,8 +1,4 @@
-import {
-  requestedOrLatestVersion,
-  runUpdateScript,
-  scriptPath,
-} from "coolheaded/updateScript.ts";
+import { requestedOrLatestVersion, runUpdateScript, scriptPath } from "coolheaded/updateScript.ts";
 import { Effect } from "effect";
 import type { SupportedSystem } from "coolheaded/system.ts";
 import { latestGitHubVersion } from "coolheaded/latestVersion.ts";
@@ -42,9 +38,7 @@ function fetchChecksums(version: string): Effect.Effect<string, Error> {
     async try(): Promise<string> {
       const response = await globalThis.fetch(url);
       if (!response.ok) {
-        throw new Error(
-          `Failed to fetch ${url}: HTTP ${response.status}`,
-        );
+        throw new Error(`Failed to fetch ${url}: HTTP ${response.status}`);
       }
 
       return await response.text();
@@ -56,12 +50,7 @@ function hexToBytes(hex: string): Uint8Array {
   const bytes: number[] = [];
 
   for (let offset = 0; offset < hex.length; offset += HEX_BYTE_WIDTH) {
-    bytes.push(
-      Number.parseInt(
-        hex.slice(offset, offset + HEX_BYTE_WIDTH),
-        HEX_RADIX,
-      ),
-    );
+    bytes.push(Number.parseInt(hex.slice(offset, offset + HEX_BYTE_WIDTH), HEX_RADIX));
   }
 
   return Uint8Array.from(bytes);
@@ -71,10 +60,7 @@ function hexSha256ToSRI(hex: string): string {
   return `sha256-${globalThis.btoa(String.fromCodePoint(...hexToBytes(hex)))}`;
 }
 
-function assetHash(
-  checksums: string,
-  asset: string,
-): Effect.Effect<string, Error> {
+function assetHash(checksums: string, asset: string): Effect.Effect<string, Error> {
   const line = checksums
     .split("\n")
     .find((entry: string): boolean => entry.trim().endsWith(` ${asset}`));
@@ -95,18 +81,9 @@ function packageHashes(
   checksums: string,
 ): Effect.Effect<Readonly<Record<SupportedSystem, string>>, Error> {
   return Effect.all({
-    "aarch64-darwin": assetHash(
-      checksums,
-      RELEASE_ASSETS["aarch64-darwin"],
-    ),
-    "aarch64-linux": assetHash(
-      checksums,
-      RELEASE_ASSETS["aarch64-linux"],
-    ),
-    "x86_64-linux": assetHash(
-      checksums,
-      RELEASE_ASSETS["x86_64-linux"],
-    ),
+    "aarch64-darwin": assetHash(checksums, RELEASE_ASSETS["aarch64-darwin"]),
+    "aarch64-linux": assetHash(checksums, RELEASE_ASSETS["aarch64-linux"]),
+    "x86_64-linux": assetHash(checksums, RELEASE_ASSETS["x86_64-linux"]),
   });
 }
 
@@ -116,8 +93,7 @@ function updateProgram(args: readonly string[]): Effect.Effect<void, Error> {
     (version: string): Effect.Effect<void, Error> =>
       Effect.flatMap(
         Effect.flatMap(fetchChecksums(version), packageHashes),
-        (hashes): Effect.Effect<void> =>
-          writePackageHashConfig(PIN_FILE_PATH, { hashes, version }),
+        (hashes): Effect.Effect<void> => writePackageHashConfig(PIN_FILE_PATH, { hashes, version }),
       ),
   );
 }

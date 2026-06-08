@@ -8,11 +8,7 @@
     "exactOptionalPropertyTypes": true,
     "forceConsistentCasingInFileNames": true,
     "isolatedModules": true,
-    "lib": [
-      "DOM.Iterable",
-      "DOM",
-      "ESNext"
-    ],
+    "lib": ["DOM.Iterable", "DOM", "ESNext"],
     "module": "ESNext",
     "moduleResolution": "Bundler",
     "noEmit": true,
@@ -26,12 +22,8 @@
     "noUnusedLocals": true,
     "noUnusedParameters": true,
     "paths": {
-      "coolheaded/*": [
-        "./src/*"
-      ],
-      "coolheadedCi/*": [
-        "./.github/ci/*"
-      ]
+      "coolheaded/*": ["./src/*"],
+      "coolheadedCi/*": ["./.github/ci/*"]
     },
     "resolveJsonModule": true,
     "skipLibCheck": true,

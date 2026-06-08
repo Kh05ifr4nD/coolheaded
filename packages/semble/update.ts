@@ -5,19 +5,16 @@ import {
   writeTextFile,
 } from "coolheaded/updateScript.ts";
 import { Effect } from "effect";
+import { fetchFromGitHubHash } from "coolheaded/sourceHash.ts";
 import { latestGitHubVersion } from "coolheaded/latestVersion.ts";
-import { unpackedSourceHash } from "coolheaded/sourceHash.ts";
 
 const PIN_FILE_PATH = scriptPath("pin.json", import.meta.url);
+const REPOSITORY_ROOT_PATH = scriptPath("../../", import.meta.url);
 function latestVersion(): Effect.Effect<string, Error> {
   return latestGitHubVersion({
     owner: "MinishLab",
     repo: "semble",
   });
-}
-
-function sourceUrl(version: string): string {
-  return `https://github.com/MinishLab/semble/archive/refs/tags/v${version}.tar.gz`;
 }
 
 function serializePin(hash: string, version: string): string {
@@ -29,12 +26,16 @@ function updateProgram(args: readonly string[]): Effect.Effect<void, Error> {
     requestedOrLatestVersion(args, latestVersion),
     (version: string): Effect.Effect<void, Error> =>
       Effect.flatMap(
-        unpackedSourceHash(sourceUrl(version)),
+        fetchFromGitHubHash(
+          {
+            owner: "MinishLab",
+            repo: "semble",
+            tag: `v${version}`,
+          },
+          REPOSITORY_ROOT_PATH,
+        ),
         (hash: string): Effect.Effect<void> =>
-          writeTextFile(
-            PIN_FILE_PATH,
-            serializePin(hash, version),
-          ),
+          writeTextFile(PIN_FILE_PATH, serializePin(hash, version)),
       ),
   );
 }

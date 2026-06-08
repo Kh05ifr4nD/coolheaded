@@ -9,10 +9,7 @@ import { Effect } from "effect";
 import { latestGitHubVersion } from "coolheaded/latestVersion.ts";
 
 const NIXFMT_RELEASE_VERSION_PREFIX = "v";
-const GENERATED_PACKAGE_FILE_PATH = scriptPath(
-  "generatedPackage.nix",
-  import.meta.url,
-);
+const GENERATED_PACKAGE_FILE_PATH = scriptPath("generatedPackage.nix", import.meta.url);
 const REPOSITORY_ROOT_PATH = scriptPath("../../", import.meta.url);
 const GENERATED_PACKAGE_RELATIVE_PATH = "packages/nixfmt/generatedPackage.nix";
 function latestVersion(): Effect.Effect<string, Error> {
@@ -26,26 +23,15 @@ function sourceUrl(version: string): string {
   return `https://github.com/NixOS/nixfmt/archive/${NIXFMT_RELEASE_VERSION_PREFIX}${version}.tar.gz`;
 }
 
-function generatedPackageBody(
-  version: string,
-): Effect.Effect<string, Error> {
+function generatedPackageBody(version: string): Effect.Effect<string, Error> {
   return commandOutput(
     "nix",
-    [
-      "run",
-      "--inputs-from",
-      REPOSITORY_ROOT_PATH,
-      "nixpkgs#cabal2nix",
-      "--",
-      sourceUrl(version),
-    ],
+    ["run", "--inputs-from", REPOSITORY_ROOT_PATH, "nixpkgs#cabal2nix", "--", sourceUrl(version)],
     REPOSITORY_ROOT_PATH,
   );
 }
 
-function generatedPackageContents(
-  version: string,
-): Effect.Effect<string, Error> {
+function generatedPackageContents(version: string): Effect.Effect<string, Error> {
   return Effect.map(
     generatedPackageBody(version),
     (body: string): string =>
@@ -55,15 +41,7 @@ function generatedPackageContents(
 
 function formatGeneratedPackage(): Effect.Effect<void, Error> {
   return Effect.asVoid(
-    commandOutput(
-      "nix",
-      [
-        "fmt",
-        "--",
-        GENERATED_PACKAGE_RELATIVE_PATH,
-      ],
-      REPOSITORY_ROOT_PATH,
-    ),
+    commandOutput("nix", ["fmt", "--", GENERATED_PACKAGE_RELATIVE_PATH], REPOSITORY_ROOT_PATH),
   );
 }
 

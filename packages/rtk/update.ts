@@ -6,8 +6,8 @@ import {
   writeTextFile,
 } from "coolheaded/updateScript.ts";
 import { Effect } from "effect";
+import { fetchFromGitHubHash } from "coolheaded/sourceHash.ts";
 import { latestGitHubVersion } from "coolheaded/latestVersion.ts";
-import { unpackedSourceHash } from "coolheaded/sourceHash.ts";
 
 const PIN_FILE_PATH = scriptPath("pin.json", import.meta.url);
 const REPOSITORY_ROOT_PATH = scriptPath("../../", import.meta.url);
@@ -22,10 +22,6 @@ interface RtkPin {
   readonly cargoHash: string;
   readonly hash: string;
   readonly version: string;
-}
-
-function sourceUrl(version: string): string {
-  return `https://github.com/rtk-ai/rtk/archive/refs/tags/v${version}.tar.gz`;
 }
 
 function cargoHashExpression(version: string, hash: string): string {
@@ -57,10 +53,7 @@ function parseCargoHash(text: string): Effect.Effect<string, Error> {
   return Effect.fail(new Error("Failed to parse rtk cargoHash"));
 }
 
-function cargoHash(
-  version: string,
-  hash: string,
-): Effect.Effect<string, Error> {
+function cargoHash(version: string, hash: string): Effect.Effect<string, Error> {
   return Effect.tryPromise({
     catch(error: unknown): Error {
       if (error instanceof Error) {
@@ -71,13 +64,7 @@ function cargoHash(
     },
     async try(): Promise<string> {
       const output = await new (denoRuntime().Command)("nix", {
-        args: [
-          "build",
-          "--impure",
-          "--no-link",
-          "--expr",
-          cargoHashExpression(version, hash),
-        ],
+        args: ["build", "--impure", "--no-link", "--expr", cargoHashExpression(version, hash)],
         cwd: REPOSITORY_ROOT_PATH,
         stderr: "piped",
         stdout: "piped",
@@ -103,7 +90,14 @@ function updateProgram(args: readonly string[]): Effect.Effect<void, Error> {
     requestedOrLatestVersion(args, latestVersion),
     (version: string): Effect.Effect<void, Error> =>
       Effect.flatMap(
-        unpackedSourceHash(sourceUrl(version)),
+        fetchFromGitHubHash(
+          {
+            owner: "rtk-ai",
+            repo: "rtk",
+            tag: `v${version}`,
+          },
+          REPOSITORY_ROOT_PATH,
+        ),
         (hash: string): Effect.Effect<void, Error> =>
           Effect.flatMap(
             cargoHash(version, hash),

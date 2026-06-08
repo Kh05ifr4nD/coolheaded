@@ -6,7 +6,7 @@ import { releaseHashConfig } from "coolheaded/releaseUpdater.ts";
 import { writePackageHashConfig } from "coolheaded/pinJson.ts";
 
 const PIN_FILE_PATH = scriptPath("pin.json", import.meta.url);
-const OXLINT_RELEASE_TARGETS = {
+const OXFMT_RELEASE_TARGETS = {
   "aarch64-darwin": "aarch64-apple-darwin",
   "aarch64-linux": "aarch64-unknown-linux-gnu",
   "x86_64-linux": "x86_64-unknown-linux-gnu",
@@ -21,14 +21,14 @@ function latestVersion(): Effect.Effect<string, Error> {
 }
 
 function releaseAssetUrl(version: string, target: string): string {
-  return `https://github.com/oxc-project/oxc/releases/download/apps_v${version}/oxlint-${target}.tar.gz`;
+  return `https://github.com/oxc-project/oxc/releases/download/apps_v${version}/oxfmt-${target}.tar.gz`;
 }
 
 function releaseAssetUrls(version: string): Readonly<Record<SupportedSystem, string>> {
   return {
-    "aarch64-darwin": releaseAssetUrl(version, OXLINT_RELEASE_TARGETS["aarch64-darwin"]),
-    "aarch64-linux": releaseAssetUrl(version, OXLINT_RELEASE_TARGETS["aarch64-linux"]),
-    "x86_64-linux": releaseAssetUrl(version, OXLINT_RELEASE_TARGETS["x86_64-linux"]),
+    "aarch64-darwin": releaseAssetUrl(version, OXFMT_RELEASE_TARGETS["aarch64-darwin"]),
+    "aarch64-linux": releaseAssetUrl(version, OXFMT_RELEASE_TARGETS["aarch64-linux"]),
+    "x86_64-linux": releaseAssetUrl(version, OXFMT_RELEASE_TARGETS["x86_64-linux"]),
   };
 }
 

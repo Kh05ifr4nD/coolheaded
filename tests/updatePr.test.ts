@@ -5,21 +5,13 @@ import { parseConfig } from "coolheadedCi/createUpdatePr.ts";
 describe("update PR config", (): void => {
   it("defaults to automated dependency labels and auto-merge", (): void => {
     assertEquals(
-      parseConfig([
-        "--branch",
-        "update/package/codex",
-        "--title",
-        "codex: 1.0.0 -> 1.0.1",
-      ]),
+      parseConfig(["--branch", "update/package/codex", "--title", "codex: 1.0.0 -> 1.0.1"]),
       {
         autoMerge: true,
         body: "",
         branch: "update/package/codex",
         dryRun: false,
-        labels: [
-          "dependencies",
-          "automated",
-        ],
+        labels: ["dependencies", "automated"],
         title: "codex: 1.0.0 -> 1.0.1",
       },
     );
@@ -45,11 +37,7 @@ describe("update PR config", (): void => {
         body: "effect: 1 -> 2",
         branch: "update/denoDeps",
         dryRun: true,
-        labels: [
-          "dependencies",
-          "automated",
-          "deno-deps",
-        ],
+        labels: ["dependencies", "automated", "deno-deps"],
         title: "deno.lock: update dependencies",
       },
     );

@@ -7,9 +7,9 @@ import {
 } from "coolheaded/updateScript.ts";
 import { Effect } from "effect";
 import type { PackageHashConfig } from "coolheaded/packageConfigTypes.ts";
+import { fetchFromGitHubHash } from "coolheaded/sourceHash.ts";
 import { latestNpmVersion } from "coolheaded/latestVersion.ts";
 import { npmPackageHashConfig } from "coolheaded/npmPackageUpdater.ts";
-import { unpackedSourceHash } from "coolheaded/sourceHash.ts";
 
 const NPM_PACKAGE_NAME = "@researai/deepscientist";
 const PIN_FILE_PATH = scriptPath("pin.json", import.meta.url);
@@ -63,11 +63,11 @@ function npmDepsHash(version: string): Effect.Effect<string, Error> {
                 `${workspacePath}/source.tgz`,
               ]),
               Effect.zipRight(
-                commandOutput("tar", [
-                  "-xzf",
-                  `${workspacePath}/source.tgz`,
-                  "--strip-components=1",
-                ], workspacePath),
+                commandOutput(
+                  "tar",
+                  ["-xzf", `${workspacePath}/source.tgz`, "--strip-components=1"],
+                  workspacePath,
+                ),
                 Effect.zipRight(
                   commandOutput("sh", [
                     "-c",
@@ -105,10 +105,9 @@ function npmDepsHash(version: string): Effect.Effect<string, Error> {
                       "sh",
                       `${workspacePath}/package-lock.json`,
                     ]),
-                    commandOutput(
-                      `${outPath.trim()}/bin/prefetch-npm-deps`,
-                      [`${workspacePath}/package-lock.json`],
-                    ),
+                    commandOutput(`${outPath.trim()}/bin/prefetch-npm-deps`, [
+                      `${workspacePath}/package-lock.json`,
+                    ]),
                   ),
                 ),
               ),
@@ -125,18 +124,13 @@ function generatedUvLock(version: string): Effect.Effect<string, Error> {
     (workspacePath: string): Effect.Effect<string, Error> =>
       Effect.ensuring(
         Effect.zipRight(
-          commandOutput("curl", [
-            "-fsSL",
-            sourceUrl(version),
-            "-o",
-            `${workspacePath}/source.tgz`,
-          ]),
+          commandOutput("curl", ["-fsSL", sourceUrl(version), "-o", `${workspacePath}/source.tgz`]),
           Effect.zipRight(
-            commandOutput("tar", [
-              "-xzf",
-              `${workspacePath}/source.tgz`,
-              "--strip-components=1",
-            ], workspacePath),
+            commandOutput(
+              "tar",
+              ["-xzf", `${workspacePath}/source.tgz`, "--strip-components=1"],
+              workspacePath,
+            ),
             Effect.zipRight(
               commandOutput(
                 "nix",
@@ -163,8 +157,9 @@ function generatedUvLock(version: string): Effect.Effect<string, Error> {
 }
 
 function serializePin(pin: DeepScientistPin): string {
-  return `${
-    JSON.stringify(pin, [
+  return `${JSON.stringify(
+    pin,
+    [
       "version",
       "hashes",
       "aarch64-darwin",
@@ -172,8 +167,9 @@ function serializePin(pin: DeepScientistPin): string {
       "x86_64-linux",
       "sourceHash",
       "npmDepsHash",
-    ], 2)
-  }\n`;
+    ],
+    2,
+  )}\n`;
 }
 
 function updateProgram(args: readonly string[]): Effect.Effect<void, Error> {
@@ -183,14 +179,17 @@ function updateProgram(args: readonly string[]): Effect.Effect<void, Error> {
       Effect.flatMap(
         Effect.all({
           packageConfig: npmPackageHashConfig(NPM_PACKAGE_NAME, version),
-          sourceHash: unpackedSourceHash(sourceUrl(version)),
+          sourceHash: fetchFromGitHubHash(
+            {
+              owner: "ResearAI",
+              repo: "DeepScientist",
+              tag: `v${version}`,
+            },
+            REPOSITORY_ROOT_PATH,
+          ),
           uvLock: generatedUvLock(version),
         }),
-        ({
-          packageConfig,
-          sourceHash,
-          uvLock,
-        }): Effect.Effect<void, Error> =>
+        ({ packageConfig, sourceHash, uvLock }): Effect.Effect<void, Error> =>
           Effect.flatMap(
             npmDepsHash(version),
             (npmDepsHashValue: string): Effect.Effect<void> =>

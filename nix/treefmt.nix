@@ -7,15 +7,32 @@ let
 in
 {
   programs = {
-    deno = {
-      enable = true;
-      excludes = rootMarkdown;
-      package = config.packages.deno;
-    };
     nixfmt = {
       enable = true;
       package = config.packages.nixfmt;
       strict = true;
+    };
+    oxfmt = {
+      enable = true;
+      includes = [
+        "*.css"
+        "*.html"
+        "*.js"
+        "*.json"
+        "*.jsonc"
+        "*.jsx"
+        "*.less"
+        "*.markdown"
+        "*.md"
+        "*.sass"
+        "*.scss"
+        "*.ts"
+        "*.tsx"
+        "*.yaml"
+        "*.yml"
+      ];
+      excludes = rootMarkdown;
+      package = config.packages.oxfmt;
     };
     "rumdl-format" = {
       enable = true;

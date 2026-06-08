@@ -16,17 +16,13 @@ function parseRegistryMetadata(
   url: string,
 ): Effect.Effect<NpmPackageMetadata, UpdateError> {
   if (!isRecord(value) || !isRecord(value["versions"])) {
-    return Effect.fail(
-      new UpdateError(`Invalid npm registry JSON from ${url}`),
-    );
+    return Effect.fail(new UpdateError(`Invalid npm registry JSON from ${url}`));
   }
 
   return Effect.succeed(value);
 }
 
-function fetchNpmMetadata(
-  packageName: string,
-): Effect.Effect<NpmPackageMetadata, UpdateError> {
+function fetchNpmMetadata(packageName: string): Effect.Effect<NpmPackageMetadata, UpdateError> {
   const url = npmRegistryPackageUrl(packageName);
 
   return Effect.tryPromise({
@@ -40,9 +36,7 @@ function fetchNpmMetadata(
     async try(): Promise<NpmPackageMetadata> {
       const response = await globalThis.fetch(url);
       if (!response.ok) {
-        throw new UpdateError(
-          `Failed to fetch ${url}: HTTP ${response.status}`,
-        );
+        throw new UpdateError(`Failed to fetch ${url}: HTTP ${response.status}`);
       }
 
       const metadata: unknown = await response.json();
@@ -58,9 +52,7 @@ function npmPlatformPackageHashConfig(
 ): Effect.Effect<PackageHashConfig, Error> {
   return Effect.flatMap(
     fetchNpmMetadata(packageName),
-    (
-      metadata: NpmPackageMetadata,
-    ): Effect.Effect<PackageHashConfig, Error> =>
+    (metadata: NpmPackageMetadata): Effect.Effect<PackageHashConfig, Error> =>
       npmHashConfigForSystems(metadata, version, suffixes),
   );
 }
@@ -71,9 +63,7 @@ function npmPackageHashConfig(
 ): Effect.Effect<PackageHashConfig, Error> {
   return Effect.flatMap(
     fetchNpmMetadata(packageName),
-    (
-      metadata: NpmPackageMetadata,
-    ): Effect.Effect<PackageHashConfig, Error> =>
+    (metadata: NpmPackageMetadata): Effect.Effect<PackageHashConfig, Error> =>
       Effect.map(
         npmVersionIntegrity(metadata, version),
         (hash: string): PackageHashConfig =>

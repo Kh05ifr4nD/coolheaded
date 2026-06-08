@@ -6,13 +6,10 @@ import {
   writeTextFile,
 } from "coolheaded/updateScript.ts";
 import { Effect } from "effect";
+import { fetchFromGitHubHash } from "coolheaded/sourceHash.ts";
 import { latestGitHubVersion } from "coolheaded/latestVersion.ts";
-import { unpackedSourceHash } from "coolheaded/sourceHash.ts";
 
-const GENERATED_PACKAGE_FILE_PATH = scriptPath(
-  "generatedPackage.nix",
-  import.meta.url,
-);
+const GENERATED_PACKAGE_FILE_PATH = scriptPath("generatedPackage.nix", import.meta.url);
 const PIN_FILE_PATH = scriptPath("pin.json", import.meta.url);
 const REPOSITORY_ROOT_PATH = scriptPath("../../", import.meta.url);
 function latestVersion(): Effect.Effect<string, Error> {
@@ -66,19 +63,18 @@ function generatedBunNix(version: string): Effect.Effect<string, Error> {
                 `${workspacePath}/source.tgz`,
               ]),
               Effect.zipRight(
-                commandOutput("tar", [
-                  "-xzf",
-                  `${workspacePath}/source.tgz`,
-                  "--strip-components=1",
-                ], workspacePath),
+                commandOutput(
+                  "tar",
+                  ["-xzf", `${workspacePath}/source.tgz`, "--strip-components=1"],
+                  workspacePath,
+                ),
                 Effect.zipRight(
-                  commandOutput(`${outPath.trim()}/bin/bun2nix`, [
-                    "-o",
-                    `${workspacePath}/generatedPackage.nix`,
-                  ], workspacePath),
-                  commandOutput("cat", [
-                    `${workspacePath}/generatedPackage.nix`,
-                  ]),
+                  commandOutput(
+                    `${outPath.trim()}/bin/bun2nix`,
+                    ["-o", `${workspacePath}/generatedPackage.nix`],
+                    workspacePath,
+                  ),
+                  commandOutput("cat", [`${workspacePath}/generatedPackage.nix`]),
                 ),
               ),
             ),
@@ -89,12 +85,7 @@ function generatedBunNix(version: string): Effect.Effect<string, Error> {
 }
 
 function serializePin(pin: QmdPin): string {
-  return `${
-    JSON.stringify(pin, [
-      "version",
-      "hash",
-    ], 2)
-  }\n`;
+  return `${JSON.stringify(pin, ["version", "hash"], 2)}\n`;
 }
 
 function updateProgram(args: readonly string[]): Effect.Effect<void, Error> {
@@ -104,7 +95,14 @@ function updateProgram(args: readonly string[]): Effect.Effect<void, Error> {
       Effect.flatMap(
         Effect.all({
           bunNix: generatedBunNix(version),
-          hash: unpackedSourceHash(sourceUrl(version)),
+          hash: fetchFromGitHubHash(
+            {
+              owner: "tobi",
+              repo: "qmd",
+              tag: `v${version}`,
+            },
+            REPOSITORY_ROOT_PATH,
+          ),
         }),
         ({ bunNix, hash }): Effect.Effect<void> =>
           Effect.zipRight(

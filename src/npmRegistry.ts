@@ -24,9 +24,7 @@ function npmVersionIntegrity(
 ): Effect.Effect<string, InvalidNpmMetadataError> {
   const integrity = metadata.versions?.[version]?.dist?.integrity;
   if (typeof integrity !== "string" || integrity.length === 0) {
-    return Effect.fail(
-      new InvalidNpmMetadataError(`Missing npm integrity for ${version}`),
-    );
+    return Effect.fail(new InvalidNpmMetadataError(`Missing npm integrity for ${version}`));
   }
 
   return Effect.succeed(integrity);

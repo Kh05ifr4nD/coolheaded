@@ -4,6 +4,7 @@
   buildNpmPackage,
   callPackage,
   fetchFromGitHub,
+  fetchNpmDeps,
   fetchurl,
   bash,
   claude-code,
@@ -43,12 +44,50 @@ let
     hash = pin.sourceHash;
   };
 
+  pruneBundledCliDependencies = ''
+    jq '
+      .dependencies |= del(
+        .["@anthropic-ai/claude-code"],
+        .["@openai/codex"],
+        .["opencode-ai"]
+      )
+    ' package.json > package.json.tmp
+    mv package.json.tmp package.json
+    jq '
+      .packages[""].dependencies |= del(
+        .["@anthropic-ai/claude-code"],
+        .["@openai/codex"],
+        .["opencode-ai"]
+      )
+      | .packages |= with_entries(
+          select(
+            (.key | test("^node_modules/@anthropic-ai/claude-code$")) | not
+          )
+          | select(
+            (.key | test("^node_modules/@openai/codex(-.*)?$")) | not
+          )
+          | select(
+            (.key | test("^node_modules/(opencode-ai|opencode-.+)$")) | not
+          )
+        )
+    ' package-lock.json > package-lock.json.tmp
+    mv package-lock.json.tmp package-lock.json
+  '';
+
+  nodeModulesNpmDeps = fetchNpmDeps {
+    name = "${pname}-node-modules-${pin.version}-npm-deps";
+    src = sourceSrc;
+    hash = pin.npmDepsHash;
+    nativeBuildInputs = [ jq ];
+    postPatch = pruneBundledCliDependencies;
+  };
+
   nodeModules = buildNpmPackage {
     pname = "${pname}-node-modules";
     inherit (pin) version;
     src = sourceSrc;
 
-    npmDepsHash = pin.npmDepsHash;
+    npmDeps = nodeModulesNpmDeps;
 
     strictDeps = true;
     __structuredAttrs = true;
@@ -57,35 +96,7 @@ let
 
     dontNpmBuild = true;
 
-    postPatch = ''
-      jq '
-        .dependencies |= del(
-          .["@anthropic-ai/claude-code"],
-          .["@openai/codex"],
-          .["opencode-ai"]
-        )
-      ' package.json > package.json.tmp
-      mv package.json.tmp package.json
-      jq '
-        .packages[""].dependencies |= del(
-          .["@anthropic-ai/claude-code"],
-          .["@openai/codex"],
-          .["opencode-ai"]
-        )
-        | .packages |= with_entries(
-            select(
-              (.key | test("^node_modules/@anthropic-ai/claude-code$")) | not
-            )
-            | select(
-              (.key | test("^node_modules/@openai/codex(-.*)?$")) | not
-            )
-            | select(
-              (.key | test("^node_modules/(opencode-ai|opencode-.+)$")) | not
-            )
-          )
-      ' package-lock.json > package-lock.json.tmp
-      mv package-lock.json.tmp package-lock.json
-    '';
+    postPatch = pruneBundledCliDependencies;
 
     installPhase = ''
       runHook preInstall

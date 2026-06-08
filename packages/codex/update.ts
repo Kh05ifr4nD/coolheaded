@@ -1,8 +1,4 @@
-import {
-  requestedOrLatestVersion,
-  runUpdateScript,
-  scriptPath,
-} from "coolheaded/updateScript.ts";
+import { requestedOrLatestVersion, runUpdateScript, scriptPath } from "coolheaded/updateScript.ts";
 import { Effect } from "effect";
 import type { SupportedSystem } from "coolheaded/system.ts";
 import { latestNpmVersion } from "coolheaded/latestVersion.ts";
@@ -26,13 +22,8 @@ function updateProgram(args: readonly string[]): Effect.Effect<void, Error> {
     requestedOrLatestVersion(args, latestVersion),
     (version: string): Effect.Effect<void, Error> =>
       Effect.flatMap(
-        npmPlatformPackageHashConfig(
-          CODEX_NPM_PACKAGE_NAME,
-          version,
-          CODEX_PLATFORM_SUFFIXES,
-        ),
-        (config): Effect.Effect<void> =>
-          writePackageHashConfig(PIN_FILE_PATH, config),
+        npmPlatformPackageHashConfig(CODEX_NPM_PACKAGE_NAME, version, CODEX_PLATFORM_SUFFIXES),
+        (config): Effect.Effect<void> => writePackageHashConfig(PIN_FILE_PATH, config),
       ),
   );
 }

@@ -1,8 +1,4 @@
-import {
-  requestedOrLatestVersion,
-  runUpdateScript,
-  scriptPath,
-} from "coolheaded/updateScript.ts";
+import { requestedOrLatestVersion, runUpdateScript, scriptPath } from "coolheaded/updateScript.ts";
 import { Effect } from "effect";
 import type { SupportedSystem } from "coolheaded/system.ts";
 import { latestGitHubVersion } from "coolheaded/latestVersion.ts";
@@ -32,22 +28,11 @@ function releaseAssetUrl(version: string, target: string): string {
   return `https://github.com/rhysd/actionlint/releases/download/v${version}/${asset}`;
 }
 
-function releaseAssetUrls(
-  version: string,
-): Readonly<Record<SupportedSystem, string>> {
+function releaseAssetUrls(version: string): Readonly<Record<SupportedSystem, string>> {
   return {
-    "aarch64-darwin": releaseAssetUrl(
-      version,
-      ACTIONLINT_RELEASE_TARGETS["aarch64-darwin"],
-    ),
-    "aarch64-linux": releaseAssetUrl(
-      version,
-      ACTIONLINT_RELEASE_TARGETS["aarch64-linux"],
-    ),
-    "x86_64-linux": releaseAssetUrl(
-      version,
-      ACTIONLINT_RELEASE_TARGETS["x86_64-linux"],
-    ),
+    "aarch64-darwin": releaseAssetUrl(version, ACTIONLINT_RELEASE_TARGETS["aarch64-darwin"]),
+    "aarch64-linux": releaseAssetUrl(version, ACTIONLINT_RELEASE_TARGETS["aarch64-linux"]),
+    "x86_64-linux": releaseAssetUrl(version, ACTIONLINT_RELEASE_TARGETS["x86_64-linux"]),
   };
 }
 
@@ -56,13 +41,8 @@ function updateProgram(args: readonly string[]): Effect.Effect<void, Error> {
     requestedOrLatestVersion(args, latestVersion),
     (version: string): Effect.Effect<void, Error> =>
       Effect.flatMap(
-        releaseHashConfig(
-          version,
-          releaseAssetUrls(version),
-          "sha256Digest",
-        ),
-        (config): Effect.Effect<void> =>
-          writePackageHashConfig(PIN_FILE_PATH, config),
+        releaseHashConfig(version, releaseAssetUrls(version), "sha256Digest"),
+        (config): Effect.Effect<void> => writePackageHashConfig(PIN_FILE_PATH, config),
       ),
   );
 }

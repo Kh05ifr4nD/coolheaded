@@ -14,43 +14,35 @@ function packageAllowedFile(name: string, file: string): boolean {
   return file.startsWith(`packages/${name}/`);
 }
 
-async function runPackageUpdate(
-  name: string,
-  version?: string,
-): Promise<void> {
-  await run([
-    "deno",
-    "run",
-    "--allow-env",
-    "--allow-net",
-    "--allow-read",
-    "--allow-run",
-    "--allow-write",
-    `packages/${name}/update.ts`,
-    ...(version === undefined ? [] : [version]),
-  ], { capture: false });
+async function runPackageUpdate(name: string, version?: string): Promise<void> {
+  await run(
+    [
+      "deno",
+      "run",
+      "--allow-env",
+      "--allow-net",
+      "--allow-read",
+      "--allow-run",
+      "--allow-write",
+      `packages/${name}/update.ts`,
+      ...(version === undefined ? [] : [version]),
+    ],
+    { capture: false },
+  );
 
-  if (!await gitHasChanges()) {
+  if (!(await gitHasChanges())) {
     await writeOutput("updated", "false");
     return;
   }
 
   const files = await changedFiles();
-  assertOnlyChangedFiles(
-    files,
-    (file: string): boolean => packageAllowedFile(name, file),
-  );
+  assertOnlyChangedFiles(files, (file: string): boolean => packageAllowedFile(name, file));
 
   const system = await currentSystem();
   const attr = `.#packages.${system}.${name}`;
   await writeOutput("updated", "true");
   await writeOutput("newVersion", await nixEvalRaw(`${attr}.version`));
-  const changelog = await run([
-    "nix",
-    "eval",
-    "--raw",
-    `${attr}.meta.changelog`,
-  ], {
+  const changelog = await run(["nix", "eval", "--raw", `${attr}.meta.changelog`], {
     capture: true,
     check: false,
   });

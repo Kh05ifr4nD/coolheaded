@@ -14,9 +14,7 @@ class InvalidPackageNameError extends Error {
   }
 }
 
-function packageName(
-  value: string,
-): Effect.Effect<PackageName, InvalidPackageNameError> {
+function packageName(value: string): Effect.Effect<PackageName, InvalidPackageNameError> {
   if (!PACKAGE_NAME_PATTERN.test(value)) {
     return Effect.fail(new InvalidPackageNameError(value));
   }

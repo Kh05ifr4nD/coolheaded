@@ -15,9 +15,7 @@ function lockNodes(lock: unknown): Readonly<Record<string, unknown>> {
   return lock["nodes"];
 }
 
-function rootInputs(
-  nodes: Readonly<Record<string, unknown>>,
-): Readonly<Record<string, string>> {
+function rootInputs(nodes: Readonly<Record<string, unknown>>): Readonly<Record<string, string>> {
   const { root } = nodes;
   if (!isRecord(root) || !isRecord(root["inputs"])) {
     return {};
@@ -45,9 +43,7 @@ function lockedRev(node: unknown): string {
 
 function filteredNames(): readonly string[] | null {
   const inputs = Deno.env.get("INPUTS")?.trim();
-  return inputs === undefined || inputs.length === 0
-    ? null
-    : inputs.split(/\s+/u);
+  return inputs === undefined || inputs.length === 0 ? null : inputs.split(/\s+/u);
 }
 
 async function discoverFlakeInputUpdates(): Promise<readonly MatrixItem[]> {
@@ -62,10 +58,12 @@ async function discoverFlakeInputUpdates(): Promise<readonly MatrixItem[]> {
       return [];
     }
 
-    return [{
-      currentVersion: lockedRev(node),
-      name,
-    }];
+    return [
+      {
+        currentVersion: lockedRev(node),
+        name,
+      },
+    ];
   });
 }
 

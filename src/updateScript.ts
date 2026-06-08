@@ -51,13 +51,15 @@ function isDenoRuntime(value: unknown): value is DenoRuntime {
     return false;
   }
 
-  return Array.isArray(value["args"]) &&
+  return (
+    Array.isArray(value["args"]) &&
     typeof value["Command"] === "function" &&
     typeof value["mainModule"] === "string" &&
     typeof value["exit"] === "function" &&
     typeof value["readTextFile"] === "function" &&
     typeof value["writeTextFile"] === "function" &&
-    typeof value["stderr"]["write"] === "function";
+    typeof value["stderr"]["write"] === "function"
+  );
 }
 
 function denoRuntime(): DenoRuntime {
@@ -100,9 +102,7 @@ function requestedOrLatestVersion(
 }
 
 function writeTextFile(path: string, contents: string): Effect.Effect<void> {
-  return Effect.promise((): Promise<void> =>
-    denoRuntime().writeTextFile(path, contents)
-  );
+  return Effect.promise((): Promise<void> => denoRuntime().writeTextFile(path, contents));
 }
 
 function readTextFile(path: string): Effect.Effect<string, UpdateError> {
@@ -138,14 +138,10 @@ function commandOutput(
         stdout: "piped",
         ...(typeof cwd === "string" ? { cwd } : {}),
       } as const;
-      const output = await new (denoRuntime().Command)(
-        command,
-        options,
-      ).output();
+      const output = await new (denoRuntime().Command)(command, options).output();
 
       if (!output.success) {
-        const stderr = new globalThis.TextDecoder().decode(output.stderr)
-          .trim();
+        const stderr = new globalThis.TextDecoder().decode(output.stderr).trim();
         throw new UpdateError(
           `Failed to run ${command}: exit ${output.code}${
             stderr.length === 0 ? "" : `: ${stderr}`
@@ -167,9 +163,7 @@ function errorMessage(error: unknown): string {
 }
 
 async function reportError(error: unknown): Promise<void> {
-  const encodedError = new globalThis.TextEncoder().encode(
-    `${errorMessage(error)}\n`,
-  );
+  const encodedError = new globalThis.TextEncoder().encode(`${errorMessage(error)}\n`);
   await denoRuntime().stderr.write(encodedError);
   denoRuntime().exit(1);
 }
@@ -185,12 +179,7 @@ function runUpdateScript(
   program: (args: readonly string[]) => Effect.Effect<void, Error>,
 ): void {
   if (denoRuntime().mainModule === moduleUrl) {
-    Effect.runFork(
-      Effect.catchAll(
-        program(denoRuntime().args),
-        reportErrorEffect,
-      ),
-    );
+    Effect.runFork(Effect.catchAll(program(denoRuntime().args), reportErrorEffect));
   }
 }
 

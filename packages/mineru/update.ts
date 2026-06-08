@@ -46,10 +46,7 @@ function generatedUvLock(version: string): Effect.Effect<string, Error> {
     (workspacePath: string): Effect.Effect<string, Error> =>
       Effect.ensuring(
         Effect.zipRight(
-          writeTextFile(
-            `${workspacePath}/pyproject.toml`,
-            pyprojectContents(version),
-          ),
+          writeTextFile(`${workspacePath}/pyproject.toml`, pyprojectContents(version)),
           Effect.zipRight(
             commandOutput(
               "nix",

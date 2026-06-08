@@ -35,12 +35,9 @@ describe("parsePackageName", (): void => {
     assertEquals(parsePackageName("codeReviewGraph"), "codeReviewGraph");
 
     fc.assert(
-      fc.property(
-        fc.stringMatching(PACKAGE_NAME_PATTERN),
-        (name: string): void => {
-          assertEquals(parsePackageName(name), name);
-        },
-      ),
+      fc.property(fc.stringMatching(PACKAGE_NAME_PATTERN), (name: string): void => {
+        assertEquals(parsePackageName(name), name);
+      }),
     );
   });
 });

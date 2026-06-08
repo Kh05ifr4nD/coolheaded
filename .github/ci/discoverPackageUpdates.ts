@@ -30,9 +30,7 @@ in
 
 function filteredNames(): readonly string[] | null {
   const packages = Deno.env.get("PACKAGES")?.trim();
-  return packages === undefined || packages.length === 0
-    ? null
-    : packages.split(/\s+/u);
+  return packages === undefined || packages.length === 0 ? null : packages.split(/\s+/u);
 }
 
 async function discoverPackageUpdates(): Promise<readonly MatrixItem[]> {
@@ -40,14 +38,7 @@ async function discoverPackageUpdates(): Promise<readonly MatrixItem[]> {
     filter: filteredNames(),
     system: await currentSystem(),
   });
-  const result = await run([
-    "nix",
-    "eval",
-    "--json",
-    "--impure",
-    "--expr",
-    NIX_EXPR,
-  ], {
+  const result = await run(["nix", "eval", "--json", "--impure", "--expr", NIX_EXPR], {
     capture: true,
     env: { DISCOVERY_CONFIG: config },
   });
@@ -56,17 +47,14 @@ async function discoverPackageUpdates(): Promise<readonly MatrixItem[]> {
     throw new Error("Invalid package discovery JSON");
   }
 
-  return Object.entries(parsedVersions).flatMap(
-    (entry: readonly [string, unknown]): readonly MatrixItem[] => {
+  return Object.entries(parsedVersions)
+    .flatMap((entry: readonly [string, unknown]): readonly MatrixItem[] => {
       const [name, currentVersion] = entry;
-      return typeof currentVersion === "string"
-        ? [{ currentVersion, name }]
-        : [];
-    },
-  ).toSorted((
-    left: Readonly<MatrixItem>,
-    right: Readonly<MatrixItem>,
-  ): number => left.name.localeCompare(right.name));
+      return typeof currentVersion === "string" ? [{ currentVersion, name }] : [];
+    })
+    .toSorted((left: Readonly<MatrixItem>, right: Readonly<MatrixItem>): number =>
+      left.name.localeCompare(right.name),
+    );
 }
 
 async function main(): Promise<void> {

@@ -25,9 +25,7 @@ function parseJsonResponse(url: string): Effect.Effect<unknown, UpdateError> {
     async try(): Promise<unknown> {
       const response = await globalThis.fetch(url);
       if (!response.ok) {
-        throw new UpdateError(
-          `Failed to fetch ${url}: HTTP ${response.status}`,
-        );
+        throw new UpdateError(`Failed to fetch ${url}: HTTP ${response.status}`);
       }
 
       return await response.json();
@@ -37,11 +35,11 @@ function parseJsonResponse(url: string): Effect.Effect<unknown, UpdateError> {
 
 function latestNpmVersion(packageName: string): Effect.Effect<string, Error> {
   const encodedName = packageName.startsWith("@")
-    ? `@${
-      packageName.slice(1).split("/").map((part: string): string =>
-        encodeURIComponent(part)
-      ).join("/")
-    }`
+    ? `@${packageName
+        .slice(1)
+        .split("/")
+        .map((part: string): string => encodeURIComponent(part))
+        .join("/")}`
     : encodeURIComponent(packageName);
   const url = `https://registry.npmjs.org/${encodedName}`;
 
@@ -75,29 +73,23 @@ function latestPyPiVersion(projectName: string): Effect.Effect<string, Error> {
       const version = isRecord(info) ? info["version"] : undefined;
       return typeof version === "string" && version.length > 0
         ? Effect.succeed(version)
-        : Effect.fail(
-          new UpdateError(`Missing PyPI latest version for ${url}`),
-        );
+        : Effect.fail(new UpdateError(`Missing PyPI latest version for ${url}`));
     },
   );
 }
 
-function normalizeGitHubVersion(
-  name: string,
-  pattern: Readonly<RegExp>,
-): string | undefined {
+function normalizeGitHubVersion(name: string, pattern: Readonly<RegExp>): string | undefined {
   const match = pattern.exec(name);
   const version = match?.groups?.["version"];
 
-  return typeof version === "string" && SEMVER_PATTERN.test(version)
-    ? version
-    : undefined;
+  return typeof version === "string" && SEMVER_PATTERN.test(version) ? version : undefined;
 }
 
 function semverParts(version: string): readonly number[] {
-  return version.split(/[.+-]/u).slice(0, 3).map((part: string): number =>
-    Number.parseInt(part, 10)
-  );
+  return version
+    .split(/[.+-]/u)
+    .slice(0, 3)
+    .map((part: string): number => Number.parseInt(part, 10));
 }
 
 function compareSemver(left: string, right: string): number {
@@ -134,29 +126,22 @@ function latestGitHubVersion(
   options: Readonly<LatestGitHubVersionOptions>,
 ): Effect.Effect<string, Error> {
   const pattern = options.versionPattern ?? /^v(?<version>\d+\.\d+\.\d+)$/u;
-  const tagsUrl =
-    `https://api.github.com/repos/${options.owner}/${options.repo}/tags?per_page=100`;
+  const tagsUrl = `https://api.github.com/repos/${options.owner}/${options.repo}/tags?per_page=100`;
 
   return Effect.flatMap(
     parseJsonResponse(tagsUrl),
     (tags: unknown): Effect.Effect<string, Error> => {
       const versions = refNames(tags)
-        .map((name: string): string | undefined =>
-          normalizeGitHubVersion(name, pattern)
-        )
-        .filter((version: string | undefined): version is string =>
-          version !== undefined
-        )
+        .map((name: string): string | undefined => normalizeGitHubVersion(name, pattern))
+        .filter((version: string | undefined): version is string => version !== undefined)
         .toSorted(compareSemver);
       const version = versions.at(-1);
 
       return typeof version === "string"
         ? Effect.succeed(version)
         : Effect.fail(
-          new UpdateError(
-            `Missing GitHub latest version for ${options.owner}/${options.repo}`,
-          ),
-        );
+            new UpdateError(`Missing GitHub latest version for ${options.owner}/${options.repo}`),
+          );
     },
   );
 }

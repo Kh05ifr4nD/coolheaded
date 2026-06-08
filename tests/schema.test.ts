@@ -1,9 +1,6 @@
 import { assertEquals, assertThrows } from "@jsr/std__assert";
 import { describe, it } from "@jsr/std__testing/bdd";
-import {
-  npmHashConfigForSystems,
-  npmHashesForSystems,
-} from "coolheaded/npmUpdater.ts";
+import { npmHashConfigForSystems, npmHashesForSystems } from "coolheaded/npmUpdater.ts";
 import {
   npmPlatformPackageVersion,
   npmRegistryPackageUrl,
@@ -52,11 +49,7 @@ describe("parsePackageHashConfig", (): void => {
         fc.string({ minLength: 1 }),
         fc.string({ minLength: 1 }),
         fc.string({ minLength: 1 }),
-        (
-          darwinHash: string,
-          armHash: string,
-          x64Hash: string,
-        ): void => {
+        (darwinHash: string, armHash: string, x64Hash: string): void => {
           const config = parsePackageHashConfig({
             hashes: {
               "aarch64-darwin": darwinHash,
@@ -91,10 +84,7 @@ describe("npm registry URL helpers", (): void => {
   });
 
   it("appends platform suffixes", (): void => {
-    assertEquals(
-      npmPlatformPackageVersion("0.137.0", "linux-x64"),
-      "0.137.0-linux-x64",
-    );
+    assertEquals(npmPlatformPackageVersion("0.137.0", "linux-x64"), "0.137.0-linux-x64");
   });
 });
 
@@ -129,13 +119,9 @@ describe("npmHashesForSystems", (): void => {
     assertThrows(
       (): void => {
         Effect.runSync(
-          npmHashesForSystems(
-            { versions: {} },
-            "0.137.0",
-            {
-              "x86_64-linux": "linux-x64",
-            },
-          ),
+          npmHashesForSystems({ versions: {} }, "0.137.0", {
+            "x86_64-linux": "linux-x64",
+          }),
         );
       },
       Error,

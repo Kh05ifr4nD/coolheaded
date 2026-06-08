@@ -22,9 +22,7 @@ function fetchText(url: string): Effect.Effect<string, UpdateError> {
     async try(): Promise<string> {
       const response = await globalThis.fetch(url);
       if (!response.ok) {
-        throw new UpdateError(
-          `Failed to fetch ${url}: HTTP ${response.status}`,
-        );
+        throw new UpdateError(`Failed to fetch ${url}: HTTP ${response.status}`);
       }
 
       return await response.text();
@@ -32,10 +30,7 @@ function fetchText(url: string): Effect.Effect<string, UpdateError> {
   });
 }
 
-function parseSha256Hex(
-  text: string,
-  url: string,
-): Effect.Effect<string, UpdateError> {
+function parseSha256Hex(text: string, url: string): Effect.Effect<string, UpdateError> {
   const [hash] = text.trim().split(/\s+/u);
   if (typeof hash === "string" && /^[0-9a-f]{64}$/u.test(hash)) {
     return Effect.succeed(hash);
@@ -48,12 +43,7 @@ function hexToBytes(hex: string): Uint8Array {
   const bytes: number[] = [];
 
   for (let offset = 0; offset < hex.length; offset += HEX_BYTE_WIDTH) {
-    bytes.push(
-      Number.parseInt(
-        hex.slice(offset, offset + HEX_BYTE_WIDTH),
-        HEX_RADIX,
-      ),
-    );
+    bytes.push(Number.parseInt(hex.slice(offset, offset + HEX_BYTE_WIDTH), HEX_RADIX));
   }
 
   return Uint8Array.from(bytes);
@@ -71,16 +61,11 @@ function fetchSha256SumHash(url: string): Effect.Effect<string, UpdateError> {
   return Effect.flatMap(
     fetchText(url),
     (text: string): Effect.Effect<string, UpdateError> =>
-      Effect.map(
-        parseSha256Hex(text, url),
-        hexSha256ToSRI,
-      ),
+      Effect.map(parseSha256Hex(text, url), hexSha256ToSRI),
   );
 }
 
-function fetchSha256DigestHash(
-  url: string,
-): Effect.Effect<string, UpdateError> {
+function fetchSha256DigestHash(url: string): Effect.Effect<string, UpdateError> {
   return Effect.tryPromise({
     catch(error: unknown): UpdateError {
       if (error instanceof UpdateError) {
@@ -92,24 +77,16 @@ function fetchSha256DigestHash(
     async try(): Promise<string> {
       const response = await globalThis.fetch(url);
       if (!response.ok) {
-        throw new UpdateError(
-          `Failed to fetch ${url}: HTTP ${response.status}`,
-        );
+        throw new UpdateError(`Failed to fetch ${url}: HTTP ${response.status}`);
       }
 
-      const digest = await globalThis.crypto.subtle.digest(
-        "SHA-256",
-        await response.arrayBuffer(),
-      );
+      const digest = await globalThis.crypto.subtle.digest("SHA-256", await response.arrayBuffer());
       return bytesToSha256SRI([...new Uint8Array(digest)]);
     },
   });
 }
 
-function hashForUrl(
-  source: ReleaseHashSource,
-  url: string,
-): Effect.Effect<string, UpdateError> {
+function hashForUrl(source: ReleaseHashSource, url: string): Effect.Effect<string, UpdateError> {
   switch (source) {
     case "sha256Digest": {
       return fetchSha256DigestHash(url);
@@ -118,9 +95,7 @@ function hashForUrl(
       return fetchSha256SumHash(url);
     }
     default: {
-      return Effect.fail(
-        new UpdateError("Unsupported release hash source"),
-      );
+      return Effect.fail(new UpdateError("Unsupported release hash source"));
     }
   }
 }
@@ -143,9 +118,8 @@ function releaseHashConfig(
 ): Effect.Effect<PackageHashConfig, UpdateError> {
   return Effect.map(
     releaseHashes(urls, source),
-    (
-      hashes: Readonly<Record<SupportedSystem, string>>,
-    ): PackageHashConfig => parsePackageHashConfig({ hashes, version }),
+    (hashes: Readonly<Record<SupportedSystem, string>>): PackageHashConfig =>
+      parsePackageHashConfig({ hashes, version }),
   );
 }
 

@@ -16,14 +16,9 @@ function isRecord(value: unknown): value is Readonly<Record<string, unknown>> {
 function objectRecord(
   value: unknown,
   name: string,
-): Effect.Effect<
-  Readonly<Record<string, unknown>>,
-  InvalidPackageHashConfigError
-> {
+): Effect.Effect<Readonly<Record<string, unknown>>, InvalidPackageHashConfigError> {
   if (!isRecord(value)) {
-    return Effect.fail(
-      new InvalidPackageHashConfigError(`${name} must be an object`),
-    );
+    return Effect.fail(new InvalidPackageHashConfigError(`${name} must be an object`));
   }
 
   return Effect.succeed(value);
@@ -35,9 +30,7 @@ function hashForSystem(
 ): Effect.Effect<string, InvalidPackageHashConfigError> {
   const hash = hashes[system];
   if (typeof hash !== "string" || hash.length === 0) {
-    return Effect.fail(
-      new InvalidPackageHashConfigError(`Missing hash for ${system}`),
-    );
+    return Effect.fail(new InvalidPackageHashConfigError(`Missing hash for ${system}`));
   }
 
   return Effect.succeed(hash);
@@ -45,18 +38,12 @@ function hashForSystem(
 
 function packageHashes(
   value: unknown,
-): Effect.Effect<
-  Readonly<Record<SupportedSystem, string>>,
-  InvalidPackageHashConfigError
-> {
+): Effect.Effect<Readonly<Record<SupportedSystem, string>>, InvalidPackageHashConfigError> {
   return Effect.flatMap(
     objectRecord(value, "hashes"),
     (
       hashes: Readonly<Record<string, unknown>>,
-    ): Effect.Effect<
-      Readonly<Record<SupportedSystem, string>>,
-      InvalidPackageHashConfigError
-    > =>
+    ): Effect.Effect<Readonly<Record<SupportedSystem, string>>, InvalidPackageHashConfigError> =>
       Effect.all({
         "aarch64-darwin": hashForSystem(hashes, "aarch64-darwin"),
         "aarch64-linux": hashForSystem(hashes, "aarch64-linux"),
@@ -75,21 +62,15 @@ function packageHashConfig(
     ): Effect.Effect<PackageHashConfig, InvalidPackageHashConfigError> => {
       const { version } = object;
       if (typeof version !== "string" || version.length === 0) {
-        return Effect.fail(
-          new InvalidPackageHashConfigError("Missing package version"),
-        );
+        return Effect.fail(new InvalidPackageHashConfigError("Missing package version"));
       }
 
       return Effect.map(
         packageHashes(object["hashes"]),
-        (
-          hashes: Readonly<Record<SupportedSystem, string>>,
-        ): PackageHashConfig => (
-          {
-            hashes,
-            version,
-          }
-        ),
+        (hashes: Readonly<Record<SupportedSystem, string>>): PackageHashConfig => ({
+          hashes,
+          version,
+        }),
       );
     },
   );
@@ -99,9 +80,5 @@ function parsePackageHashConfig(value: unknown): PackageHashConfig {
   return Effect.runSync(packageHashConfig(value));
 }
 
-export {
-  InvalidPackageHashConfigError,
-  packageHashConfig,
-  parsePackageHashConfig,
-};
+export { InvalidPackageHashConfigError, packageHashConfig, parsePackageHashConfig };
 export type { PackageHashConfig };

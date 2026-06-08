@@ -15,10 +15,7 @@ function serializePackageHashConfig(config: PackageHashConfig): string {
   return `${JSON.stringify(config, [...JSON_FIELD_ORDER], JSON_INDENT)}\n`;
 }
 
-function writePackageHashConfig(
-  path: string,
-  config: PackageHashConfig,
-): Effect.Effect<void> {
+function writePackageHashConfig(path: string, config: PackageHashConfig): Effect.Effect<void> {
   return writeTextFile(path, serializePackageHashConfig(config));
 }
 
