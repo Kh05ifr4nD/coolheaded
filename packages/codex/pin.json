@@ -1,8 +1,8 @@
 {
-  "version": "0.137.0",
+  "version": "0.138.0",
   "hashes": {
-    "aarch64-darwin": "sha512-YjKmre7DlKslQVhSfocHscgxntZKaZc1LQySKh7q+hNL8jdK+c8nSWSePi583yKFNIxZ8Z/zCkewtjFNvOpQiQ==",
-    "aarch64-linux": "sha512-R3ZZymQQA1qpp6OpowN49XJ4scHwSckq7CjVvgmLv3bIs3X+F0XXK3xPFkC9vs2mX3wPekPi3ONpxx+yPAsJ6Q==",
-    "x86_64-linux": "sha512-n+26MUj8rekbEDUeYTGoD6HXuGS0MmLHn2LOn0i5qTNYIJvXV82B7cCLSTzVKF/RJxRMRl22se9Q0Z035JIVng=="
+    "aarch64-darwin": "sha512-kQyY2E25GVUUmNhHwUzg8CylA71SX/3H8Fy8h/hy6lu+uB/I5dWzwpQlcMqAFJToT8lPS6FjHX0UYOizpPle0g==",
+    "aarch64-linux": "sha512-ZMnhHRPJk+tx9PTVcjbWkNr+WniTUNDax3sQ2+WusV8XWJbdtFPA9v3kbcUqN5f5iw3Aqzgl/PvbHVJzum7cEg==",
+    "x86_64-linux": "sha512-/nLUrXRPthrSLZWtDGrn/LkREDJCz3oLoaEknYCVZVDmiMnoB3IEgBdmoLqeyor4uKOs0/AN0h/opqmJrRBf8w=="
   }
 }
