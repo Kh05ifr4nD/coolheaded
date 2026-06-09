@@ -4,10 +4,28 @@ import { run } from "./lib.ts";
 
 async function prepareUpdateBranch(branch: string): Promise<void> {
   await run(["git", "fetch", "origin", "main"], { capture: false });
-  await run(["git", "fetch", "origin", branch], {
+  const existingBranch = await run(["git", "fetch", "origin", branch], {
     capture: false,
     check: false,
   });
+  if (existingBranch.code === 0) {
+    await run(["git", "checkout", "-B", branch, `origin/${branch}`], {
+      capture: false,
+    });
+    const rebase = await run(["git", "rebase", "origin/main"], {
+      capture: false,
+      check: false,
+    });
+    if (rebase.code === 0) {
+      return;
+    }
+
+    await run(["git", "rebase", "--abort"], {
+      capture: false,
+      check: false,
+    });
+  }
+
   await run(["git", "checkout", "-B", branch, "origin/main"], {
     capture: false,
   });

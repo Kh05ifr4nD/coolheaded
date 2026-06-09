@@ -12,19 +12,11 @@ on:
         required: false
         type: boolean
         default: true
-  workflow_dispatch:
-    inputs:
-      packages:
-        description: "Space-separated package attrs"
-        required: false
-        default: ""
-      autoMerge:
-        description: "Enable GitHub auto-merge"
-        required: false
-        type: boolean
-        default: true
-  schedule:
-    - cron: "0 3 * * *"
+    secrets:
+      APP_PRIVATE_KEY:
+        required: true
+      APP_ID:
+        required: true
 jobs:
   discover:
     runs-on: ubuntu-latest
@@ -32,14 +24,6 @@ jobs:
       hasUpdates: ${{ steps.discover.outputs.hasUpdates }}
       matrix: ${{ steps.discover.outputs.matrix }}
     steps:
-      - name: Require update token
-        env:
-          COOLHEADED_UPDATE_TOKEN: ${{ secrets.COOLHEADED_UPDATE_TOKEN }}
-        run: |
-          test -n "$COOLHEADED_UPDATE_TOKEN" || {
-            echo "COOLHEADED_UPDATE_TOKEN repository secret is required"
-            exit 1
-          }
       - uses: actions/checkout@v6
         with:
           persist-credentials: false
@@ -60,18 +44,15 @@ jobs:
       issues: write
       pull-requests: write
     steps:
-      - name: Require update secrets
-        env:
-          COOLHEADED_UPDATE_TOKEN: ${{ secrets.COOLHEADED_UPDATE_TOKEN }}
-        run: |
-          test -n "$COOLHEADED_UPDATE_TOKEN" || {
-            echo "COOLHEADED_UPDATE_TOKEN repository secret is required"
-            exit 1
-          }
+      - id: app-token
+        uses: actions/create-github-app-token@v3
+        with:
+          app-id: ${{ secrets.APP_ID }}
+          private-key: ${{ secrets.APP_PRIVATE_KEY }}
       - uses: actions/checkout@v6
         with:
           fetch-depth: 0
-          token: ${{ secrets.COOLHEADED_UPDATE_TOKEN }}
+          token: ${{ steps.app-token.outputs.token }}
       - uses: cachix/install-nix-action@v31
       - run: |
           git config user.name "github-actions[bot]"
@@ -85,7 +66,7 @@ jobs:
         run: nix develop -c deno task check
       - if: steps.update.outputs.updated == 'true'
         env:
-          GH_TOKEN: ${{ secrets.COOLHEADED_UPDATE_TOKEN }}
+          GH_TOKEN: ${{ steps.app-token.outputs.token }}
         run: |
           cat > body.md <<'EOF'
           Automated package update for ${{ matrix.name }} from ${{ matrix.currentVersion }} to ${{ steps.update.outputs.newVersion }}.

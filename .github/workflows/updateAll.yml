@@ -1,6 +1,9 @@
-name: Update All
+name: Update Dependencies
 permissions:
   contents: read
+concurrency:
+  group: update-dependencies
+  cancel-in-progress: false
 on:
   workflow_dispatch:
     inputs:
@@ -29,25 +32,31 @@ on:
         type: boolean
         default: true
   schedule:
-    - cron: "0 2 * * *"
+    - cron: "0 0,4,18,21 * * *"
 jobs:
   packages:
     if: inputs.updatePackages != false
     uses: ./.github/workflows/updatePackages.yml
-    secrets: inherit
     with:
       autoMerge: ${{ inputs.autoMerge != false }}
       packages: ${{ inputs.packages }}
+    secrets:
+      APP_PRIVATE_KEY: ${{ secrets.APP_PRIVATE_KEY }}
+      APP_ID: ${{ secrets.APP_ID }}
   flakeInputs:
     if: inputs.updateFlakeInputs != false
     uses: ./.github/workflows/updateFlakeInputs.yml
-    secrets: inherit
     with:
       autoMerge: ${{ inputs.autoMerge != false }}
       inputs: ${{ inputs.inputs }}
+    secrets:
+      APP_PRIVATE_KEY: ${{ secrets.APP_PRIVATE_KEY }}
+      APP_ID: ${{ secrets.APP_ID }}
   denoDeps:
     if: inputs.updateDenoDeps != false
     uses: ./.github/workflows/updateDenoDeps.yml
-    secrets: inherit
     with:
       autoMerge: ${{ inputs.autoMerge != false }}
+    secrets:
+      APP_PRIVATE_KEY: ${{ secrets.APP_PRIVATE_KEY }}
+      APP_ID: ${{ secrets.APP_ID }}
