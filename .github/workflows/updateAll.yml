@@ -32,7 +32,7 @@ on:
         type: boolean
         default: true
   schedule:
-    - cron: "0 0,18 * * *"
+    - cron: "0 0,12 * * *"
 jobs:
   discover:
     runs-on: ubuntu-24.04
