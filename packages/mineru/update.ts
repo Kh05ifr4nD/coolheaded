@@ -29,6 +29,7 @@ dependencies = ["mineru[all]==${version}"]
 
 [tool.uv.extra-build-dependencies]
 pylatexenc = ["setuptools"]
+xgrammar = ["scikit_build_core"]
 `;
 }
 
