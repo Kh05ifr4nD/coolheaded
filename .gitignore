@@ -7,16 +7,15 @@
 !/lib/package.sh
 !/lib/nix/
 !/lib/nix/*.nix
-!/docs/
-!/docs/*.md
-!/nix/
-!/nix/*.nix
+!/flake/
+!/flake/*.nix
 !/packages/
 !/src/
 !/src/*.ts
 !/tests/
 !/tests/**
 
+!/.oxfmtrc.jsonc
 !/.oxlintrc.jsonc
 !/AGENTS.md
 !/deno.jsonc

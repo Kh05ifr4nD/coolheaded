@@ -7,6 +7,14 @@ let
 in
 {
   programs = {
+    actionlint = {
+      enable = true;
+      package = config.packages.actionlint;
+    };
+    deadnix = {
+      enable = true;
+      package = config.packages.deadnix;
+    };
     nixfmt = {
       enable = true;
       package = config.packages.nixfmt;
@@ -14,23 +22,6 @@ in
     };
     oxfmt = {
       enable = true;
-      includes = [
-        "*.css"
-        "*.html"
-        "*.js"
-        "*.json"
-        "*.jsonc"
-        "*.jsx"
-        "*.less"
-        "*.markdown"
-        "*.md"
-        "*.sass"
-        "*.scss"
-        "*.ts"
-        "*.tsx"
-        "*.yaml"
-        "*.yml"
-      ];
       excludes = rootMarkdown;
       package = config.packages.oxfmt;
     };

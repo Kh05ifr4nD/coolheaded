@@ -35,7 +35,6 @@ packageLib.mkGitHubReleaseBinaryPackage {
   };
 
   meta = {
-    homepage = "https://github.com/rhysd/actionlint";
     license = lib.licenses.mit;
     description = "Static checker for GitHub Actions workflow files";
   };

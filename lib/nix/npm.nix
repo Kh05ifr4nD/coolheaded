@@ -9,7 +9,7 @@ let
       packageName ? pname,
       tarballName ? npmTarballName packageName,
       targets ? base.systemTargets,
-      asset ? ({ version, target }: "${tarballName}-${version}.tgz"),
+      asset ? ({ version, ... }: "${tarballName}-${version}.tgz"),
       ...
     }@args:
     base.mkReleaseBinaryPackage (

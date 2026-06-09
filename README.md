@@ -6,12 +6,6 @@
 
 项目围绕 Deno、Oxc、Effect 等生态开发和维护，基于 fast-check 框架实现性质基测试。
 
-### Nixpkgs
-
-- [deno](https://github.com/denoland/deno)
-- [oxlint](https://github.com/oxc-project/oxc/tree/main/crates/oxlint)
-- [rumdl](https://github.com/rvben/rumdl)
-
 ### Flake
 
 - [flake-parts](https://github.com/hercules-ci/flake-parts)
@@ -19,7 +13,7 @@
 - [nixpkgs](https://github.com/NixOS/nixpkgs/tree/nixos-unstable)
 - [treefmt-nix](https://github.com/numtide/treefmt-nix)
 
-### NPM
+### Npm
 
 - [@jsr/std__assert](https://npmx.dev/package/@jsr/std__assert)
 - [@jsr/std__cli](https://npmx.dev/package/@jsr/std__cli)

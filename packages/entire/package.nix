@@ -15,7 +15,7 @@ packageLib.mkGitHubReleaseBinaryPackage {
     "entire_linux_arm64.tar.gz"
     "entire_linux_amd64.tar.gz"
   ];
-  asset = { target, version }: target;
+  asset = { target, ... }: target;
 
   nativeBuildInputs = [
     gzip

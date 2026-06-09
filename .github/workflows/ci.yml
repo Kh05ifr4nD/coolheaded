@@ -77,3 +77,19 @@ jobs:
           persist-credentials: false
       - uses: cachix/install-nix-action@v31
       - run: nix build ".#checks.$(nix eval --impure --raw --expr builtins.currentSystem).${{ matrix.package }}" --print-build-logs
+  buildMineruWithAllArm64:
+    runs-on: ubuntu-24.04-arm
+    steps:
+      - name: Require update token
+        env:
+          COOLHEADED_UPDATE_TOKEN: ${{ secrets.COOLHEADED_UPDATE_TOKEN }}
+        run: |
+          test -n "$COOLHEADED_UPDATE_TOKEN" || {
+            echo "COOLHEADED_UPDATE_TOKEN repository secret is required"
+            exit 1
+          }
+      - uses: actions/checkout@v6
+        with:
+          persist-credentials: false
+      - uses: cachix/install-nix-action@v31
+      - run: nix build ".#checks.aarch64-linux.mineruWithAll" --print-build-logs

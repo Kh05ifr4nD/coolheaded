@@ -51,7 +51,7 @@
         treefmtNix.flakeModule
       ];
 
-      flake.overlays.default = import ./nix/overlay.nix {
+      flake.overlays.default = import ./flake/overlay.nix {
         inherit
           bun2nix
           pyprojectBuildSystems
@@ -77,7 +77,7 @@
               in
               builtins.any (license: !(license.free or true)) licenses;
           };
-          checks = import ./nix/checks.nix {
+          checks = import ./flake/checks.nix {
             lib = pkgs.lib;
             inherit
               pkgs
@@ -87,8 +87,8 @@
               uv2nix
               ;
           };
-          devShells.default = import ./nix/devShell.nix { inherit config pkgs; };
-          packages = import ./nix/packages.nix {
+          devShells.default = import ./flake/devShell.nix { inherit config pkgs; };
+          packages = import ./flake/packages.nix {
             lib = pkgs.lib;
             inherit
               pkgs
@@ -98,8 +98,8 @@
               uv2nix
               ;
           };
-          pre-commit.settings = import ./nix/gitHooks.nix { inherit config pkgs; };
-          treefmt = import ./nix/treefmt.nix { inherit config pkgs; };
+          pre-commit.settings = import ./flake/gitHooks.nix { inherit config pkgs; };
+          treefmt = import ./flake/treefmt.nix { inherit config pkgs; };
         };
 
       systems = [

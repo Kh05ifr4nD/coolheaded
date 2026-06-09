@@ -17,7 +17,7 @@ packageLib.mkGitHubReleaseBinaryPackage {
   owner = "oxc-project";
   repo = "oxc";
   tag = { version, ... }: "apps_v${version}";
-  asset = { target, version }: "oxfmt-${target}.tar.gz";
+  asset = { target, ... }: "oxfmt-${target}.tar.gz";
 
   nativeBuildInputs = lib.optionals stdenv.hostPlatform.isLinux [ autoPatchelfHook ];
   buildInputs = lib.optionals stdenv.hostPlatform.isLinux [ stdenv.cc.cc.lib ];

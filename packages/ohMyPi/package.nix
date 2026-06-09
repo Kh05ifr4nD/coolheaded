@@ -12,7 +12,7 @@ packageLib.mkGitHubReleaseBinaryPackage {
   mainProgram = "omp";
 
   targets = packageLib.npmReleaseTargets;
-  asset = { target, version }: "omp-${target}";
+  asset = { target, ... }: "omp-${target}";
 
   nativeBuildInputs = [
     installShellFiles

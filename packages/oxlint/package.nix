@@ -29,7 +29,7 @@ packageLib.mkGitHubReleaseBinaryPackage {
   owner = "oxc-project";
   repo = "oxc";
   tag = { version, ... }: "apps_v${version}";
-  asset = { target, version }: "oxlint-${target}.tar.gz";
+  asset = { target, ... }: "oxlint-${target}.tar.gz";
 
   nativeBuildInputs = [
     makeWrapper

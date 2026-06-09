@@ -10,7 +10,7 @@ packageLib.mkGitHubReleaseBinaryPackage {
   owner = "colbymchenry";
 
   targets = packageLib.npmReleaseTargets;
-  asset = { target, version }: "codegraph-${target}.tar.gz";
+  asset = { target, ... }: "codegraph-${target}.tar.gz";
 
   nativeBuildInputs = [
     makeWrapper
