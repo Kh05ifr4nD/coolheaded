@@ -1,49 +1,81 @@
 name: CI
 permissions:
   contents: read
+concurrency:
+  group: ci-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
 on:
   pull_request:
-  push:
-    branches:
-      - main
+    paths:
+      - ".github/workflows/ci.yml"
+      - ".github/ci/**"
+      - ".oxfmtrc.jsonc"
+      - ".oxlintrc.jsonc"
+      - "AGENTS.md"
+      - "README.md"
+      - "deno.jsonc"
+      - "deno.lock"
+      - "flake.nix"
+      - "flake.lock"
+      - "flake/**"
+      - "lib/**"
+      - "packages/**"
+      - "src/**"
+      - "tests/**"
   workflow_dispatch:
+    inputs:
+      packages:
+        description: "Space-separated check attrs to build; empty with buildAllPackages=true builds all"
+        required: false
+        default: ""
+      buildAllPackages:
+        description: "Build all Linux check attrs"
+        required: false
+        type: boolean
+        default: false
+      buildMineruWithAllArm64:
+        description: "Build checks.aarch64-linux.mineruWithAll"
+        required: false
+        type: boolean
+        default: false
 jobs:
   discoverPackages:
+    if: github.event_name == 'workflow_dispatch' && (inputs.buildAllPackages || inputs.packages != '')
     runs-on: ubuntu-latest
     outputs:
       matrix: ${{ steps.discover.outputs.matrix }}
     steps:
-      - name: Require update token
-        env:
-          COOLHEADED_UPDATE_TOKEN: ${{ secrets.COOLHEADED_UPDATE_TOKEN }}
-        run: |
-          test -n "$COOLHEADED_UPDATE_TOKEN" || {
-            echo "COOLHEADED_UPDATE_TOKEN repository secret is required"
-            exit 1
-          }
       - uses: actions/checkout@v6
         with:
           persist-credentials: false
       - uses: cachix/install-nix-action@v31
       - id: discover
+        env:
+          PACKAGES: ${{ inputs.packages }}
         run: |
           system="$(nix eval --impure --raw --expr builtins.currentSystem)"
-          matrix="$(
+          available="$(
             nix eval --json ".#checks.$system" \
-              | jq -c '{include: (keys | map(select(. != "pre-commit" and . != "treefmt") | {package: .}))}'
+              | jq '[keys[] | select(. != "pre-commit" and . != "treefmt")]'
           )"
+          if [ -n "$PACKAGES" ]; then
+            matrix="$(
+              jq -cn --argjson available "$available" --arg packages "$PACKAGES" '
+                ($packages | split(" ") | map(select(length > 0))) as $requested
+                | ($requested - $available) as $missing
+                | if ($missing | length) > 0
+                  then error("unknown check attrs: \($missing | join(", "))")
+                  else {include: ($requested | map({package: .}))}
+                  end
+              '
+            )"
+          else
+            matrix="$(jq -cn --argjson available "$available" '{include: ($available | map({package: .}))}')"
+          fi
           printf 'matrix=%s\n' "$matrix" >> "$GITHUB_OUTPUT"
   check:
     runs-on: ubuntu-latest
     steps:
-      - name: Require update token
-        env:
-          COOLHEADED_UPDATE_TOKEN: ${{ secrets.COOLHEADED_UPDATE_TOKEN }}
-        run: |
-          test -n "$COOLHEADED_UPDATE_TOKEN" || {
-            echo "COOLHEADED_UPDATE_TOKEN repository secret is required"
-            exit 1
-          }
       - uses: actions/checkout@v6
         with:
           persist-credentials: false
@@ -59,35 +91,21 @@ jobs:
       - run: nix flake check --no-build
   buildPackages:
     needs: discoverPackages
+    if: github.event_name == 'workflow_dispatch' && (inputs.buildAllPackages || inputs.packages != '')
     runs-on: ubuntu-latest
     strategy:
       fail-fast: false
       matrix: ${{ fromJson(needs.discoverPackages.outputs.matrix) }}
     steps:
-      - name: Require update token
-        env:
-          COOLHEADED_UPDATE_TOKEN: ${{ secrets.COOLHEADED_UPDATE_TOKEN }}
-        run: |
-          test -n "$COOLHEADED_UPDATE_TOKEN" || {
-            echo "COOLHEADED_UPDATE_TOKEN repository secret is required"
-            exit 1
-          }
       - uses: actions/checkout@v6
         with:
           persist-credentials: false
       - uses: cachix/install-nix-action@v31
       - run: nix build ".#checks.$(nix eval --impure --raw --expr builtins.currentSystem).${{ matrix.package }}" --print-build-logs
   buildMineruWithAllArm64:
+    if: github.event_name == 'workflow_dispatch' && inputs.buildMineruWithAllArm64
     runs-on: ubuntu-24.04-arm
     steps:
-      - name: Require update token
-        env:
-          COOLHEADED_UPDATE_TOKEN: ${{ secrets.COOLHEADED_UPDATE_TOKEN }}
-        run: |
-          test -n "$COOLHEADED_UPDATE_TOKEN" || {
-            echo "COOLHEADED_UPDATE_TOKEN repository secret is required"
-            exit 1
-          }
       - uses: actions/checkout@v6
         with:
           persist-credentials: false
