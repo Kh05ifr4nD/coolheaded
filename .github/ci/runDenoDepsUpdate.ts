@@ -11,7 +11,7 @@ import {
   writeOutput,
 } from "./lib.ts";
 
-const DENO_DEPENDENCY_HASH_FILE_PATH = "nix/gitHooks.nix";
+const DENO_DEPENDENCY_HASH_FILE_PATH = "flake/gitHooks.nix";
 const FAKE_HASH = "sha256-AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA=";
 const LINUX_SYSTEMS = ["aarch64-linux", "x86_64-linux"] as const;
 
@@ -179,6 +179,7 @@ if (import.meta.main) {
 }
 
 export {
+  DENO_DEPENDENCY_HASH_FILE_PATH,
   denoDependencyHash,
   denoDependencyHashSystems,
   directSpecifierVersions,
@@ -186,5 +187,6 @@ export {
   replaceDenoDependencyHash,
   replaceDenoDependencyHashes,
   runDenoDepsUpdate,
+  updateDenoDependencyHash,
   versionChanges,
 };

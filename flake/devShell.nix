@@ -3,12 +3,7 @@
 pkgs.mkShellNoCC {
   packages = (
     with config;
-    pre-commit.settings.enabledPackages
-    ++ [ treefmt.build.wrapper ]
-    ++ (with packages; [
-      deno
-      oxlint
-    ])
+    pre-commit.settings.enabledPackages ++ [ treefmt.build.wrapper ] ++ (with packages; [ deno ])
   );
 
   shellHook = ''

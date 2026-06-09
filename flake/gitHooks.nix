@@ -28,7 +28,7 @@ let
         export HOME="$TMPDIR/home"
         mkdir -p "$DENO_DIR" "$HOME"
 
-        deno install --frozen --node-modules-dir=auto
+        deno install
         deno cache --lock=deno.lock --config=deno.jsonc .github/ci/**/*.ts packages/*/update.ts src/**/*.ts tests/**/*.ts
 
         mkdir -p "$out"
@@ -95,17 +95,31 @@ in
       settings.configPath = "deno.jsonc";
     };
 
+    actionlint = {
+      enable = true;
+      package = packages.actionlint;
+    };
+
+    deadnix = {
+      enable = true;
+      package = packages.deadnix;
+    };
+
     oxlint = {
       enable = true;
       package = packages.oxlint;
-      pass_filenames = false;
-      always_run = true;
       settings = {
         configPath = ".oxlintrc.jsonc";
         tsconfig = "tsconfig.json";
         typeAware = true;
         typeCheck = true;
       };
+    };
+
+    shellcheck = {
+      enable = true;
+      package = packages.shellcheck;
+      files = "^lib/package\\.sh$";
     };
 
     treefmt = {

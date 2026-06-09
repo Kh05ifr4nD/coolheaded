@@ -1,4 +1,4 @@
-# 冷静头脑
+# Coolheaded
 
 以智能体为中心的开发工具打包 Flake，通过 CI 自动更新，提供 overlay 与 homeModule。
 

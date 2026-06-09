@@ -1,5 +1,6 @@
 #!/usr/bin/env -S deno run --allow-env --allow-read --allow-run --allow-write
 
+import { DENO_DEPENDENCY_HASH_FILE_PATH, updateDenoDependencyHash } from "./runDenoDepsUpdate.ts";
 import {
   assertOnlyChangedFiles,
   changedFiles,
@@ -11,7 +12,10 @@ import {
 } from "./lib.ts";
 
 function packageAllowedFile(name: string, file: string): boolean {
-  return file.startsWith(`packages/${name}/`);
+  return (
+    file.startsWith(`packages/${name}/`) ||
+    (name === "deno" && file === DENO_DEPENDENCY_HASH_FILE_PATH)
+  );
 }
 
 async function runPackageUpdate(name: string, version?: string): Promise<void> {
@@ -35,10 +39,11 @@ async function runPackageUpdate(name: string, version?: string): Promise<void> {
     return;
   }
 
+  const system = await currentSystem();
+  const denoDependencyHashChange = name === "deno" ? await updateDenoDependencyHash(system) : "";
   const files = await changedFiles();
   assertOnlyChangedFiles(files, (file: string): boolean => packageAllowedFile(name, file));
 
-  const system = await currentSystem();
   const attr = `.#packages.${system}.${name}`;
   await writeOutput("updated", "true");
   await writeOutput("newVersion", await nixEvalRaw(`${attr}.version`));
@@ -46,7 +51,12 @@ async function runPackageUpdate(name: string, version?: string): Promise<void> {
     capture: true,
     check: false,
   });
-  await writeOutput("changelog", changelog.code === 0 ? changelog.stdout : "");
+  await writeOutput(
+    "changelog",
+    [changelog.code === 0 ? changelog.stdout : "", denoDependencyHashChange]
+      .filter((line: string): boolean => line.length > 0)
+      .join("\n"),
+  );
 }
 
 async function main(args: readonly string[]): Promise<void> {

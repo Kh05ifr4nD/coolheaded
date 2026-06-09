@@ -7,14 +7,6 @@ let
 in
 {
   programs = {
-    actionlint = {
-      enable = true;
-      package = config.packages.actionlint;
-    };
-    deadnix = {
-      enable = true;
-      package = config.packages.deadnix;
-    };
     nixfmt = {
       enable = true;
       package = config.packages.nixfmt;
@@ -29,11 +21,6 @@ in
       enable = true;
       includes = rootMarkdown;
       package = config.packages.rumdl;
-    };
-    shellcheck = {
-      enable = true;
-      includes = [ "lib/package.sh" ];
-      package = config.packages.shellcheck;
     };
     shfmt = {
       enable = true;
