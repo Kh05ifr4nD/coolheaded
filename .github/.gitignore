@@ -1,3 +1,5 @@
 !/ci/
 !/workflows/
 !/workflows/*.yml
+
+!/actionlint.yml

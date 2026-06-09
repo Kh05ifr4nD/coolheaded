@@ -1,0 +1,13 @@
+paths:
+  .github/workflows/updatePackages.yml:
+    ignore:
+      - 'input "client-id" is not defined in action "actions/create-github-app-token@v3"'
+      - 'missing input "app-id" which is required by action "actions/create-github-app-token@v3"'
+  .github/workflows/updateFlakeInputs.yml:
+    ignore:
+      - 'input "client-id" is not defined in action "actions/create-github-app-token@v3"'
+      - 'missing input "app-id" which is required by action "actions/create-github-app-token@v3"'
+  .github/workflows/updateDenoDeps.yml:
+    ignore:
+      - 'input "client-id" is not defined in action "actions/create-github-app-token@v3"'
+      - 'missing input "app-id" which is required by action "actions/create-github-app-token@v3"'

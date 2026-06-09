@@ -42,7 +42,6 @@ jobs:
       packages: ${{ inputs.packages }}
     secrets:
       APP_PRIVATE_KEY: ${{ secrets.APP_PRIVATE_KEY }}
-      APP_ID: ${{ secrets.APP_ID }}
   flakeInputs:
     if: inputs.updateFlakeInputs != false
     uses: ./.github/workflows/updateFlakeInputs.yml
@@ -51,7 +50,6 @@ jobs:
       inputs: ${{ inputs.inputs }}
     secrets:
       APP_PRIVATE_KEY: ${{ secrets.APP_PRIVATE_KEY }}
-      APP_ID: ${{ secrets.APP_ID }}
   denoDeps:
     if: inputs.updateDenoDeps != false
     uses: ./.github/workflows/updateDenoDeps.yml
@@ -59,4 +57,3 @@ jobs:
       autoMerge: ${{ inputs.autoMerge != false }}
     secrets:
       APP_PRIVATE_KEY: ${{ secrets.APP_PRIVATE_KEY }}
-      APP_ID: ${{ secrets.APP_ID }}
