@@ -25,16 +25,11 @@ on:
   workflow_dispatch:
     inputs:
       packages:
-        description: "Space-separated check attrs to build; empty with buildAllPackages=true builds all"
+        description: "Space-separated check attrs to build across all supported Linux runners"
         required: false
         default: ""
       buildAllPackages:
-        description: "Build all Linux check attrs"
-        required: false
-        type: boolean
-        default: false
-      buildMineruWithAllArm64:
-        description: "Build checks.aarch64-linux.mineruWithAll"
+        description: "Build all Linux check attrs on every supported Linux runner"
         required: false
         type: boolean
         default: false
@@ -53,25 +48,66 @@ jobs:
         env:
           PACKAGES: ${{ inputs.packages }}
         run: |
-          system="$(nix eval --impure --raw --expr builtins.currentSystem)"
-          available="$(
-            nix eval --json ".#checks.$system" \
+          systems='[
+            {"system":"x86_64-linux","runner":"ubuntu-latest"},
+            {"system":"aarch64-linux","runner":"ubuntu-24.04-arm"}
+          ]'
+          x86_64_linux_available="$(
+            nix eval --json .#checks.x86_64-linux \
               | jq '[keys[] | select(. != "pre-commit" and . != "treefmt")]'
           )"
+          aarch64_linux_available="$(
+            nix eval --json .#checks.aarch64-linux \
+              | jq '[keys[] | select(. != "pre-commit" and . != "treefmt")]'
+          )"
+          available_union="$(
+            jq -cn \
+              --argjson x86 "$x86_64_linux_available" \
+              --argjson arm "$aarch64_linux_available" \
+              '$x86 + $arm | unique'
+          )"
           if [ -n "$PACKAGES" ]; then
-            matrix="$(
-              jq -cn --argjson available "$available" --arg packages "$PACKAGES" '
-                ($packages | split(" ") | map(select(length > 0))) as $requested
-                | ($requested - $available) as $missing
-                | if ($missing | length) > 0
-                  then error("unknown check attrs: \($missing | join(", "))")
-                  else {include: ($requested | map({package: .}))}
-                  end
+            requested="$(
+              jq -cn --arg packages "$PACKAGES" '
+                $packages | split(" ") | map(select(length > 0)) | unique
               '
             )"
+            missing="$(
+              jq -cn \
+                --argjson requested "$requested" \
+                --argjson available "$available_union" \
+                '$requested - $available'
+            )"
+            if [ "$(jq 'length' <<<"$missing")" -gt 0 ]; then
+              echo "unknown check attrs: $(jq -r 'join(", ")' <<<"$missing")" >&2
+              exit 1
+            fi
           else
-            matrix="$(jq -cn --argjson available "$available" '{include: ($available | map({package: .}))}')"
+            requested="$available_union"
           fi
+          matrix="$(
+            jq -cn \
+              --argjson systems "$systems" \
+              --argjson requested "$requested" \
+              --argjson x86 "$x86_64_linux_available" \
+              --argjson arm "$aarch64_linux_available" '
+                {
+                  include: [
+                    $systems[] as $target
+                    | (
+                        if $target.system == "x86_64-linux" then $x86 else $arm end
+                      ) as $available
+                    | $requested[]
+                    | select($available | index(.))
+                    | {
+                        system: $target.system,
+                        runner: $target.runner,
+                        package: .
+                      }
+                  ]
+                }
+              '
+          )"
           printf 'matrix=%s\n' "$matrix" >> "$GITHUB_OUTPUT"
   check:
     runs-on: ubuntu-latest
@@ -92,7 +128,7 @@ jobs:
   buildPackages:
     needs: discoverPackages
     if: github.event_name == 'workflow_dispatch' && (inputs.buildAllPackages || inputs.packages != '')
-    runs-on: ubuntu-latest
+    runs-on: ${{ matrix.runner }}
     strategy:
       fail-fast: false
       matrix: ${{ fromJson(needs.discoverPackages.outputs.matrix) }}
@@ -101,13 +137,4 @@ jobs:
         with:
           persist-credentials: false
       - uses: cachix/install-nix-action@v31
-      - run: nix build ".#checks.$(nix eval --impure --raw --expr builtins.currentSystem).${{ matrix.package }}" --print-build-logs
-  buildMineruWithAllArm64:
-    if: github.event_name == 'workflow_dispatch' && inputs.buildMineruWithAllArm64
-    runs-on: ubuntu-24.04-arm
-    steps:
-      - uses: actions/checkout@v6
-        with:
-          persist-credentials: false
-      - uses: cachix/install-nix-action@v31
-      - run: nix build ".#checks.aarch64-linux.mineruWithAll" --print-build-logs
+      - run: nix build ".#checks.${{ matrix.system }}.${{ matrix.package }}" --print-build-logs
