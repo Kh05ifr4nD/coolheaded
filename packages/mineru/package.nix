@@ -31,6 +31,11 @@ let
       sitePackages = "lib/python${python313.pythonVersion}/site-packages";
       enableCudaPackageOverrides = withAll && packageLib.stdenv.hostPlatform.isLinux;
       enableNvidiaWheelOverrides = withAll && packageLib.system == "x86_64-linux";
+      torchLibraryPath = "${final.torch}/${sitePackages}/torch/lib";
+      torchBuildInputs = [
+        final.torch
+      ]
+      ++ lib.optionals enableNvidiaWheelOverrides (with cudaPackages; [ cuda_cudart ]);
     in
     {
       opencv-python-headless = prev.opencv-python-headless.overrideAttrs (oldAttrs: {
@@ -55,11 +60,46 @@ let
             nccl
           ]);
       });
+      numba = prev.numba.overrideAttrs (oldAttrs: {
+        buildInputs = (oldAttrs.buildInputs or [ ]) ++ [ tbb ];
+      });
+      torchaudio = prev.torchaudio.overrideAttrs (oldAttrs: {
+        buildInputs =
+          (oldAttrs.buildInputs or [ ])
+          ++ torchBuildInputs
+          ++ [
+            ffmpeg_4
+            ffmpeg_6
+            sox
+          ];
+        preFixup = (oldAttrs.preFixup or "") + ''
+          addAutoPatchelfSearchPath ${torchLibraryPath}
+        '';
+        autoPatchelfIgnoreMissingDeps = [
+          "libavcodec.so.59"
+          "libavdevice.so.59"
+          "libavfilter.so.8"
+          "libavformat.so.59"
+          "libavutil.so.57"
+        ];
+      });
+      torchvision = prev.torchvision.overrideAttrs (oldAttrs: {
+        buildInputs = (oldAttrs.buildInputs or [ ]) ++ torchBuildInputs;
+        preFixup = (oldAttrs.preFixup or "") + ''
+          addAutoPatchelfSearchPath ${torchLibraryPath}
+        '';
+      });
+      vllm = prev.vllm.overrideAttrs (oldAttrs: {
+        buildInputs = (oldAttrs.buildInputs or [ ]) ++ torchBuildInputs;
+        preFixup = (oldAttrs.preFixup or "") + ''
+          addAutoPatchelfSearchPath ${torchLibraryPath}
+        '';
+        autoPatchelfIgnoreMissingDeps = [ "libcuda.so.1" ];
+      });
     }
     // lib.optionalAttrs enableNvidiaWheelOverrides (
       let
         nvidiaLibraryPath = package: component: "${package}/${sitePackages}/nvidia/${component}/lib";
-        torchLibraryPath = "${final.torch}/${sitePackages}/torch/lib";
         torchNvidiaLibraries = [
           (nvidiaLibraryPath final."nvidia-cublas-cu12" "cublas")
           (nvidiaLibraryPath final."nvidia-cuda-cupti-cu12" "cuda_cupti")
@@ -74,10 +114,6 @@ let
           (nvidiaLibraryPath final."nvidia-cusparselt-cu12" "cusparselt")
           (nvidiaLibraryPath final."nvidia-nccl-cu12" "nccl")
           (nvidiaLibraryPath final."nvidia-nvjitlink-cu12" "nvjitlink")
-        ];
-        torchBuildInputs = with cudaPackages; [
-          cuda_cudart
-          final.torch
         ];
       in
       {
@@ -107,9 +143,6 @@ let
             addAutoPatchelfSearchPath ${nvidiaLibraryPath final."nvidia-nvjitlink-cu12" "nvjitlink"}
           '';
         });
-        numba = prev.numba.overrideAttrs (oldAttrs: {
-          buildInputs = (oldAttrs.buildInputs or [ ]) ++ [ tbb ];
-        });
         torch = prev.torch.overrideAttrs (oldAttrs: {
           buildInputs = (oldAttrs.buildInputs or [ ]) ++ [
             final."nvidia-cublas-cu12"
@@ -130,39 +163,6 @@ let
             (oldAttrs.preFixup or "")
             + "\n"
             + lib.concatMapStringsSep "\n" (path: "addAutoPatchelfSearchPath ${path}") torchNvidiaLibraries;
-          autoPatchelfIgnoreMissingDeps = [ "libcuda.so.1" ];
-        });
-        torchaudio = prev.torchaudio.overrideAttrs (oldAttrs: {
-          buildInputs =
-            (oldAttrs.buildInputs or [ ])
-            ++ torchBuildInputs
-            ++ [
-              ffmpeg_4
-              ffmpeg_6
-              sox
-            ];
-          preFixup = (oldAttrs.preFixup or "") + ''
-            addAutoPatchelfSearchPath ${torchLibraryPath}
-          '';
-          autoPatchelfIgnoreMissingDeps = [
-            "libavcodec.so.59"
-            "libavdevice.so.59"
-            "libavfilter.so.8"
-            "libavformat.so.59"
-            "libavutil.so.57"
-          ];
-        });
-        torchvision = prev.torchvision.overrideAttrs (oldAttrs: {
-          buildInputs = (oldAttrs.buildInputs or [ ]) ++ torchBuildInputs;
-          preFixup = (oldAttrs.preFixup or "") + ''
-            addAutoPatchelfSearchPath ${torchLibraryPath}
-          '';
-        });
-        vllm = prev.vllm.overrideAttrs (oldAttrs: {
-          buildInputs = (oldAttrs.buildInputs or [ ]) ++ torchBuildInputs;
-          preFixup = (oldAttrs.preFixup or "") + ''
-            addAutoPatchelfSearchPath ${torchLibraryPath}
-          '';
           autoPatchelfIgnoreMissingDeps = [ "libcuda.so.1" ];
         });
         xformers = prev.xformers.overrideAttrs (oldAttrs: {
