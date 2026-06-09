@@ -33,9 +33,16 @@ let
       enableNvidiaWheelOverrides = withAll && packageLib.system == "x86_64-linux";
       torchLibraryPath = "${final.torch}/${sitePackages}/torch/lib";
       torchBuildInputs = [
+        cudaPackages.cuda_cudart
         final.torch
+      ];
+      vllmMissingDeps = [
+        "libcuda.so.1"
       ]
-      ++ lib.optionals enableNvidiaWheelOverrides (with cudaPackages; [ cuda_cudart ]);
+      ++ lib.optionals (packageLib.system == "aarch64-linux") [
+        "libc10_cuda.so"
+        "libtorch_cuda.so"
+      ];
     in
     {
       opencv-python-headless = prev.opencv-python-headless.overrideAttrs (oldAttrs: {
@@ -94,7 +101,7 @@ let
         preFixup = (oldAttrs.preFixup or "") + ''
           addAutoPatchelfSearchPath ${torchLibraryPath}
         '';
-        autoPatchelfIgnoreMissingDeps = [ "libcuda.so.1" ];
+        autoPatchelfIgnoreMissingDeps = vllmMissingDeps;
       });
     }
     // lib.optionalAttrs enableNvidiaWheelOverrides (
