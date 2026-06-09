@@ -35,7 +35,7 @@ on:
     - cron: "0 0,4,18,21 * * *"
 jobs:
   discover:
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     outputs:
       hasUpdates: ${{ steps.discover.outputs.hasUpdates }}
       matrix: ${{ steps.discover.outputs.matrix }}
@@ -55,7 +55,7 @@ jobs:
   update:
     needs: discover
     if: needs.discover.outputs.hasUpdates == 'true'
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     strategy:
       fail-fast: false
       matrix: ${{ fromJson(needs.discover.outputs.matrix) }}
@@ -136,7 +136,7 @@ jobs:
             --auto-merge "${{ github.event_name != 'workflow_dispatch' || inputs.autoMerge != false }}"
   summary:
     needs: [discover, update]
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     if: always() && needs.discover.outputs.hasUpdates == 'true'
     steps:
       - run: |

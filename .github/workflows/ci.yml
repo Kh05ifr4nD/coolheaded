@@ -36,7 +36,7 @@ on:
 jobs:
   discoverPackages:
     if: github.event_name == 'workflow_dispatch' && (inputs.buildAllPackages || inputs.packages != '')
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     outputs:
       matrix: ${{ steps.discover.outputs.matrix }}
     steps:
@@ -49,7 +49,7 @@ jobs:
           PACKAGES: ${{ inputs.packages }}
         run: |
           systems='[
-            {"system":"x86_64-linux","runner":"ubuntu-latest"},
+            {"system":"x86_64-linux","runner":"ubuntu-24.04"},
             {"system":"aarch64-linux","runner":"ubuntu-24.04-arm"}
           ]'
           x86_64_linux_available="$(
@@ -110,7 +110,7 @@ jobs:
           )"
           printf 'matrix=%s\n' "$matrix" >> "$GITHUB_OUTPUT"
   check:
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     steps:
       - uses: actions/checkout@v6
         with:
