@@ -29,7 +29,8 @@ let
     final: prev:
     let
       sitePackages = "lib/python${python313.pythonVersion}/site-packages";
-      enableCudaWheelOverrides = withAll && packageLib.system == "x86_64-linux";
+      enableCudaPackageOverrides = withAll && packageLib.stdenv.hostPlatform.isLinux;
+      enableNvidiaWheelOverrides = withAll && packageLib.system == "x86_64-linux";
     in
     {
       opencv-python-headless = prev.opencv-python-headless.overrideAttrs (oldAttrs: {
@@ -38,7 +39,24 @@ let
         '';
       });
     }
-    // lib.optionalAttrs enableCudaWheelOverrides (
+    // lib.optionalAttrs enableCudaPackageOverrides {
+      cupy-cuda12x = prev.cupy-cuda12x.overrideAttrs (oldAttrs: {
+        buildInputs =
+          (oldAttrs.buildInputs or [ ])
+          ++ (with cudaPackages; [
+            cuda_cudart
+            cuda_nvrtc
+            libcublas
+            libcufft
+            libcurand
+            libcusolver
+            libcusparse
+            libcutensor
+            nccl
+          ]);
+      });
+    }
+    // lib.optionalAttrs enableNvidiaWheelOverrides (
       let
         nvidiaLibraryPath = package: component: "${package}/${sitePackages}/nvidia/${component}/lib";
         torchLibraryPath = "${final.torch}/${sitePackages}/torch/lib";
@@ -63,21 +81,6 @@ let
         ];
       in
       {
-        cupy-cuda12x = prev.cupy-cuda12x.overrideAttrs (oldAttrs: {
-          buildInputs =
-            (oldAttrs.buildInputs or [ ])
-            ++ (with cudaPackages; [
-              cuda_cudart
-              cuda_nvrtc
-              libcublas
-              libcufft
-              libcurand
-              libcusolver
-              libcusparse
-              libcutensor
-              nccl
-            ]);
-        });
         nvidia-cufile-cu12 = prev.nvidia-cufile-cu12.overrideAttrs (oldAttrs: {
           buildInputs = (oldAttrs.buildInputs or [ ]) ++ [ rdma-core ];
         });
