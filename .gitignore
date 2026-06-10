@@ -2,6 +2,11 @@
 !.gitignore
 !.gitkeep
 
+!/.agents/
+!/.agents/skills/
+!/.agents/skills/*/
+!/.agents/skills/*/SKILL.md
+
 !/.github/
 !/lib/
 !/lib/package.sh

@@ -1,8 +1,8 @@
 import {
   denoRuntime,
-  requestedOrLatestVersion,
   runUpdateScript,
   scriptPath,
+  updateNewerPinVersion,
   writeTextFile,
 } from "coolheaded/updateScript.ts";
 import { Effect } from "effect";
@@ -86,8 +86,10 @@ function serializePin(pin: RtkPin): string {
 }
 
 function updateProgram(args: readonly string[]): Effect.Effect<void, Error> {
-  return Effect.flatMap(
-    requestedOrLatestVersion(args, latestVersion),
+  return updateNewerPinVersion(
+    args,
+    latestVersion,
+    PIN_FILE_PATH,
     (version: string): Effect.Effect<void, Error> =>
       Effect.flatMap(
         fetchFromGitHubHash(

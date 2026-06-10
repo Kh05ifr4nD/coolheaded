@@ -1,4 +1,5 @@
 import { Effect } from "effect";
+import { compareVersions } from "./version.ts";
 
 interface RuntimeWritable {
   readonly write: (bytes: unknown) => Promise<number>;
@@ -118,6 +119,57 @@ function readTextFile(path: string): Effect.Effect<string, UpdateError> {
   });
 }
 
+function currentPinVersion(pinPath: string): Effect.Effect<string, Error> {
+  return Effect.flatMap(
+    readTextFile(pinPath),
+    (contents: string): Effect.Effect<string, Error> =>
+      Effect.flatMap(
+        Effect.try({
+          catch: (): UpdateError => new UpdateError(`Failed to parse ${pinPath}`),
+          try: (): unknown => JSON.parse(contents),
+        }),
+        (pin: unknown): Effect.Effect<string, Error> => {
+          if (!isRecord(pin) || typeof pin["version"] !== "string" || pin["version"].length === 0) {
+            return Effect.fail(new UpdateError(`${pinPath} does not contain a string version`));
+          }
+
+          return Effect.succeed(pin["version"]);
+        },
+      ),
+  );
+}
+
+function requestedOrNewerPinVersion(
+  args: readonly string[],
+  latestVersion: () => Effect.Effect<string, Error>,
+  pinPath: string,
+): Effect.Effect<string | undefined, Error> {
+  const [version] = args;
+
+  if (typeof version === "string" && version.length > 0) {
+    return Effect.succeed(version);
+  }
+
+  return Effect.flatMap(currentPinVersion(pinPath), (currentVersion: string) =>
+    Effect.map(latestVersion(), (candidateVersion: string): string | undefined =>
+      compareVersions(currentVersion, candidateVersion) < 0 ? candidateVersion : undefined,
+    ),
+  );
+}
+
+function updateNewerPinVersion(
+  args: readonly string[],
+  latestVersion: () => Effect.Effect<string, Error>,
+  pinPath: string,
+  updateVersion: (version: string) => Effect.Effect<void, Error>,
+): Effect.Effect<void, Error> {
+  return Effect.flatMap(
+    requestedOrNewerPinVersion(args, latestVersion, pinPath),
+    (version: string | undefined): Effect.Effect<void, Error> =>
+      version === undefined ? Effect.void : updateVersion(version),
+  );
+}
+
 function commandOutput(
   command: string,
   args: readonly string[],
@@ -154,6 +206,10 @@ function commandOutput(
   });
 }
 
+function formatNixFile(path: string): Effect.Effect<void, UpdateError> {
+  return Effect.asVoid(commandOutput("nix", ["fmt", "--", path]));
+}
+
 function errorMessage(error: unknown): string {
   if (error instanceof Error) {
     return error.message;
@@ -186,11 +242,14 @@ function runUpdateScript(
 export {
   commandOutput,
   denoRuntime,
+  formatNixFile,
   readTextFile,
   requestedOrLatestVersion,
+  requestedOrNewerPinVersion,
   requestedVersion,
   runUpdateScript,
   scriptPath,
   UpdateError,
+  updateNewerPinVersion,
   writeTextFile,
 };

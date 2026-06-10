@@ -2,6 +2,7 @@ import {
   denoDependencyHash,
   denoDependencyHashSystems,
   directSpecifierVersions,
+  isDenoDependencyHashMismatch,
   parsedNixHash,
   replaceDenoDependencyHash,
   replaceDenoDependencyHashes,
@@ -86,13 +87,14 @@ describe("Deno deps update helpers", (): void => {
   });
 
   it("parses fixed-output hashes from Nix mismatch output", (): void => {
-    assertEquals(
-      parsedNixHash(`
-        error: hash mismatch in fixed-output derivation
-                 specified: sha256-AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA=
-                      got:    sha256-X6QHXER9IFm04+VKZpAO21iEOckyn9Rkg35knjjM+E8=
-      `),
-      "sha256-X6QHXER9IFm04+VKZpAO21iEOckyn9Rkg35knjjM+E8=",
-    );
+    const output = `
+      error: hash mismatch in fixed-output derivation '/nix/store/example-coolheaded-deno-dependencies.drv'
+               specified: sha256-AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA=
+                    got:    sha256-X6QHXER9IFm04+VKZpAO21iEOckyn9Rkg35knjjM+E8=
+    `;
+
+    assertEquals(parsedNixHash(output), "sha256-X6QHXER9IFm04+VKZpAO21iEOckyn9Rkg35knjjM+E8=");
+    assertEquals(isDenoDependencyHashMismatch(output), true);
+    assertEquals(isDenoDependencyHashMismatch("error: hash mismatch in another derivation"), false);
   });
 });

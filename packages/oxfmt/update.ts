@@ -1,4 +1,4 @@
-import { requestedOrLatestVersion, runUpdateScript, scriptPath } from "coolheaded/updateScript.ts";
+import { runUpdateScript, scriptPath, updateNewerPinVersion } from "coolheaded/updateScript.ts";
 import { Effect } from "effect";
 import type { SupportedSystem } from "coolheaded/system.ts";
 import { latestGitHubVersion } from "coolheaded/latestVersion.ts";
@@ -16,6 +16,7 @@ function latestVersion(): Effect.Effect<string, Error> {
   return latestGitHubVersion({
     owner: "oxc-project",
     repo: "oxc",
+    source: "releases",
     versionPattern: /^apps_v(?<version>\d+\.\d+\.\d+)$/u,
   });
 }
@@ -33,8 +34,10 @@ function releaseAssetUrls(version: string): Readonly<Record<SupportedSystem, str
 }
 
 function updateProgram(args: readonly string[]): Effect.Effect<void, Error> {
-  return Effect.flatMap(
-    requestedOrLatestVersion(args, latestVersion),
+  return updateNewerPinVersion(
+    args,
+    latestVersion,
+    PIN_FILE_PATH,
     (version: string): Effect.Effect<void, Error> =>
       Effect.flatMap(
         releaseHashConfig(version, releaseAssetUrls(version), "sha256Digest"),

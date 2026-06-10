@@ -56,10 +56,23 @@ let
     always_run = true;
   };
 
-  gitHook = entry: {
-    enable = true;
-    package = pkgs.git;
-    inherit entry;
+  appendDco = pkgs.writeShellApplication {
+    name = "append-dco";
+    runtimeInputs = [ pkgs.git ];
+    text = ''
+      set -eu
+
+      commitMessageFile="$1"
+      ident="$(git var GIT_COMMITTER_IDENT)"
+      signer="''${ident%%>*}>"
+
+      git interpret-trailers \
+        --in-place \
+        --if-exists addIfDifferent \
+        --if-missing add \
+        --trailer "Signed-off-by: $signer" \
+        "$commitMessageFile"
+    '';
   };
 in
 
@@ -67,22 +80,13 @@ in
   rootSrc = pkgs.lib.mkForce preCommitRootSrc;
 
   hooks = {
-    appendDco =
-      gitHook ''
-        ${pkgs.runtimeShell} -eu -c '
-          commitMessageFile="$1"
-          signer="$(git var GIT_COMMITTER_IDENT | sed "s/>.*/>/")"
-
-          git interpret-trailers \
-            --in-place \
-            --if-exists doNothing \
-            --trailer "Signed-off-by: $signer" \
-            "$commitMessageFile"
-        ' appendDco
-      ''
-      // {
-        stages = [ "prepare-commit-msg" ];
-      };
+    appendDco = {
+      enable = true;
+      name = "Append DCO sign-off";
+      package = appendDco;
+      entry = "append-dco";
+      stages = [ "prepare-commit-msg" ];
+    };
 
     denoCheck = denoTaskHook "check" [ ];
     denoTest = denoTaskHook "test" [ ];

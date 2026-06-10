@@ -10,6 +10,7 @@ import {
   run,
   writeOutput,
 } from "./lib.ts";
+import { compareVersions } from "coolheaded/version.ts";
 
 function packageAllowedFile(name: string, file: string): boolean {
   return (
@@ -18,7 +19,27 @@ function packageAllowedFile(name: string, file: string): boolean {
   );
 }
 
-async function runPackageUpdate(name: string, version?: string): Promise<void> {
+function assertVersionAdvanced(
+  name: string,
+  currentVersion: string | undefined,
+  newVersion: string,
+): void {
+  if (
+    currentVersion !== undefined &&
+    currentVersion.length > 0 &&
+    compareVersions(currentVersion, newVersion) >= 0
+  ) {
+    throw new Error(
+      `${name} produced package changes without a version advance: ${currentVersion} -> ${newVersion}`,
+    );
+  }
+}
+
+async function runPackageUpdate(
+  name: string,
+  version?: string,
+  currentVersion = Deno.env.get("CURRENT_VERSION"),
+): Promise<void> {
   await run(
     [
       "deno",
@@ -45,8 +66,11 @@ async function runPackageUpdate(name: string, version?: string): Promise<void> {
   assertOnlyChangedFiles(files, (file: string): boolean => packageAllowedFile(name, file));
 
   const attr = `.#packages.${system}.${name}`;
+  const newVersion = await nixEvalRaw(`${attr}.version`);
+  assertVersionAdvanced(name, currentVersion, newVersion);
+
   await writeOutput("updated", "true");
-  await writeOutput("newVersion", await nixEvalRaw(`${attr}.version`));
+  await writeOutput("newVersion", newVersion);
   const changelog = await run(["nix", "eval", "--raw", `${attr}.meta.changelog`], {
     capture: true,
     check: false,

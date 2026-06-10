@@ -21,15 +21,6 @@ let
 in
 packages
 // {
-  codeReviewGraphWithAll = packages.codeReviewGraph.override { withAll = true; };
-  codeReviewGraphWithCommunities = packages.codeReviewGraph.override { withCommunities = true; };
-  codeReviewGraphWithEmbeddings = packages.codeReviewGraph.override { withEmbeddings = true; };
-  codeReviewGraphWithEnrichment = packages.codeReviewGraph.override { withEnrichment = true; };
-  codeReviewGraphWithEval = packages.codeReviewGraph.override { withEval = true; };
-  codeReviewGraphWithGoogleEmbeddings = packages.codeReviewGraph.override {
-    withGoogleEmbeddings = true;
-  };
-  codeReviewGraphWithWiki = packages.codeReviewGraph.override { withWiki = true; };
   codexWithoutRipgrep = packages.codex.override { withRipgrep = false; };
   oxlintWithoutTypecheck = packages.oxlint.override { withTypecheck = false; };
 }

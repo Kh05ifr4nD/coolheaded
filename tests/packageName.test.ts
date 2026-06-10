@@ -24,15 +24,15 @@ describe("parsePackageName", (): void => {
   it("rejects hyphenated package directory names", (): void => {
     assertThrows(
       (): void => {
-        parsePackageName("code-review-graph");
+        parsePackageName("example-package");
       },
       Error,
-      "Invalid package name: code-review-graph",
+      "Invalid package name: example-package",
     );
   });
 
   it("accepts camelCase package directory names", (): void => {
-    assertEquals(parsePackageName("codeReviewGraph"), "codeReviewGraph");
+    assertEquals(parsePackageName("examplePackage"), "examplePackage");
 
     fc.assert(
       fc.property(fc.stringMatching(PACKAGE_NAME_PATTERN), (name: string): void => {

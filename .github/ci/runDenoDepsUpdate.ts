@@ -105,6 +105,12 @@ function parsedNixHash(output: string): string {
   return match.groups["hash"];
 }
 
+function isDenoDependencyHashMismatch(output: string): boolean {
+  return (
+    output.includes("coolheaded-deno-dependencies") && /got:\s+sha256-[A-Za-z0-9+/=]+/u.test(output)
+  );
+}
+
 async function buildDenoDependencyHash(system: string): Promise<string> {
   const result = await run(
     ["nix", "build", `.#checks.${system}.pre-commit`, "--no-link", "--print-build-logs"],
@@ -183,6 +189,7 @@ export {
   denoDependencyHash,
   denoDependencyHashSystems,
   directSpecifierVersions,
+  isDenoDependencyHashMismatch,
   parsedNixHash,
   replaceDenoDependencyHash,
   replaceDenoDependencyHashes,

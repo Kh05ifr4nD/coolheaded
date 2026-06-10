@@ -1,8 +1,9 @@
 import {
   commandOutput,
-  requestedOrLatestVersion,
+  formatNixFile,
   runUpdateScript,
   scriptPath,
+  updateNewerPinVersion,
   writeTextFile,
 } from "coolheaded/updateScript.ts";
 import { Effect } from "effect";
@@ -89,8 +90,10 @@ function serializePin(pin: QmdPin): string {
 }
 
 function updateProgram(args: readonly string[]): Effect.Effect<void, Error> {
-  return Effect.flatMap(
-    requestedOrLatestVersion(args, latestVersion),
+  return updateNewerPinVersion(
+    args,
+    latestVersion,
+    PIN_FILE_PATH,
     (version: string): Effect.Effect<void, Error> =>
       Effect.flatMap(
         Effect.all({
@@ -104,7 +107,7 @@ function updateProgram(args: readonly string[]): Effect.Effect<void, Error> {
             REPOSITORY_ROOT_PATH,
           ),
         }),
-        ({ bunNix, hash }): Effect.Effect<void> =>
+        ({ bunNix, hash }): Effect.Effect<void, Error> =>
           Effect.zipRight(
             writeTextFile(
               PIN_FILE_PATH,
@@ -113,7 +116,10 @@ function updateProgram(args: readonly string[]): Effect.Effect<void, Error> {
                 version,
               }),
             ),
-            writeTextFile(GENERATED_PACKAGE_FILE_PATH, `${bunNix.trim()}\n`),
+            Effect.zipRight(
+              writeTextFile(GENERATED_PACKAGE_FILE_PATH, `${bunNix.trim()}\n`),
+              formatNixFile(GENERATED_PACKAGE_FILE_PATH),
+            ),
           ),
       ),
   );

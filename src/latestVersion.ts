@@ -1,19 +1,60 @@
+import { compareVersions, isSemver } from "./version.ts";
 import { Effect } from "effect";
 import { UpdateError } from "./updateScript.ts";
 
 interface LatestGitHubVersionOptions {
   readonly owner: string;
   readonly repo: string;
+  readonly source?: GitHubVersionSource;
   readonly versionPattern?: Readonly<RegExp>;
 }
 
-const SEMVER_PATTERN = /^(?<version>\d+\.\d+\.\d+(?:[-+][0-9A-Za-z.-]+)?)$/u;
+type GitHubVersionSource = "releases" | "tags";
+
+interface RuntimeEnv {
+  readonly get: (name: string) => string | undefined;
+}
+
+interface RuntimeWithEnv {
+  readonly env: RuntimeEnv;
+}
+
+type FetchHeaders = Readonly<Record<string, string>>;
 
 function isRecord(value: unknown): value is Readonly<Record<string, unknown>> {
   return typeof value === "object" && value !== null && !Array.isArray(value);
 }
 
-function parseJsonResponse(url: string): Effect.Effect<unknown, UpdateError> {
+function isRuntimeWithEnv(value: unknown): value is RuntimeWithEnv {
+  if (typeof value !== "object" || value === null || !("env" in value)) {
+    return false;
+  }
+
+  const { env } = value;
+  return typeof env === "object" && env !== null && "get" in env && typeof env.get === "function";
+}
+
+function envValue(name: string): string | undefined {
+  const runtime = Reflect.get(globalThis, "Deno");
+
+  return isRuntimeWithEnv(runtime) ? runtime.env.get(name) : undefined;
+}
+
+function gitHubHeaders(): FetchHeaders {
+  const token = envValue("GH_TOKEN") ?? envValue("GITHUB_TOKEN");
+
+  return token === undefined || token.length === 0
+    ? { accept: "application/vnd.github+json" }
+    : {
+        accept: "application/vnd.github+json",
+        authorization: `Bearer ${token}`,
+      };
+}
+
+function parseJsonResponse(
+  url: string,
+  headers?: FetchHeaders,
+): Effect.Effect<unknown, UpdateError> {
   return Effect.tryPromise({
     catch(error: unknown): UpdateError {
       if (error instanceof UpdateError) {
@@ -23,7 +64,7 @@ function parseJsonResponse(url: string): Effect.Effect<unknown, UpdateError> {
       return new UpdateError(`Failed to fetch ${url}`);
     },
     async try(): Promise<unknown> {
-      const response = await globalThis.fetch(url);
+      const response = await globalThis.fetch(url, headers === undefined ? undefined : { headers });
       if (!response.ok) {
         throw new UpdateError(`Failed to fetch ${url}: HTTP ${response.status}`);
       }
@@ -82,28 +123,7 @@ function normalizeGitHubVersion(name: string, pattern: Readonly<RegExp>): string
   const match = pattern.exec(name);
   const version = match?.groups?.["version"];
 
-  return typeof version === "string" && SEMVER_PATTERN.test(version) ? version : undefined;
-}
-
-function semverParts(version: string): readonly number[] {
-  return version
-    .split(/[.+-]/u)
-    .slice(0, 3)
-    .map((part: string): number => Number.parseInt(part, 10));
-}
-
-function compareSemver(left: string, right: string): number {
-  const leftParts = semverParts(left);
-  const rightParts = semverParts(right);
-
-  for (const index of [0, 1, 2]) {
-    const diff = (leftParts[index] ?? 0) - (rightParts[index] ?? 0);
-    if (diff !== 0) {
-      return diff;
-    }
-  }
-
-  return left.localeCompare(right);
+  return typeof version === "string" && isSemver(version) ? version : undefined;
 }
 
 function refNames(value: unknown): readonly string[] {
@@ -126,15 +146,17 @@ function latestGitHubVersion(
   options: Readonly<LatestGitHubVersionOptions>,
 ): Effect.Effect<string, Error> {
   const pattern = options.versionPattern ?? /^v(?<version>\d+\.\d+\.\d+)$/u;
-  const tagsUrl = `https://api.github.com/repos/${options.owner}/${options.repo}/tags?per_page=100`;
+  const source = options.source ?? "tags";
+  const endpoint = source === "releases" ? "releases" : "tags";
+  const refsUrl = `https://api.github.com/repos/${options.owner}/${options.repo}/${endpoint}?per_page=100`;
 
   return Effect.flatMap(
-    parseJsonResponse(tagsUrl),
-    (tags: unknown): Effect.Effect<string, Error> => {
-      const versions = refNames(tags)
+    parseJsonResponse(refsUrl, gitHubHeaders()),
+    (refs: unknown): Effect.Effect<string, Error> => {
+      const versions = refNames(refs)
         .map((name: string): string | undefined => normalizeGitHubVersion(name, pattern))
         .filter((version: string | undefined): version is string => version !== undefined)
-        .toSorted(compareSemver);
+        .toSorted(compareVersions);
       const version = versions.at(-1);
 
       return typeof version === "string"

@@ -83,6 +83,9 @@ jobs:
         run: nix develop -c deno run --allow-run .github/ci/prepareUpdateBranch.ts "$UPDATE_BRANCH"
       - id: update
         name: Run update
+        env:
+          CURRENT_VERSION: ${{ matrix.currentVersion }}
+          GITHUB_TOKEN: ${{ steps.app-token.outputs.token }}
         run: |
           case "${{ matrix.type }}" in
             package)
