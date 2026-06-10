@@ -1,9 +1,12 @@
 {
   lib,
   packageLib,
+  cmake,
+  fetchPypi,
   ffmpeg_4,
   ffmpeg_6,
   python313,
+  python313Packages,
   rdma-core,
   sox,
   tbb,
@@ -44,11 +47,38 @@ let
         "libc10_cuda.so"
         "libtorch_cuda.so"
       ];
+      nanobind_2_5 = python313Packages.nanobind.overridePythonAttrs (_oldAttrs: rec {
+        version = "2.5.0";
+        src = fetchPypi {
+          pname = "nanobind";
+          inherit version;
+          hash = "sha256-zIQS6UrP+iCjaRkTgrzbtvv7MC5HXofKz/lRbVECOhU=";
+        };
+      });
     in
     {
       opencv-python-headless = prev.opencv-python-headless.overrideAttrs (oldAttrs: {
         postFixup = (oldAttrs.postFixup or "") + ''
           rm -rf "$out/${sitePackages}/cv2"
+        '';
+      });
+      xgrammar = prev.xgrammar.overrideAttrs (oldAttrs: {
+        nativeBuildInputs = (oldAttrs.nativeBuildInputs or [ ]) ++ [
+          cmake
+          nanobind_2_5
+        ];
+        postPatch = (oldAttrs.postPatch or "") + ''
+          if [ -f CMakeLists.txt ]; then
+            substituteInPlace CMakeLists.txt \
+              --replace-fail " -flto=auto" ""
+            substituteInPlace cpp/nanobind/CMakeLists.txt \
+              --replace-fail "nanobind_add_module(xgrammar_bindings LTO nanobind.cc)" \
+                "nanobind_add_module(xgrammar_bindings nanobind.cc)"
+          fi
+        '';
+        preBuild = (oldAttrs.preBuild or "") + ''
+          export PYTHONPATH="${nanobind_2_5}/${sitePackages}:''${PYTHONPATH:-}"
+          export CMAKE_PREFIX_PATH="${nanobind_2_5}/${sitePackages}/nanobind/cmake:''${CMAKE_PREFIX_PATH:-}"
         '';
       });
     }
