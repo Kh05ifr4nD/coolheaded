@@ -94,7 +94,41 @@ packageLib.mkGitHubReleaseBinaryPackage {
     "TMPDIR"
   ];
 
-  installCheck.helpContains = "opencode";
+  installCheck.extra = ''
+    raw="$out/libexec/opencode/bin/opencode"
+    wrapped="$out/bin/.opencode-wrapped"
+    public="$out/bin/opencode"
+
+    echo "diag: system=${stdenv.hostPlatform.system}"
+    echo "diag: raw=$raw"
+    echo "diag: wrapped=$wrapped"
+    echo "diag: public=$public"
+    echo "diag: raw interpreter=$(patchelf --print-interpreter "$raw" 2>&1 || true)"
+    echo "diag: raw rpath=$(patchelf --print-rpath "$raw" 2>&1 || true)"
+    echo "diag: raw needed=$(patchelf --print-needed "$raw" 2>&1 | tr '\n' ' ' || true)"
+
+    runDiag() {
+      label="$1"
+      shift
+      echo "diag: begin $label"
+      set +e
+      "$@" > "$label.out" 2>&1
+      status="$?"
+      set -e
+      echo "diag: status $label=$status"
+      sed -n '1,120p' "$label.out" | sed "s/^/diag: output $label: /"
+      echo "diag: end $label"
+    }
+
+    runDiag public-version "$public" --version
+    runDiag wrapped-version "$wrapped" --version
+    runDiag raw-version "$raw" --version
+    runDiag public-help "$public" --help
+    runDiag wrapped-help "$wrapped" --help
+    runDiag raw-help "$raw" --help
+
+    failCheck "intentional opencode arm diagnostic failure"
+  '';
 
   meta = {
     license = lib.licenses.mit;
