@@ -4,10 +4,10 @@ import { latestNpmVersion } from "coolheaded/latestVersion.ts";
 import { npmPackageHashConfig } from "coolheaded/npmPackageUpdater.ts";
 import { writePackageHashConfig } from "coolheaded/pinJson.ts";
 
-const LAZYCODEX_NPM_PACKAGE_NAME = "lazycodex-ai";
+const LAZYCODEX_AI_NPM_PACKAGE_NAME = "lazycodex-ai";
 const PIN_FILE_PATH = scriptPath("pin.json", import.meta.url);
 function latestVersion(): Effect.Effect<string, Error> {
-  return latestNpmVersion(LAZYCODEX_NPM_PACKAGE_NAME);
+  return latestNpmVersion(LAZYCODEX_AI_NPM_PACKAGE_NAME);
 }
 
 function updateProgram(args: readonly string[]): Effect.Effect<void, Error> {
@@ -17,7 +17,7 @@ function updateProgram(args: readonly string[]): Effect.Effect<void, Error> {
     PIN_FILE_PATH,
     (version: string): Effect.Effect<void, Error> =>
       Effect.flatMap(
-        npmPackageHashConfig(LAZYCODEX_NPM_PACKAGE_NAME, version),
+        npmPackageHashConfig(LAZYCODEX_AI_NPM_PACKAGE_NAME, version),
         (config): Effect.Effect<void> => writePackageHashConfig(PIN_FILE_PATH, config),
       ),
   );

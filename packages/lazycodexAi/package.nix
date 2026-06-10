@@ -7,7 +7,7 @@
   packageLib,
 }:
 let
-  pname = "lazycodex";
+  pname = "lazycodex-ai";
 
   platformMap = {
     aarch64-darwin = {
@@ -32,7 +32,7 @@ let
   platform = packageLib.releaseTarget pname platformMap;
 
   packageName = "lazycodex-ai";
-  packageRoot = "${placeholder "out"}/libexec/lazycodex";
+  packageRoot = "${placeholder "out"}/libexec/lazycodex-ai";
   nodePath = lib.makeBinPath [ nodejs ];
 in
 packageLib.mkNpmTarballPackage {
@@ -58,7 +58,7 @@ packageLib.mkNpmTarballPackage {
 
     . ${../../lib/package.sh}
 
-    packageRoot="$out/libexec/lazycodex"
+    packageRoot="$out/libexec/lazycodex-ai"
     mkdir -p "$packageRoot" "$out/bin"
     cp -R . "$packageRoot/"
     rm -f "$packageRoot/env-vars"
@@ -71,7 +71,6 @@ packageLib.mkNpmTarballPackage {
     makeWrapper "${nodejs}/bin/node" "$out/bin/lazycodex-ai" \
       --add-flags "$packageRoot/packages/omo-codex/scripts/install-local.mjs" \
       --prefix PATH : "${nodePath}"
-    ln -s "$out/bin/lazycodex-ai" "$out/bin/lazycodex"
 
     runHook postInstall
   '';
@@ -90,13 +89,13 @@ packageLib.mkNpmTarballPackage {
       *) failCheck "unexpected lazycodex-ai --dry-run output" ;;
     esac
 
-    test -L "$out/bin/lazycodex" || failCheck "expected lazycodex launcher symlink"
+    test ! -e "$out/bin/lazycodex" || failCheck "unexpected lazycodex compatibility launcher"
     assertFileExists "${packageRoot}/packages/omo-codex/marketplace.json"
     assertFileExists "${packageRoot}/packages/omo-codex/scripts/install-local.mjs"
   '';
 
   meta = {
-    homepage = "https://github.com/code-yeongyu/lazycodex";
+    homepage = "https://www.npmjs.com/package/lazycodex-ai";
     license = lib.licenses.unfree;
     description = "The one and only agent harness for complex codebases. Project memory, planning, execution, and verified completion inside Codex";
   };

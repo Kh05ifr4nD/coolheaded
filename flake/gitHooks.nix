@@ -4,9 +4,9 @@ let
   inherit (config) packages;
 
   denoDependenciesHashes = {
-    aarch64-darwin = "sha256-H0SlO/fxcwXUYqLEij2ICwejpN1BpoL7veR8FW2glR8=";
-    aarch64-linux = "sha256-RhTHreWb4T6jy+PoHkz/izPJYDdm0oGUQ3lwcrDzPKg=";
-    x86_64-linux = "sha256-RhTHreWb4T6jy+PoHkz/izPJYDdm0oGUQ3lwcrDzPKg=";
+    aarch64-darwin = "sha256-6eGk10qVbBJGBkfOtinVvd2Q2OF/OXcKHPqgN1vxZ88=";
+    aarch64-linux = "sha256-7rP5w3PXuGWTXhuBbFnO3cBKCPz3U+B/ScvBebSJ4w0=";
+    x86_64-linux = "sha256-7rP5w3PXuGWTXhuBbFnO3cBKCPz3U+B/ScvBebSJ4w0=";
   };
 
   denoDependencies =
@@ -84,7 +84,7 @@ in
       enable = true;
       name = "Append DCO sign-off";
       package = appendDco;
-      entry = "append-dco";
+      entry = pkgs.lib.getExe appendDco;
       stages = [ "prepare-commit-msg" ];
     };
 
