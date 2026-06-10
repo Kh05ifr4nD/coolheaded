@@ -5,6 +5,7 @@
   pyprojectBuildSystems,
   pyprojectNix,
   uv2nix,
+  wrapBuddy,
 }:
 
 import ./packageSet.nix {
@@ -15,5 +16,6 @@ import ./packageSet.nix {
     pyprojectBuildSystems
     pyprojectNix
     uv2nix
+    wrapBuddy
     ;
 }

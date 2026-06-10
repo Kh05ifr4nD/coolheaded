@@ -105,6 +105,7 @@ let
       versionCheckProgram ? "${placeholder "out"}/bin/${mainProgram}",
       versionCheckProgramArg ? "--version",
       versionCheckKeepEnvironment ? [ ],
+      wrapBuddyExtraNeeded ? [ ],
     }:
     stdenv.mkDerivation (
       {
@@ -131,6 +132,7 @@ let
           versionCheckKeepEnvironment
           versionCheckProgram
           versionCheckProgramArg
+          wrapBuddyExtraNeeded
           ;
         installCheckPhase = mkInstallCheckPhase (
           { executable = "$out/bin/${mainProgram}"; } // installCheck

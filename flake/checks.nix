@@ -5,6 +5,7 @@
   pyprojectBuildSystems,
   pyprojectNix,
   uv2nix,
+  wrapBuddy,
 }:
 
 let
@@ -16,6 +17,7 @@ let
       pyprojectBuildSystems
       pyprojectNix
       uv2nix
+      wrapBuddy
       ;
   };
 in

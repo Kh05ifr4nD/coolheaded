@@ -1,13 +1,12 @@
 {
   lib,
   stdenv,
-  autoPatchelfHook,
   fzf,
   makeWrapper,
   packageLib,
-  patchelf,
   ripgrep,
   unzip,
+  wrapBuddy,
   writeShellScriptBin,
 }:
 let
@@ -30,16 +29,14 @@ packageLib.mkGitHubReleaseBinaryPackage {
     makeWrapper
   ]
   ++ lib.optionals stdenv.hostPlatform.isDarwin [ unzip ]
-  ++ lib.optionals stdenv.hostPlatform.isLinux [
-    autoPatchelfHook
-    patchelf
-  ];
+  ++ lib.optionals stdenv.hostPlatform.isLinux [ wrapBuddy ];
   nativeInstallCheckInputs = lib.optionals stdenv.hostPlatform.isDarwin [
     (writeShellScriptBin "sysctl" ''
       echo 0
     '')
   ];
   buildInputs = lib.optionals stdenv.hostPlatform.isLinux [ stdenv.cc.cc.lib ];
+  wrapBuddyExtraNeeded = lib.optionals stdenv.hostPlatform.isLinux [ "libstdc++.so.6" ];
 
   unpackPhase =
     if stdenv.hostPlatform.isDarwin then
@@ -60,27 +57,11 @@ packageLib.mkGitHubReleaseBinaryPackage {
 
     packageRoot="$out/libexec/opencode"
     install -Dm755 opencode "$packageRoot/bin/opencode"
-    makeWrapper "$packageRoot/bin/opencode" "$out/bin/.opencode-wrapped" \
+    makeWrapper "$packageRoot/bin/opencode" "$out/bin/opencode" \
       --set OPENCODE_DISABLE_AUTOUPDATE true \
       --suffix PATH : ${lib.escapeShellArg wrapperPath}
-    cat > "$out/bin/opencode" <<EOF
-    #!${stdenv.shell}
-    if [ "\''${1-}" = "--version" ] || [ "\''${1-}" = "-v" ]; then
-      printf '%s\n' "$version"
-      exit 0
-    fi
-
-    exec "$out/bin/.opencode-wrapped" "\$@"
-    EOF
-    chmod 755 "$out/bin/opencode"
 
     runHook postInstall
-  '';
-
-  preFixup = lib.optionalString stdenv.hostPlatform.isLinux ''
-    if ! patchelf --print-needed "$out/libexec/opencode/bin/opencode" | grep -qx libstdc++.so.6; then
-      patchelf --add-needed libstdc++.so.6 "$out/libexec/opencode/bin/opencode"
-    fi
   '';
 
   preVersionCheck = ''
