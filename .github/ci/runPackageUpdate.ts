@@ -61,7 +61,9 @@ async function runPackageUpdate(
   }
 
   const system = await currentSystem();
-  const denoDependencyHashChange = name === "deno" ? await updateDenoDependencyHash(system) : "";
+  if (name === "deno") {
+    await updateDenoDependencyHash(system);
+  }
   const files = await changedFiles();
   assertOnlyChangedFiles(files, (file: string): boolean => packageAllowedFile(name, file));
 
@@ -75,12 +77,7 @@ async function runPackageUpdate(
     capture: true,
     check: false,
   });
-  await writeOutput(
-    "changelog",
-    [changelog.code === 0 ? changelog.stdout : "", denoDependencyHashChange]
-      .filter((line: string): boolean => line.length > 0)
-      .join("\n"),
-  );
+  await writeOutput("changelog", changelog.code === 0 ? changelog.stdout : "");
 }
 
 async function main(args: readonly string[]): Promise<void> {

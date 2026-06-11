@@ -136,7 +136,7 @@ async function buildDenoDependencyHashWithFakeHash(
   }
 }
 
-async function updateDenoDependencyHash(system: string): Promise<string> {
+async function updateDenoDependencyHash(system: string): Promise<void> {
   const systems = denoDependencyHashSystems(system);
   const original = await Deno.readTextFile(DENO_DEPENDENCY_HASH_FILE_PATH);
   const fake = replaceDenoDependencyHash(original, system, FAKE_HASH);
@@ -146,15 +146,13 @@ async function updateDenoDependencyHash(system: string): Promise<string> {
     DENO_DEPENDENCY_HASH_FILE_PATH,
     replaceDenoDependencyHashes(original, systems, hash),
   );
-
-  return `${systems.join(", ")}: ${denoDependencyHash(original, system)} -> ${hash}`;
 }
 
 async function runDenoDepsUpdate(): Promise<void> {
   const before = directSpecifierVersions(await readJson("deno.lock"));
   await run(["deno", "install", "--frozen=false"], { capture: false });
   const lockChanged = await gitHasChanges(["deno.lock"]);
-  const hashChange = await updateDenoDependencyHash(await currentSystem());
+  await updateDenoDependencyHash(await currentSystem());
 
   if (!lockChanged && !(await gitHasChanges([DENO_DEPENDENCY_HASH_FILE_PATH]))) {
     await writeOutput("updated", "false");
@@ -168,12 +166,7 @@ async function runDenoDepsUpdate(): Promise<void> {
   const after = directSpecifierVersions(await readJson("deno.lock"));
   await writeOutput("updated", "true");
   await writeOutput("newVersion", "deno dependencies");
-  await writeOutput(
-    "changelog",
-    [versionChanges(before, after), `Deno dependency cache: ${hashChange}`]
-      .filter((line: string): boolean => line.length > 0)
-      .join("\n"),
-  );
+  await writeOutput("changelog", versionChanges(before, after));
 }
 
 async function main(): Promise<void> {

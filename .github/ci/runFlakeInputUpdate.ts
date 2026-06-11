@@ -32,14 +32,14 @@ async function lockedRevision(name: string): Promise<string> {
   return typeof rev === "string" ? rev.slice(0, 8) : "unknown";
 }
 
-async function repairDenoDependencyHashIfNeeded(system: string): Promise<string> {
+async function repairDenoDependencyHashIfNeeded(system: string): Promise<void> {
   const result = await run(
     ["nix", "build", `.#checks.${system}.pre-commit`, "--no-link", "--print-build-logs"],
     { check: false },
   );
 
   if (result.code === 0) {
-    return "";
+    return;
   }
 
   const output = `${result.stdout}\n${result.stderr}`;
@@ -47,7 +47,7 @@ async function repairDenoDependencyHashIfNeeded(system: string): Promise<string>
     throw new Error(output);
   }
 
-  return await updateDenoDependencyHash(system);
+  await updateDenoDependencyHash(system);
 }
 
 async function runFlakeInputUpdate(name: string): Promise<void> {
@@ -58,7 +58,7 @@ async function runFlakeInputUpdate(name: string): Promise<void> {
     return;
   }
 
-  const hashChange = await repairDenoDependencyHashIfNeeded(await currentSystem());
+  await repairDenoDependencyHashIfNeeded(await currentSystem());
 
   assertOnlyChangedFiles(
     await changedFiles(),
@@ -66,10 +66,7 @@ async function runFlakeInputUpdate(name: string): Promise<void> {
   );
   await writeOutput("updated", "true");
   await writeOutput("newVersion", await lockedRevision(name));
-  await writeOutput(
-    "changelog",
-    hashChange.length === 0 ? "" : `Deno dependency cache: ${hashChange}`,
-  );
+  await writeOutput("changelog", "");
 }
 
 async function main(args: readonly string[]): Promise<void> {

@@ -227,6 +227,6 @@ packageLib.mkUvApplication {
     homepage = "https://github.com/opendatalab/MinerU";
     license = lib.licenses.unfreeRedistributable;
     description = "High-accuracy document parsing engine for LLM · RAG · Agent workflows";
-    changelog = "https://github.com/opendatalab/MinerU/releases/tag/magic_pdf-${pin.version}";
+    changelog = "https://github.com/opendatalab/MinerU/releases/tag/mineru-${pin.version}-released";
   };
 }
