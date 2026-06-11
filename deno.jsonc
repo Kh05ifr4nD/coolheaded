@@ -17,17 +17,12 @@
     "strictFunctionTypes": true,
     "strictNullChecks": true,
     "strictPropertyInitialization": true,
-    "types": [
-      "./tsReset.d.ts"
-    ],
+    "types": ["./tsReset.d.ts"],
     "useUnknownInCatchVariables": true,
-    "verbatimModuleSyntax": true
+    "verbatimModuleSyntax": true,
   },
   "fmt": {
-    "exclude": [
-      "AGENTS.md",
-      "README.md"
-    ]
+    "exclude": ["AGENTS.md", "README.md"],
   },
   "imports": {
     "@jsr/std__assert": "npm:@jsr/std__assert",
@@ -40,7 +35,7 @@
     "coolheaded/": "./src/",
     "coolheadedCi/": "./.github/ci/",
     "effect": "npm:effect",
-    "fast-check": "npm:fast-check"
+    "fast-check": "npm:fast-check",
   },
   "lint": {
     "rules": {
@@ -59,7 +54,7 @@
         "react-no-danger",
         "react-no-danger-with-children",
         "react-rules-of-hooks",
-        "require-await"
+        "require-await",
       ],
       "include": [
         "ban-untagged-todo",
@@ -83,17 +78,13 @@
         "no-undef",
         "no-useless-rename",
         "single-var-declarator",
-        "triple-slash-reference"
+        "triple-slash-reference",
       ],
-      "tags": [
-        "jsr",
-        "recommended",
-        "workspace"
-      ]
-    }
+      "tags": ["jsr", "recommended", "workspace"],
+    },
   },
   "lock": {
-    "frozen": true
+    "frozen": true,
   },
   "nodeModulesDir": "auto",
   "tasks": {
@@ -102,11 +93,9 @@
     "lint": "deno lint && deno task lint:oxlint",
     "lint:oxlint": "oxlint",
     "test": "deno test --allow-env --allow-read --allow-run --allow-write",
-    "update:deno-deps": "deno run --allow-env --allow-read --allow-run --allow-write .github/ci/runDenoDepsUpdate.ts"
+    "update:deno-deps": "deno run --allow-env --allow-read --allow-run --allow-write .github/ci/runDenoDepsUpdate.ts",
   },
   "test": {
-    "include": [
-      "tests/**/*.ts"
-    ]
-  }
+    "include": ["tests/**/*.ts"],
+  },
 }

@@ -98,9 +98,15 @@ function pinJsonHasCanonicalOrder(contents: string): boolean {
   }
 
   const lines = contents.split("\n");
+  const binaryVersionIndex = lines.findIndex((line: string): boolean =>
+    line.startsWith('  "binaryVersion": "'),
+  );
   const hashesIndex = lines.indexOf('  "hashes": {');
   if (hashesIndex === -1) {
     return true;
+  }
+  if (binaryVersionIndex !== -1 && binaryVersionIndex !== hashesIndex - 1) {
+    return false;
   }
 
   return (

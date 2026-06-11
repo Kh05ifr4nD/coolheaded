@@ -2,6 +2,7 @@
   fetchurl,
   lib,
   packageDirectory ? null,
+  removeReferencesTo,
   stdenv,
   versionCheckHook,
 }:
@@ -54,6 +55,10 @@ let
 
   readPin = pinPath: builtins.fromJSON (builtins.readFile pinPath);
 
+  removeSelfReferences = paths: ''
+    remove-references-to -t "$out" ${lib.concatStringsSep " " paths}
+  '';
+
   mkInstallCheckPhase =
     {
       executable,
@@ -86,6 +91,7 @@ let
       src,
       meta,
       buildInputs ? [ ],
+      binaryVersion ? version,
       doInstallCheck ? canExecute,
       dontUnpack ? false,
       executablePath ? if dontUnpack then "$src" else mainProgram,
@@ -107,6 +113,13 @@ let
       versionCheckKeepEnvironment ? [ ],
       wrapBuddyExtraNeeded ? [ ],
     }:
+    let
+      effectivePreVersionCheck =
+        lib.optionalString (binaryVersion != version) ''
+          version=${lib.escapeShellArg binaryVersion}
+        ''
+        + preVersionCheck;
+    in
     stdenv.mkDerivation (
       {
         inherit
@@ -148,7 +161,9 @@ let
       // lib.optionalAttrs (unpackPhase != null) { inherit unpackPhase; }
       // lib.optionalAttrs (preFixup != "") { inherit preFixup; }
       // lib.optionalAttrs (postFixup != "") { inherit postFixup; }
-      // lib.optionalAttrs (preVersionCheck != "") { inherit preVersionCheck; }
+      // lib.optionalAttrs (effectivePreVersionCheck != "") {
+        preVersionCheck = effectivePreVersionCheck;
+      }
     );
 
   mkReleaseBinaryPackage =
@@ -178,6 +193,7 @@ let
       ]
       // {
         inherit pname version;
+        binaryVersion = args.binaryVersion or pin.binaryVersion or version;
 
         src = fetchurl {
           url = url {
@@ -222,6 +238,8 @@ in
     packageShell
     readPin
     releaseTarget
+    removeReferencesTo
+    removeSelfReferences
     rustTargetTriples
     stdenv
     supportedSystems

@@ -36,6 +36,24 @@ function hashForSystem(
   return Effect.succeed(hash);
 }
 
+function optionalNonEmptyString(
+  object: Readonly<Record<string, unknown>>,
+  fieldName: string,
+): Effect.Effect<string | undefined, InvalidPackageHashConfigError> {
+  const value = object[fieldName];
+  if (value === undefined) {
+    return Effect.succeed(void 0);
+  }
+
+  if (typeof value !== "string" || value.length === 0) {
+    return Effect.fail(
+      new InvalidPackageHashConfigError(`${fieldName} must be a non-empty string`),
+    );
+  }
+
+  return Effect.succeed(value);
+}
+
 function packageHashes(
   value: unknown,
 ): Effect.Effect<Readonly<Record<SupportedSystem, string>>, InvalidPackageHashConfigError> {
@@ -66,9 +84,18 @@ function packageHashConfig(
       }
 
       return Effect.map(
-        packageHashes(object["hashes"]),
-        (hashes: Readonly<Record<SupportedSystem, string>>): PackageHashConfig => ({
-          hashes,
+        Effect.all({
+          binaryVersion: optionalNonEmptyString(object, "binaryVersion"),
+          hashes: packageHashes(object["hashes"]),
+        }),
+        (
+          config: Readonly<{
+            binaryVersion: string | undefined;
+            hashes: Readonly<Record<SupportedSystem, string>>;
+          }>,
+        ): PackageHashConfig => ({
+          ...(config.binaryVersion === undefined ? {} : { binaryVersion: config.binaryVersion }),
+          hashes: config.hashes,
           version,
         }),
       );

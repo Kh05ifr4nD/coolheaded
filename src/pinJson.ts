@@ -5,6 +5,7 @@ import { writeTextFile } from "./updateScript.ts";
 const JSON_INDENT = 2;
 const JSON_FIELD_ORDER = [
   "version",
+  "binaryVersion",
   "hashes",
   "aarch64-darwin",
   "aarch64-linux",

@@ -38,6 +38,7 @@ let
         callPackage
         callPackages
         fetchurl
+        removeReferencesTo
         stdenv
         versionCheckHook
         ;

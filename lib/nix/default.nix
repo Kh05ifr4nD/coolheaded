@@ -6,6 +6,7 @@
   packageDirectory ? null,
   pyprojectBuildSystems,
   pyprojectNix,
+  removeReferencesTo,
   stdenv,
   uv2nix,
   versionCheckHook,
@@ -17,6 +18,7 @@ let
       fetchurl
       lib
       packageDirectory
+      removeReferencesTo
       stdenv
       versionCheckHook
       ;

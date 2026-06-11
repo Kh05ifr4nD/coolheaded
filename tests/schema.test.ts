@@ -27,6 +27,31 @@ describe("parsePackageHashConfig", (): void => {
     assertEquals(config.hashes["x86_64-linux"], "sha512-c");
   });
 
+  it("accepts package pins with a distinct binary version", (): void => {
+    const config = parsePackageHashConfig({
+      binaryVersion: "0.54.0",
+      hashes: COMPLETE_HASHES,
+      version: "1.69.0",
+    });
+
+    assertEquals(config.binaryVersion, "0.54.0");
+    assertEquals(config.version, "1.69.0");
+  });
+
+  it("rejects invalid binary versions", (): void => {
+    assertThrows(
+      (): void => {
+        parsePackageHashConfig({
+          binaryVersion: "",
+          hashes: COMPLETE_HASHES,
+          version: "1.69.0",
+        });
+      },
+      Error,
+      "binaryVersion must be a non-empty string",
+    );
+  });
+
   it("rejects missing platform pins", (): void => {
     assertThrows(
       (): void => {

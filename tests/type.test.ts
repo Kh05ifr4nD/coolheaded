@@ -14,8 +14,9 @@ assertType<
   IsExact<
     PackageHashConfig,
     {
-      readonly version: string;
+      readonly binaryVersion?: string;
       readonly hashes: ReadonlyHashes;
+      readonly version: string;
     }
   >
 >(true);

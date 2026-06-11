@@ -22,10 +22,6 @@ packageLib.mkGitHubReleaseBinaryPackage {
   nativeBuildInputs = lib.optionals stdenv.hostPlatform.isLinux [ autoPatchelfHook ];
   buildInputs = lib.optionals stdenv.hostPlatform.isLinux [ stdenv.cc.cc.lib ];
 
-  preVersionCheck = ''
-    version=0.53.0
-  '';
-
   unpackPhase = ''
     runHook preUnpack
     tar -xzf "$src"

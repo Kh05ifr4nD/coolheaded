@@ -9,6 +9,11 @@ interface LatestGitHubVersionOptions {
   readonly versionPattern?: Readonly<RegExp>;
 }
 
+interface GitHubRelease {
+  readonly name: string;
+  readonly tagName: string;
+}
+
 type GitHubVersionSource = "releases" | "tags";
 
 interface RuntimeEnv {
@@ -142,6 +147,33 @@ function refNames(value: unknown): readonly string[] {
   });
 }
 
+function gitHubRelease(
+  owner: string,
+  repo: string,
+  tag: string,
+): Effect.Effect<GitHubRelease, Error> {
+  const releaseUrl = `https://api.github.com/repos/${owner}/${repo}/releases/tags/${encodeURIComponent(
+    tag,
+  )}`;
+
+  return Effect.flatMap(
+    parseJsonResponse(releaseUrl, gitHubHeaders()),
+    (release: unknown): Effect.Effect<GitHubRelease, Error> => {
+      if (!isRecord(release)) {
+        return Effect.fail(new UpdateError(`Invalid GitHub release metadata for ${owner}/${repo}`));
+      }
+
+      const { name, tag_name: tagName } = release;
+      return typeof name === "string" &&
+        name.length > 0 &&
+        typeof tagName === "string" &&
+        tagName.length > 0
+        ? Effect.succeed({ name, tagName })
+        : Effect.fail(new UpdateError(`Missing GitHub release name for ${owner}/${repo} ${tag}`));
+    },
+  );
+}
+
 function latestGitHubVersion(
   options: Readonly<LatestGitHubVersionOptions>,
 ): Effect.Effect<string, Error> {
@@ -168,4 +200,5 @@ function latestGitHubVersion(
   );
 }
 
-export { latestGitHubVersion, latestNpmVersion, latestPyPiVersion };
+export { gitHubRelease, latestGitHubVersion, latestNpmVersion, latestPyPiVersion };
+export type { GitHubRelease };

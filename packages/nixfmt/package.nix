@@ -3,6 +3,7 @@
   stdenv,
   haskell,
   haskellPackages,
+  packageLib,
   versionCheckHook,
 }:
 let
@@ -21,11 +22,14 @@ lib.pipe rawPackage [
       strictDeps = true;
       __structuredAttrs = true;
 
+      nativeBuildInputs = (oldAttrs.nativeBuildInputs or [ ]) ++ [ packageLib.removeReferencesTo ];
       nativeInstallCheckInputs = (oldAttrs.nativeInstallCheckInputs or [ ]) ++ [ versionCheckHook ];
 
       doInstallCheck = canExecute;
       versionCheckProgram = "${placeholder "out"}/bin/nixfmt";
       versionCheckProgramArg = "--version";
+
+      postFixup = (oldAttrs.postFixup or "") + packageLib.removeSelfReferences [ "$out/bin/nixfmt" ];
 
       postInstallCheck = (oldAttrs.postInstallCheck or "") + ''
         . ${../../lib/package.sh}

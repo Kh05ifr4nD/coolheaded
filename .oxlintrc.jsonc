@@ -7,41 +7,30 @@
     "perf": "error",
     "restriction": "error",
     "style": "error",
-    "suspicious": "error"
+    "suspicious": "error",
   },
   "env": {
-    "builtin": true
+    "builtin": true,
   },
   "globals": {
-    "Deno": "readonly"
+    "Deno": "readonly",
   },
-  "ignorePatterns": [
-    ".generated/deno.d.ts",
-    "tsReset.d.ts"
-  ],
+  "ignorePatterns": [".generated/deno.d.ts", "tsReset.d.ts"],
   "options": {
     "denyWarnings": true,
     "reportUnusedDisableDirectives": "error",
     "respectEslintDisableDirectives": false,
     "typeAware": true,
-    "typeCheck": true
+    "typeCheck": true,
   },
-  "plugins": [
-    "eslint",
-    "import",
-    "node",
-    "oxc",
-    "promise",
-    "typescript",
-    "unicorn"
-  ],
+  "plugins": ["eslint", "import", "node", "oxc", "promise", "typescript", "unicorn"],
   "rules": {
     "eslint/complexity": [
       "error",
       {
         "max": 32,
-        "variant": "modified"
-      }
+        "variant": "modified",
+      },
     ],
     "eslint/func-style": [
       "error",
@@ -49,41 +38,41 @@
       {
         "allowArrowFunctions": false,
         "overrides": {
-          "namedExports": "declaration"
-        }
-      }
+          "namedExports": "declaration",
+        },
+      },
     ],
     "eslint/max-lines": [
       "error",
       {
         "max": 1024,
         "skipBlankLines": true,
-        "skipComments": true
-      }
+        "skipComments": true,
+      },
     ],
     "eslint/max-lines-per-function": [
       "error",
       {
-        "max": 192
-      }
+        "max": 192,
+      },
     ],
     "eslint/max-nested-callbacks": [
       "error",
       {
-        "max": 6
-      }
+        "max": 6,
+      },
     ],
     "eslint/max-params": [
       "error",
       {
-        "max": 6
-      }
+        "max": 6,
+      },
     ],
     "eslint/max-statements": [
       "error",
       {
-        "max": 48
-      }
+        "max": 48,
+      },
     ],
     "eslint/no-magic-numbers": [
       "error",
@@ -91,31 +80,8 @@
         "detectObjects": true,
         "enforceConst": true,
         "ignore": [
-          -1,
-          0,
-          1,
-          2,
-          3,
-          4,
-          5,
-          6,
-          7,
-          8,
-          9,
-          10,
-          11,
-          12,
-          16,
-          24,
-          32,
-          36,
-          42,
-          48,
-          60,
-          64,
-          128,
-          256,
-          1024
+          -1, 0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 16, 24, 32, 36, 42, 48, 60, 64, 128, 256,
+          1024,
         ],
         "ignoreArrayIndexes": true,
         "ignoreClassFieldInitialValues": true,
@@ -123,14 +89,14 @@
         "ignoreEnums": true,
         "ignoreNumericLiteralTypes": true,
         "ignoreReadonlyClassProperties": true,
-        "ignoreTypeIndexes": true
-      }
+        "ignoreTypeIndexes": true,
+      },
     ],
     "eslint/no-plusplus": [
       "error",
       {
-        "allowForLoopAfterthoughts": true
-      }
+        "allowForLoopAfterthoughts": true,
+      },
     ],
     "eslint/no-ternary": "off",
     "eslint/no-undefined": "off",
@@ -139,8 +105,8 @@
       "error",
       {
         "ignoreTypeImports": true,
-        "max": 48
-      }
+        "max": 48,
+      },
     ],
     "import/no-named-export": "off",
     "import/prefer-default-export": "off",
@@ -155,20 +121,17 @@
         "checkArrowFunctions": false,
         "checkFunctionDeclarations": true,
         "checkFunctionExpressions": false,
-        "checkMethodDeclarations": true
-      }
+        "checkMethodDeclarations": true,
+      },
     ],
-    "typescript/return-await": [
-      "error",
-      "error-handling-correctness-only"
-    ],
+    "typescript/return-await": ["error", "error-handling-correctness-only"],
     "unicorn/filename-case": [
       "error",
       {
-        "case": "camelCase"
-      }
+        "case": "camelCase",
+      },
     ],
     "unicorn/no-null": "off",
-    "unicorn/prefer-top-level-await": "off"
-  }
+    "unicorn/prefer-top-level-await": "off",
+  },
 }
