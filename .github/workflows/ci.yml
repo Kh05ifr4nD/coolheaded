@@ -6,22 +6,6 @@ concurrency:
   cancel-in-progress: true
 on:
   pull_request:
-    paths:
-      - ".github/workflows/ci.yml"
-      - ".github/ci/**"
-      - ".oxfmtrc.jsonc"
-      - ".oxlintrc.jsonc"
-      - "AGENTS.md"
-      - "README.md"
-      - "deno.jsonc"
-      - "deno.lock"
-      - "flake.nix"
-      - "flake.lock"
-      - "flake/**"
-      - "lib/**"
-      - "packages/**"
-      - "src/**"
-      - "tests/**"
   workflow_dispatch:
     inputs:
       packages:
@@ -35,80 +19,24 @@ on:
         default: false
 jobs:
   discoverPackages:
-    if: github.event_name == 'workflow_dispatch' && (inputs.buildAllPackages || inputs.packages != '')
+    if: github.event_name == 'pull_request' || (github.event_name == 'workflow_dispatch' && (inputs.buildAllPackages || inputs.packages != ''))
     runs-on: ubuntu-24.04
     outputs:
+      hasPackages: ${{ steps.discover.outputs.hasPackages }}
       matrix: ${{ steps.discover.outputs.matrix }}
     steps:
       - uses: actions/checkout@v6
         with:
+          fetch-depth: 0
           persist-credentials: false
       - uses: cachix/install-nix-action@v31
       - id: discover
         env:
+          BASE_SHA: ${{ github.event.pull_request.base.sha }}
+          BUILD_ALL_PACKAGES: ${{ github.event_name == 'workflow_dispatch' && inputs.buildAllPackages }}
+          GITHUB_EVENT_NAME: ${{ github.event_name }}
           PACKAGES: ${{ inputs.packages }}
-        run: |
-          systems='[
-            {"system":"x86_64-linux","runner":"ubuntu-24.04"},
-            {"system":"aarch64-linux","runner":"ubuntu-24.04-arm"}
-          ]'
-          x86_64_linux_available="$(
-            nix eval --json .#checks.x86_64-linux \
-              | jq '[keys[] | select(. != "pre-commit" and . != "treefmt")]'
-          )"
-          aarch64_linux_available="$(
-            nix eval --json .#checks.aarch64-linux \
-              | jq '[keys[] | select(. != "pre-commit" and . != "treefmt")]'
-          )"
-          available_union="$(
-            jq -cn \
-              --argjson x86 "$x86_64_linux_available" \
-              --argjson arm "$aarch64_linux_available" \
-              '$x86 + $arm | unique'
-          )"
-          if [ -n "$PACKAGES" ]; then
-            requested="$(
-              jq -cn --arg packages "$PACKAGES" '
-                $packages | split(" ") | map(select(length > 0)) | unique
-              '
-            )"
-            missing="$(
-              jq -cn \
-                --argjson requested "$requested" \
-                --argjson available "$available_union" \
-                '$requested - $available'
-            )"
-            if [ "$(jq 'length' <<<"$missing")" -gt 0 ]; then
-              echo "unknown check attrs: $(jq -r 'join(", ")' <<<"$missing")" >&2
-              exit 1
-            fi
-          else
-            requested="$available_union"
-          fi
-          matrix="$(
-            jq -cn \
-              --argjson systems "$systems" \
-              --argjson requested "$requested" \
-              --argjson x86 "$x86_64_linux_available" \
-              --argjson arm "$aarch64_linux_available" '
-                {
-                  include: [
-                    $systems[] as $target
-                    | (
-                        if $target.system == "x86_64-linux" then $x86 else $arm end
-                      ) as $available
-                    | $requested[]
-                    | select($available | index(.))
-                    | {
-                        system: $target.system,
-                        runner: $target.runner,
-                        package: .
-                      }
-                  ]
-                }
-              '
-          )"
-          printf 'matrix=%s\n' "$matrix" >> "$GITHUB_OUTPUT"
+        run: nix develop -c deno run --allow-env --allow-read --allow-run --allow-write="$GITHUB_OUTPUT" .github/ci/discoverCiPackageBuilds.ts
   check:
     runs-on: ubuntu-24.04
     steps:
@@ -117,6 +45,7 @@ jobs:
           persist-credentials: false
       - uses: cachix/install-nix-action@v31
       - run: nix fmt -- --ci
+      - run: nix develop -c actionlint
       - run: nix develop -c deno task check
       - run: nix develop -c deno task lint
       - run: nix develop -c deno task test
@@ -127,7 +56,7 @@ jobs:
       - run: nix flake check --no-build
   buildPackages:
     needs: discoverPackages
-    if: github.event_name == 'workflow_dispatch' && (inputs.buildAllPackages || inputs.packages != '')
+    if: needs.discoverPackages.outputs.hasPackages == 'true'
     runs-on: ${{ matrix.runner }}
     strategy:
       fail-fast: false
@@ -138,3 +67,24 @@ jobs:
           persist-credentials: false
       - uses: cachix/install-nix-action@v31
       - run: nix build ".#checks.${{ matrix.system }}.${{ matrix.package }}" --print-build-logs
+  packageBuilds:
+    needs:
+      - discoverPackages
+      - buildPackages
+    if: always() && (github.event_name == 'pull_request' || (github.event_name == 'workflow_dispatch' && (inputs.buildAllPackages || inputs.packages != '')))
+    runs-on: ubuntu-24.04
+    steps:
+      - run: |
+          if [ "${{ needs.discoverPackages.result }}" != success ]; then
+            echo "Package discovery failed"
+            exit 1
+          fi
+
+          if [ "${{ needs.discoverPackages.outputs.hasPackages }}" = true ]; then
+            if [ "${{ needs.buildPackages.result }}" != success ]; then
+              echo "Package builds failed"
+              exit 1
+            fi
+          else
+            echo "No package builds required"
+          fi

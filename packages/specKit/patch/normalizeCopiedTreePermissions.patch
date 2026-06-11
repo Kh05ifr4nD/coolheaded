@@ -1,0 +1,56 @@
+diff --git a/src/specify_cli/extensions.py b/src/specify_cli/extensions.py
+index 01067a7..2f8f637 100644
+--- a/src/specify_cli/extensions.py
++++ b/src/specify_cli/extensions.py
+@@ -28,6 +28,15 @@ from packaging.specifiers import SpecifierSet, InvalidSpecifier
+ from .catalogs import CatalogEntry as BaseCatalogEntry, CatalogStackBase
+ from ._init_options import is_ai_skills_enabled
+ 
++def _normalize_copied_tree_permissions(path: Path) -> None:
++    for item in [path, *path.rglob("*")]:
++        mode = item.stat().st_mode
++        if item.is_dir():
++            item.chmod(mode | 0o700)
++        else:
++            item.chmod(mode | 0o600)
++
++
+ _FALLBACK_CORE_COMMAND_NAMES = frozenset({
+     "analyze",
+     "clarify",
+@@ -1315,6 +1324,7 @@ class ExtensionManager:
+ 
+         ignore_fn = self._load_extensionignore(source_dir)
+         shutil.copytree(source_dir, dest_dir, ignore=ignore_fn)
++        _normalize_copied_tree_permissions(dest_dir)
+ 
+         # Register commands with AI agents
+         registered_commands = {}
+diff --git a/src/specify_cli/presets.py b/src/specify_cli/presets.py
+index a6b2ded..c1dfab6 100644
+--- a/src/specify_cli/presets.py
++++ b/src/specify_cli/presets.py
+@@ -32,6 +32,15 @@ from .integrations.base import IntegrationBase
+ from ._init_options import is_ai_skills_enabled
+ 
+ 
++def _normalize_copied_tree_permissions(path: Path) -> None:
++    for item in [path, *path.rglob("*")]:
++        mode = item.stat().st_mode
++        if item.is_dir():
++            item.chmod(mode | 0o700)
++        else:
++            item.chmod(mode | 0o600)
++
++
+ def _substitute_core_template(
+     body: str,
+     cmd_name: str,
+@@ -1535,6 +1544,7 @@ class PresetManager:
+             shutil.rmtree(dest_dir)
+ 
+         shutil.copytree(source_dir, dest_dir)
++        _normalize_copied_tree_permissions(dest_dir)
+ 
+         # Pre-register the preset so that composition resolution can see it
+         # in the priority stack when resolving composed command content.

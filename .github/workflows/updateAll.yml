@@ -99,25 +99,6 @@ jobs:
               nix develop -c deno task update:deno-deps
               ;;
           esac
-      - if: steps.update.outputs.updated == 'true' && matrix.type == 'package'
-        run: nix build ".#${{ matrix.name }}"
-      - if: steps.update.outputs.updated == 'true' && matrix.type != 'package'
-        name: Realize bun2nix cache entry creator
-        run: |
-          system="$(nix eval --impure --raw --expr builtins.currentSystem)"
-          nix build --no-link --inputs-from . "bun2nix#packages.$system.cacheEntryCreator" --print-build-logs
-      - if: steps.update.outputs.updated == 'true' && matrix.type == 'flake-input'
-        run: nix flake check --print-build-logs
-      - if: steps.update.outputs.updated == 'true' && matrix.type == 'deno-deps'
-        run: nix develop -c deno task check
-      - if: steps.update.outputs.updated == 'true' && matrix.type == 'deno-deps'
-        run: nix develop -c deno task lint
-      - if: steps.update.outputs.updated == 'true' && matrix.type == 'deno-deps'
-        run: nix develop -c deno task test
-      - if: steps.update.outputs.updated == 'true' && matrix.type == 'deno-deps'
-        run: nix flake check --print-build-logs
-      - if: steps.update.outputs.updated == 'true' && matrix.type == 'package'
-        run: nix develop -c deno task check
       - if: steps.update.outputs.updated == 'true'
         env:
           GH_TOKEN: ${{ steps.app-token.outputs.token }}
