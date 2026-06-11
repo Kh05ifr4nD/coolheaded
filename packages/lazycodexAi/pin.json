@@ -1,8 +1,8 @@
 {
-  "version": "4.8.1",
+  "version": "4.9.1",
   "hashes": {
-    "aarch64-darwin": "sha512-z/mm+YCY6E3OkHXUxo/FJEEiv7cQfspJwal/O141mJpnq9LviEM1uOzPb4+MIaikSzpNgWqmktktPPWDaVDf4g==",
-    "aarch64-linux": "sha512-z/mm+YCY6E3OkHXUxo/FJEEiv7cQfspJwal/O141mJpnq9LviEM1uOzPb4+MIaikSzpNgWqmktktPPWDaVDf4g==",
-    "x86_64-linux": "sha512-z/mm+YCY6E3OkHXUxo/FJEEiv7cQfspJwal/O141mJpnq9LviEM1uOzPb4+MIaikSzpNgWqmktktPPWDaVDf4g=="
+    "aarch64-darwin": "sha512-Jwfjtf+1YdchXkfvNjbILqAr9ecC0KykQanR4gl7w2OBAy5SMX+hz7WFc5tMjOupoEuwXXHWrOHZ0F7ouVLKtQ==",
+    "aarch64-linux": "sha512-Jwfjtf+1YdchXkfvNjbILqAr9ecC0KykQanR4gl7w2OBAy5SMX+hz7WFc5tMjOupoEuwXXHWrOHZ0F7ouVLKtQ==",
+    "x86_64-linux": "sha512-Jwfjtf+1YdchXkfvNjbILqAr9ecC0KykQanR4gl7w2OBAy5SMX+hz7WFc5tMjOupoEuwXXHWrOHZ0F7ouVLKtQ=="
   }
 }
