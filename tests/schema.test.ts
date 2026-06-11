@@ -104,7 +104,14 @@ describe("npm registry URL helpers", (): void => {
   it("encodes scoped package names", (): void => {
     assertEquals(
       npmRegistryPackageUrl("@openai/codex"),
-      "https://registry.npmjs.org/@openai%2Fcodex",
+      "https://registry.npmjs.org/%40openai%2Fcodex",
+    );
+  });
+
+  it("encodes every path separator in registry metadata URLs", (): void => {
+    assertEquals(
+      npmRegistryPackageUrl("@scope/name/extra"),
+      "https://registry.npmjs.org/%40scope%2Fname%2Fextra",
     );
   });
 

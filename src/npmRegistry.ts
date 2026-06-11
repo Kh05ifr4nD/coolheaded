@@ -3,7 +3,7 @@ import { InvalidNpmMetadataError } from "./npmRegistryErrors.ts";
 import type { NpmPackageMetadata } from "./npmRegistryTypes.ts";
 
 function npmRegistryPackageUrl(packageName: string): string {
-  return `https://registry.npmjs.org/${packageName.replace("/", "%2F")}`;
+  return `https://registry.npmjs.org/${encodeURIComponent(packageName)}`;
 }
 
 function npmScopedTarballUrl(
