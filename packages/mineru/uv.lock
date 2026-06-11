@@ -9,7 +9,7 @@ resolution-markers = [
 
 [[package]]
 name = "accelerate"
-version = "1.13.0"
+version = "1.14.0"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
     { name = "huggingface-hub" },
@@ -20,9 +20,9 @@ dependencies = [
     { name = "safetensors" },
     { name = "torch" },
 ]
-sdist = { url = "https://files.pythonhosted.org/packages/ca/14/787e5498cd062640f0f3d92ef4ae4063174f76f9afd29d13fc52a319daae/accelerate-1.13.0.tar.gz", hash = "sha256:d631b4e0f5b3de4aff2d7e9e6857d164810dfc3237d54d017f075122d057b236", size = 402835, upload-time = "2026-03-04T19:34:12.359Z" }
+sdist = { url = "https://files.pythonhosted.org/packages/8d/75/94cd5d389649578aca399e5aa822637eec18319a1dadc400ffe2f9a7493f/accelerate-1.14.0.tar.gz", hash = "sha256:41b9c4377a54e0b460a959b0defa1b736e4ca0a2373252d9a539964c2afe3c8d", size = 412167, upload-time = "2026-06-11T13:45:52.326Z" }
 wheels = [
-    { url = "https://files.pythonhosted.org/packages/7e/46/02ac5e262d4af18054b3e922b2baedbb2a03289ee792162de60a865defc5/accelerate-1.13.0-py3-none-any.whl", hash = "sha256:cf1a3efb96c18f7b152eb0fa7490f3710b19c3f395699358f08decca2b8b62e0", size = 383744, upload-time = "2026-03-04T19:34:10.313Z" },
+    { url = "https://files.pythonhosted.org/packages/a8/db/253133d7e7cb40d3af384bb2f5c0b4a2b7fdcffbc95c688cc67a20a3c103/accelerate-1.14.0-py3-none-any.whl", hash = "sha256:e94390c2863b873be18f623f9df48a0d8fe5eff13ea7f1a00092b0a7904888c6", size = 389246, upload-time = "2026-06-11T13:45:50.477Z" },
 ]
 
 [[package]]
@@ -1314,7 +1314,7 @@ wheels = [
 
 [[package]]
 name = "mineru"
-version = "3.3.0"
+version = "3.3.1"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
     { name = "beautifulsoup4" },
@@ -1348,7 +1348,7 @@ dependencies = [
     { name = "uvicorn" },
 ]
 wheels = [
-    { url = "https://files.pythonhosted.org/packages/d2/ed/9bae65aa908a8430eb535525331ea91ea3e74bbb1d150f48bfc371f00b75/mineru-3.3.0-py3-none-any.whl", hash = "sha256:a0df84025d5a756a35df5ead4418643660f22bcc5b6ee276c95614878935b251", size = 1586319, upload-time = "2026-06-11T11:05:51.107Z" },
+    { url = "https://files.pythonhosted.org/packages/03/8c/d72028f31417d239b4e4b78dcd4538d554579ea753db505901d3699d199d/mineru-3.3.1-py3-none-any.whl", hash = "sha256:922fbebd566ef3f35b5f14a02104f59aa496a710b2a3101cb728b9de06717d49", size = 1587423, upload-time = "2026-06-11T14:27:11.238Z" },
 ]
 
 [package.optional-dependencies]
@@ -1374,7 +1374,7 @@ all = [
 
 [[package]]
 name = "mineru-vl-utils"
-version = "1.0.4"
+version = "1.0.5"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
     { name = "aiofiles" },
@@ -1385,19 +1385,19 @@ dependencies = [
     { name = "pydantic" },
 ]
 wheels = [
-    { url = "https://files.pythonhosted.org/packages/ca/3a/6df13944af8d019ab158b28d1f80d47f23aad97acc3d8c53d3b5032383a1/mineru_vl_utils-1.0.4-py3-none-any.whl", hash = "sha256:29c072abe07dfb98e4e38742803cc5725a7815b2a32c729d1915235849609778", size = 94412, upload-time = "2026-06-05T20:37:28.039Z" },
+    { url = "https://files.pythonhosted.org/packages/a0/e6/71556a212ab86c8845f5bec220952e08ba288342593161da41076c678627/mineru_vl_utils-1.0.5-py3-none-any.whl", hash = "sha256:cf910e68f0607634e61b613b7f5992daf604bf80b400d81e7b9f0f117b7c3c15", size = 94450, upload-time = "2026-06-11T13:49:32.395Z" },
 ]
 
 [[package]]
 name = "mineruproject"
-version = "3.3.0"
+version = "3.3.1"
 source = { virtual = "." }
 dependencies = [
     { name = "mineru", extra = ["all"] },
 ]
 
 [package.metadata]
-requires-dist = [{ name = "mineru", extras = ["all"], specifier = "==3.3.0" }]
+requires-dist = [{ name = "mineru", extras = ["all"], specifier = "==3.3.1" }]
 
 [[package]]
 name = "mistral-common"
