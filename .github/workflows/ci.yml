@@ -67,7 +67,7 @@ jobs:
           persist-credentials: false
       - uses: cachix/install-nix-action@v31
       - run: nix build ".#checks.${{ matrix.system }}.${{ matrix.package }}" --print-build-logs
-  packageBuilds:
+  packageBuildGate:
     needs:
       - discoverPackages
       - buildPackages
