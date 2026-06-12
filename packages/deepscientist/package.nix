@@ -209,7 +209,7 @@ stdenvNoCC.mkDerivation {
       mkdir -p "$packageRoot" "$out/bin"
       cp -R . "$packageRoot/"
       chmod -R u+w "$packageRoot"
-      rm -f "$packageRoot/env-vars"
+      rm -f "$packageRoot/.attrs.json" "$packageRoot/.attrs.sh" "$packageRoot/env-vars"
       cp -R ${nodeModules}/node_modules "$packageRoot/"
       substituteInPlace "$packageRoot/bin/ds.js" \
         --replace-fail \
