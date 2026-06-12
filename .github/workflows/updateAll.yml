@@ -76,8 +76,8 @@ jobs:
           token: ${{ steps.app-token.outputs.token }}
       - uses: cachix/install-nix-action@v31
       - run: |
-          git config user.name "github-actions[bot]"
-          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git config user.name "kh05ifr4nd-coolheaded[bot]"
+          git config user.email "292306314+kh05ifr4nd-coolheaded[bot]@users.noreply.github.com"
       - name: Prepare update branch
         env:
           UPDATE_BRANCH: ${{ matrix.type == 'package' && format('update/package/{0}', matrix.name) || matrix.type == 'flake-input' && format('update/flakeInput/{0}', matrix.name) || 'update/denoDeps' }}

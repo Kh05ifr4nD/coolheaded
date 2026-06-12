@@ -61,7 +61,8 @@ packageLib.mkNpmTarballPackage {
     packageRoot="$out/libexec/lazycodex-ai"
     mkdir -p "$packageRoot" "$out/bin"
     cp -R . "$packageRoot/"
-    rm -f "$packageRoot/env-vars"
+    rm -f "$packageRoot/.attrs.json" "$packageRoot/.attrs.sh" "$packageRoot/env-vars"
+    find "$packageRoot/packages/omo-codex/plugin" -type d -name .github -prune -exec rm -rf {} +
 
     pluginNodeModules="$packageRoot/packages/omo-codex/plugin/node_modules"
     keepOnlyMatchingChildren "$pluginNodeModules/@biomejs" "cli-" '${platform.biome}'

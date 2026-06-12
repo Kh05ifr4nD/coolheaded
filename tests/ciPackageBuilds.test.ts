@@ -2,6 +2,7 @@ import {
   buildMatrix,
   changedDerivationPackages,
   changedDerivationTargets,
+  comparesCheckedOutBase,
   packagesFromInput,
 } from "coolheadedCi/discoverCiPackageBuilds.ts";
 import { describe, it } from "@jsr/std__testing/bdd";
@@ -11,6 +12,13 @@ describe("CI package build discovery", (): void => {
   it("parses explicit package inputs", (): void => {
     assertEquals(packagesFromInput("specKit codex specKit"), ["codex", "specKit"]);
     assertEquals(packagesFromInput(""), []);
+  });
+
+  it("compares checked-out merge bases for protected queue events", (): void => {
+    assertEquals(comparesCheckedOutBase("pull_request"), true);
+    assertEquals(comparesCheckedOutBase("merge_group"), true);
+    assertEquals(comparesCheckedOutBase("workflow_dispatch"), false);
+    assertEquals(comparesCheckedOutBase(), false);
   });
 
   it("selects package checks whose derivation identity changed", (): void => {

@@ -1,0 +1,10 @@
+{
+  "version": "0.5.19",
+  "hashes": {
+    "aarch64-darwin": "sha512-CMqNRCaiw8wBCiq4J+ATo8uKEiBCLpLb2EgsFblcV72zLmT7rWkfJOZEHQBpgrhQsHaER0dEDlnay9IpNi9pxQ==",
+    "aarch64-linux": "sha512-CMqNRCaiw8wBCiq4J+ATo8uKEiBCLpLb2EgsFblcV72zLmT7rWkfJOZEHQBpgrhQsHaER0dEDlnay9IpNi9pxQ==",
+    "x86_64-linux": "sha512-CMqNRCaiw8wBCiq4J+ATo8uKEiBCLpLb2EgsFblcV72zLmT7rWkfJOZEHQBpgrhQsHaER0dEDlnay9IpNi9pxQ=="
+  },
+  "sourceHash": "sha256-3d4eXj4/ErT0JdyIB/2AkEVp8g4CUE4kmicIg4wKSb4=",
+  "pnpmDepsHash": "sha256-bWFsh/0jn8Q/dK9njuf/OtoEa69xLQ/tMSvFdukRrcU="
+}

@@ -5,21 +5,22 @@ concurrency:
   group: ci-${{ github.event.pull_request.number || github.ref }}
   cancel-in-progress: true
 on:
+  merge_group:
   pull_request:
   workflow_dispatch:
     inputs:
       packages:
-        description: "Space-separated check attrs to build across all supported Linux runners"
+        description: "Space-separated check attrs to build across supported runners"
         required: false
         default: ""
       buildAllPackages:
-        description: "Build all Linux check attrs on every supported Linux runner"
+        description: "Build all check attrs on supported runners"
         required: false
         type: boolean
         default: false
 jobs:
-  discoverPackages:
-    if: github.event_name == 'pull_request' || (github.event_name == 'workflow_dispatch' && (inputs.buildAllPackages || inputs.packages != ''))
+  discoverPackageBuilds:
+    if: github.event_name == 'pull_request' || github.event_name == 'merge_group' || (github.event_name == 'workflow_dispatch' && (inputs.buildAllPackages || inputs.packages != ''))
     runs-on: ubuntu-24.04
     outputs:
       hasPackages: ${{ steps.discover.outputs.hasPackages }}
@@ -32,7 +33,6 @@ jobs:
       - uses: cachix/install-nix-action@v31
       - id: discover
         env:
-          BASE_SHA: ${{ github.event.pull_request.base.sha }}
           BUILD_ALL_PACKAGES: ${{ github.event_name == 'workflow_dispatch' && inputs.buildAllPackages }}
           GITHUB_EVENT_NAME: ${{ github.event_name }}
           PACKAGES: ${{ inputs.packages }}
@@ -54,34 +54,34 @@ jobs:
           system="$(nix eval --impure --raw --expr builtins.currentSystem)"
           nix build --no-link --inputs-from . "bun2nix#packages.$system.cacheEntryCreator" --print-build-logs
       - run: nix flake check --no-build
-  buildPackages:
-    needs: discoverPackages
-    if: needs.discoverPackages.outputs.hasPackages == 'true'
+  buildPackage:
+    needs: discoverPackageBuilds
+    if: needs.discoverPackageBuilds.outputs.hasPackages == 'true'
     runs-on: ${{ matrix.runner }}
     strategy:
       fail-fast: false
-      matrix: ${{ fromJson(needs.discoverPackages.outputs.matrix) }}
+      matrix: ${{ fromJson(needs.discoverPackageBuilds.outputs.matrix) }}
     steps:
       - uses: actions/checkout@v6
         with:
           persist-credentials: false
       - uses: cachix/install-nix-action@v31
       - run: nix build ".#checks.${{ matrix.system }}.${{ matrix.package }}" --print-build-logs
-  packageBuilds:
+  packageBuildGate:
     needs:
-      - discoverPackages
-      - buildPackages
-    if: always() && (github.event_name == 'pull_request' || (github.event_name == 'workflow_dispatch' && (inputs.buildAllPackages || inputs.packages != '')))
+      - discoverPackageBuilds
+      - buildPackage
+    if: always() && (github.event_name == 'pull_request' || github.event_name == 'merge_group' || (github.event_name == 'workflow_dispatch' && (inputs.buildAllPackages || inputs.packages != '')))
     runs-on: ubuntu-24.04
     steps:
       - run: |
-          if [ "${{ needs.discoverPackages.result }}" != success ]; then
+          if [ "${{ needs.discoverPackageBuilds.result }}" != success ]; then
             echo "Package discovery failed"
             exit 1
           fi
 
-          if [ "${{ needs.discoverPackages.outputs.hasPackages }}" = true ]; then
-            if [ "${{ needs.buildPackages.result }}" != success ]; then
+          if [ "${{ needs.discoverPackageBuilds.outputs.hasPackages }}" = true ]; then
+            if [ "${{ needs.buildPackage.result }}" != success ]; then
               echo "Package builds failed"
               exit 1
             fi

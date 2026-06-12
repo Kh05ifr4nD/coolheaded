@@ -36,6 +36,11 @@ function localGitFlakeRef(rev: string): string {
   return `git+${toFileUrl(Deno.cwd()).href}?rev=${encodeURIComponent(rev)}`;
 }
 
+async function checkedOutBaseFlakeRef(): Promise<string> {
+  const result = await run(["git", "rev-parse", "HEAD^1"], { capture: true });
+  return localGitFlakeRef(result.stdout);
+}
+
 async function packageDrvPaths(flakeRef: string, system: string): Promise<PackageDrvPaths> {
   const result = await run(
     ["nix", "eval", "--json", `${flakeRef}#checks.${system}`, "--apply", PACKAGE_CHECKS_EXPR],
@@ -137,9 +142,12 @@ function buildMatrix(
   });
 }
 
+function comparesCheckedOutBase(eventName?: string): boolean {
+  return eventName === "merge_group" || eventName === "pull_request";
+}
+
 async function requestedBuildTargets(
   eventName: string | undefined,
-  baseSha: string | undefined,
   packagesInput: string | undefined,
   buildAllPackages: string | undefined,
   availableBySystem: Readonly<Record<string, readonly string[]>>,
@@ -161,9 +169,9 @@ async function requestedBuildTargets(
     return buildMatrix(explicit, availableBySystem);
   }
 
-  if (eventName === "pull_request" && baseSha !== undefined && baseSha.length > 0) {
+  if (comparesCheckedOutBase(eventName)) {
     return changedDerivationTargets(
-      await packageDrvPathsBySystem(localGitFlakeRef(baseSha)),
+      await packageDrvPathsBySystem(await checkedOutBaseFlakeRef()),
       currentDrvPathsBySystem,
     );
   }
@@ -177,7 +185,6 @@ async function discoverCiPackageBuilds(): Promise<void> {
 
   const include = await requestedBuildTargets(
     Deno.env.get("GITHUB_EVENT_NAME"),
-    Deno.env.get("BASE_SHA"),
     Deno.env.get("PACKAGES"),
     Deno.env.get("BUILD_ALL_PACKAGES"),
     availableBySystem,
@@ -196,6 +203,7 @@ export {
   buildMatrix,
   changedDerivationPackages,
   changedDerivationTargets,
+  comparesCheckedOutBase,
   packagesFromInput,
   requestedBuildTargets,
 };

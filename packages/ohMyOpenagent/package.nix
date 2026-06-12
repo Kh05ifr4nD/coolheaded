@@ -50,7 +50,7 @@ packageLib.mkBinaryPackage {
     mkdir -p "$packageRoot" "$platformRoot" "$out/bin"
 
     cp -R . "$packageRoot/"
-    rm -f "$packageRoot/env-vars"
+    rm -f "$packageRoot/.attrs.json" "$packageRoot/.attrs.sh" "$packageRoot/env-vars"
     rm -rf "$packageRoot/packages/omo-codex"
 
     tar -xzf "${platformSrc}" --strip-components=1 -C "$platformRoot"

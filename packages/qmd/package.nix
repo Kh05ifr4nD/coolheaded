@@ -144,6 +144,8 @@ stdenv.mkDerivation (finalAttrs: {
     packageRoot="$out/libexec/qmd"
     mkdir -p "$packageRoot" "$out/bin"
     cp -R node_modules skills src package.json "$packageRoot/"
+    chmod -R u+w "$packageRoot/node_modules"
+    find "$packageRoot/node_modules" -depth \( -type d -name .github -o -type f \( -name package-lock.json -o -name pnpm-lock.yaml -o -name yarn.lock \) \) -exec rm -rf {} +
 
     keepOnlyMatchingChildren "$packageRoot/node_modules" "sqlite-vec-" '${prebuild.sqliteVec}'
     keepOnlyMatchingChildren "$packageRoot/node_modules/@reflink" "reflink-" '${prebuild.reflink}'
