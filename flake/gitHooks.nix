@@ -4,9 +4,9 @@ let
   inherit (config) packages;
 
   denoDependenciesHashes = {
-    aarch64-darwin = "sha256-6eGk10qVbBJGBkfOtinVvd2Q2OF/OXcKHPqgN1vxZ88=";
-    aarch64-linux = "sha256-I/ApITUIFyw0utXBf24NIiEypH0x3CQnUMsw5p+I6/o=";
-    x86_64-linux = "sha256-I/ApITUIFyw0utXBf24NIiEypH0x3CQnUMsw5p+I6/o=";
+    aarch64-darwin = "sha256-y7n31mS+OWlxmq3MSJd+tFqkwzt3S7Ba8pkFGGk40n8=";
+    aarch64-linux = "sha256-4+59kSKpoI9vn3sifaIPElle8nj7A7PtYZJgFqaUPwI=";
+    x86_64-linux = "sha256-4+59kSKpoI9vn3sifaIPElle8nj7A7PtYZJgFqaUPwI=";
   };
 
   denoDependencies =
