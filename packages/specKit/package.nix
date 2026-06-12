@@ -60,7 +60,7 @@ packageLib.mkUvApplication {
     mainProgram = "specify";
     homepage = "https://github.com/github/spec-kit";
     license = lib.licenses.mit;
-    description = "Toolkit for bootstrapping Spec-Driven Development projects";
+    description = "Toolkit to help you get started with Spec-Driven Development";
     changelog = "https://github.com/github/spec-kit/releases";
   };
 }

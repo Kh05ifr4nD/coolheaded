@@ -46,7 +46,7 @@ packageLib.mkUvApplication {
   meta = pin: {
     homepage = "https://github.com/volcengine/OpenViking";
     license = lib.licenses.agpl3Only;
-    description = "Context database for AI agents";
+    description = "Open-source context database designed specifically for AI Agents";
     changelog = "https://github.com/volcengine/OpenViking/releases/tag/v${pin.version}";
   };
 }

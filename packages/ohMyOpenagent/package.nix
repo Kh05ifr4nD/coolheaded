@@ -99,7 +99,6 @@ packageLib.mkBinaryPackage {
     changelog = "https://github.com/code-yeongyu/oh-my-openagent/releases/tag/v${pin.version}";
     license = lib.licenses.unfree;
     platforms = packageLib.supportedSystems;
-    sourceProvenance = with lib.sourceTypes; [ binaryNativeCode ];
-    description = "OpenCode plugin and agent bundle";
+    description = "Coding agent for tokenmaxxers";
   };
 }

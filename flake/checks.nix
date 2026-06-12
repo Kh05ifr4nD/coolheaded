@@ -20,15 +20,20 @@ let
       wrapBuddy
       ;
   };
+  packageCheckPath = name: ../packages + "/${name}/checks.nix";
+  packageChecks = lib.concatMapAttrs (
+    name: package:
+    if builtins.pathExists (packageCheckPath name) then
+      import (packageCheckPath name) {
+        inherit
+          lib
+          package
+          packages
+          pkgs
+          ;
+      }
+    else
+      { }
+  ) packages;
 in
-packages
-// {
-  mineruWithAll = packages.mineru.override { withAll = true; };
-  oxlintWithoutTypecheck = packages.oxlint.override { withTypecheck = false; };
-}
-// lib.optionalAttrs pkgs.stdenv.hostPlatform.isLinux {
-  codexMinimal = packages.codex.override {
-    withRipgrep = false;
-    withBubblewrap = false;
-  };
-}
+packages // packageChecks

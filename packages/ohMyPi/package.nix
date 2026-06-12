@@ -80,6 +80,6 @@ packageLib.mkGitHubReleaseBinaryPackage {
 
   meta = {
     license = lib.licenses.mit;
-    description = "Coding agent with the IDE wired in";
+    description = "AI coding agent for the terminal with hash-anchored edits, optimized tool harness, LSP, Python, browser, subagents, and more";
   };
 }

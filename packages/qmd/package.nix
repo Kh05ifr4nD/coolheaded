@@ -8,6 +8,7 @@
   makeWrapper,
   node-gyp,
   nodejs,
+  packageLib,
   python3,
   sqlite,
   versionCheckHook,
@@ -195,11 +196,7 @@ stdenv.mkDerivation (finalAttrs: {
     license = lib.licenses.mit;
     description = "Mini CLI search engine for your docs, knowledge bases, meeting notes, whatever";
     mainProgram = pname;
-    platforms = [
-      "aarch64-darwin"
-      "aarch64-linux"
-      "x86_64-linux"
-    ];
+    platforms = packageLib.supportedSystems;
     sourceProvenance = with lib.sourceTypes; [
       fromSource
       binaryNativeCode

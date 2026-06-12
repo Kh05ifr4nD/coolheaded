@@ -4,7 +4,7 @@
 
 ## 依赖
 
-项目围绕 Deno、Oxc、Effect 等生态开发和维护，基于 fast-check 框架实现性质基测试。
+项目围绕 Deno、Effect 和 Oxc 生态开发维护，基于 fast-check 框架实现性质基测试。
 
 ### Flake
 
@@ -13,14 +13,14 @@
 - [nixpkgs](https://github.com/NixOS/nixpkgs/tree/nixos-unstable)
 - [treefmt-nix](https://github.com/numtide/treefmt-nix)
 
-### Npm
+### JSR & NPM
 
-- [@jsr/std__assert](https://npmx.dev/package/@jsr/std__assert)
-- [@jsr/std__cli](https://npmx.dev/package/@jsr/std__cli)
-- [@jsr/std__fs](https://npmx.dev/package/@jsr/std__fs)
-- [@jsr/std__jsonc](https://npmx.dev/package/@jsr/std__jsonc)
-- [@jsr/std__path](https://npmx.dev/package/@jsr/std__path)
-- [@jsr/std__testing](https://npmx.dev/package/@jsr/std__testing)
+- [@std/assert](https://jsr.io/@std/assert)
+- [@std/cli](https://jsr.io/@std/cli)
+- [@std/fs](https://jsr.io/@std/fs)
+- [@std/jsonc](https://jsr.io/@std/jsonc)
+- [@std/path](https://jsr.io/@std/path)
+- [@std/testing](https://jsr.io/@std/testing)
 - [@total-typescript/ts-reset](https://npmx.dev/package/@total-typescript/ts-reset)
 - [effect](https://npmx.dev/package/effect)
 - [fast-check](https://npmx.dev/package/fast-check)

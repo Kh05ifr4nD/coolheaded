@@ -49,6 +49,6 @@ packageLib.mkGitHubReleaseBinaryPackage {
   meta = {
     homepage = "https://rumdl.dev";
     license = lib.licenses.mit;
-    description = "Fast Markdown linter written in Rust";
+    description = "Fast Markdown linter and formatter written in Rust";
   };
 }

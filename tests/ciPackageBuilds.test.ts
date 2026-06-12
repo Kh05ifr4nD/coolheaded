@@ -10,7 +10,10 @@ import { assertEquals } from "@jsr/std__assert";
 
 describe("CI package build discovery", (): void => {
   it("parses explicit package inputs", (): void => {
-    assertEquals(packagesFromInput("specKit codex specKit"), ["codex", "specKit"]);
+    assertEquals(packagesFromInput("betaPackage alphaPackage betaPackage"), [
+      "alphaPackage",
+      "betaPackage",
+    ]);
     assertEquals(packagesFromInput(""), []);
   });
 

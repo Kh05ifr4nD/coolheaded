@@ -14,6 +14,7 @@
   makeWrapper,
   nodejs,
   opencode,
+  packageLib,
   python314,
   uv,
   pyprojectBuildSystems,
@@ -271,13 +272,9 @@ stdenvNoCC.mkDerivation {
   meta = {
     homepage = "https://github.com/ResearAI/DeepScientist";
     license = lib.licenses.asl20;
-    description = "Autonomous scientific discovery workspace and research map";
+    description = "Local-first autonomous research studio that keeps the full loop moving on your machine";
     mainProgram = "ds";
-    platforms = [
-      "aarch64-darwin"
-      "aarch64-linux"
-      "x86_64-linux"
-    ];
+    platforms = packageLib.supportedSystems;
     sourceProvenance = with lib.sourceTypes; [
       fromSource
       binaryNativeCode

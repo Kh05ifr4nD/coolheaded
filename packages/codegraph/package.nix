@@ -51,6 +51,6 @@ packageLib.mkGitHubReleaseBinaryPackage {
 
   meta = {
     license = lib.licenses.mit;
-    description = "Local-first code-intelligence tool that turns any codebase into a queryable knowledge graph for AI coding agents";
+    description = "Pre-indexed code knowledge graph for Claude Code, Codex, Gemini, Cursor, OpenCode, AntiGravity, Kiro, and Hermes Agent";
   };
 }

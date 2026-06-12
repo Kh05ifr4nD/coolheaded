@@ -7,8 +7,6 @@
   versionCheckHook,
 }:
 let
-  pname = "nixfmt";
-
   inherit (haskell.lib.compose) justStaticExecutables;
   canExecute = stdenv.buildPlatform.canExecute stdenv.hostPlatform;
 
@@ -56,7 +54,6 @@ lib.pipe rawPackage [
       '';
 
       meta = (oldAttrs.meta or { }) // {
-        mainProgram = pname;
         sourceProvenance = with lib.sourceTypes; [ fromSource ];
         changelog = "https://github.com/NixOS/nixfmt/releases/tag/v${oldAttrs.version}";
       };

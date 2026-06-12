@@ -9,14 +9,19 @@ import { assertEquals } from "@jsr/std__assert";
 describe("update PR config", (): void => {
   it("defaults to automated dependency labels and auto-merge", (): void => {
     assertEquals(
-      parseConfig(["--branch", "update/package/codex", "--title", "codex: 1.0.0 -> 1.0.1"]),
+      parseConfig([
+        "--branch",
+        "update/package/examplePackage",
+        "--title",
+        "examplePackage: 1.0.0 -> 1.0.1",
+      ]),
       {
         autoMerge: true,
         body: "",
-        branch: "update/package/codex",
+        branch: "update/package/examplePackage",
         dryRun: false,
         labels: ["dependencies", "automated"],
-        title: "codex: 1.0.0 -> 1.0.1",
+        title: "examplePackage: 1.0.0 -> 1.0.1",
       },
     );
   });

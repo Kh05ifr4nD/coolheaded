@@ -9,6 +9,7 @@ import {
 import { Effect } from "effect";
 import { fetchFromGitHubHash } from "coolheaded/sourceHash.ts";
 import { latestGitHubVersion } from "coolheaded/latestVersion.ts";
+import { withTemporaryDirectory } from "coolheaded/temporaryDirectory.ts";
 
 const GENERATED_PACKAGE_FILE_PATH = scriptPath("generatedPackage.nix", import.meta.url);
 const PIN_FILE_PATH = scriptPath("pin.json", import.meta.url);
@@ -29,14 +30,6 @@ function sourceUrl(version: string): string {
   return `https://github.com/tobi/qmd/archive/refs/tags/v${version}.tar.gz`;
 }
 
-function temporaryDirectory(): Effect.Effect<string, Error> {
-  return commandOutput("mktemp", ["-d"]);
-}
-
-function removeDirectory(path: string): Effect.Effect<void, Error> {
-  return Effect.asVoid(commandOutput("rm", ["-rf", path]));
-}
-
 function bun2nixOutPath(): Effect.Effect<string, Error> {
   return commandOutput("nix", [
     "build",
@@ -52,34 +45,30 @@ function generatedBunNix(version: string): Effect.Effect<string, Error> {
   return Effect.flatMap(
     bun2nixOutPath(),
     (outPath: string): Effect.Effect<string, Error> =>
-      Effect.flatMap(
-        temporaryDirectory(),
+      withTemporaryDirectory(
         (workspacePath: string): Effect.Effect<string, Error> =>
-          Effect.ensuring(
+          Effect.zipRight(
+            commandOutput("curl", [
+              "-fsSL",
+              sourceUrl(version),
+              "-o",
+              `${workspacePath}/source.tgz`,
+            ]),
             Effect.zipRight(
-              commandOutput("curl", [
-                "-fsSL",
-                sourceUrl(version),
-                "-o",
-                `${workspacePath}/source.tgz`,
-              ]),
+              commandOutput(
+                "tar",
+                ["-xzf", `${workspacePath}/source.tgz`, "--strip-components=1"],
+                workspacePath,
+              ),
               Effect.zipRight(
                 commandOutput(
-                  "tar",
-                  ["-xzf", `${workspacePath}/source.tgz`, "--strip-components=1"],
+                  `${outPath.trim()}/bin/bun2nix`,
+                  ["-o", `${workspacePath}/generatedPackage.nix`],
                   workspacePath,
                 ),
-                Effect.zipRight(
-                  commandOutput(
-                    `${outPath.trim()}/bin/bun2nix`,
-                    ["-o", `${workspacePath}/generatedPackage.nix`],
-                    workspacePath,
-                  ),
-                  commandOutput("cat", [`${workspacePath}/generatedPackage.nix`]),
-                ),
+                commandOutput("cat", [`${workspacePath}/generatedPackage.nix`]),
               ),
             ),
-            Effect.catchAll(removeDirectory(workspacePath), () => Effect.void),
           ),
       ),
   );
