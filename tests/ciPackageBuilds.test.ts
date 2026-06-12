@@ -1,6 +1,7 @@
 import {
   buildMatrix,
-  changedPackageNames,
+  changedDerivationPackages,
+  changedDerivationTargets,
   packagesFromInput,
 } from "coolheadedCi/discoverCiPackageBuilds.ts";
 import { describe, it } from "@jsr/std__testing/bdd";
@@ -12,22 +13,62 @@ describe("CI package build discovery", (): void => {
     assertEquals(packagesFromInput(""), []);
   });
 
-  it("selects touched package directories", (): void => {
+  it("selects package checks whose derivation identity changed", (): void => {
     assertEquals(
-      changedPackageNames([
-        "README.md",
-        "packages/specKit/package.nix",
-        "packages/specKit/uv.lock",
-        "packages/codex/pin.json",
-      ]),
-      ["codex", "specKit"],
+      changedDerivationPackages(
+        {
+          changed: "/nix/store/source-changed.drv",
+          removed: "/nix/store/source-removed.drv",
+          unchanged: "/nix/store/source-unchanged.drv",
+        },
+        {
+          added: "/nix/store/target-added.drv",
+          changed: "/nix/store/target-changed.drv",
+          unchanged: "/nix/store/source-unchanged.drv",
+        },
+      ),
+      ["added", "changed"],
     );
   });
 
-  it("expands package infrastructure changes to the full package set", (): void => {
-    assertEquals(changedPackageNames(["flake/packageSet.nix"]), "__all__");
-    assertEquals(changedPackageNames(["lib/nix/base.nix"]), "__all__");
-    assertEquals(changedPackageNames(["packages/.gitignore"]), "__all__");
+  it("keeps derivation changes scoped to the affected system", (): void => {
+    assertEquals(
+      changedDerivationTargets(
+        {
+          "aarch64-darwin": {
+            shared: "/nix/store/darwin-shared.drv",
+          },
+          "aarch64-linux": {
+            linuxOnly: "/nix/store/arm-old.drv",
+            shared: "/nix/store/arm-shared.drv",
+          },
+          "x86_64-linux": {
+            linuxOnly: "/nix/store/x86-old.drv",
+            shared: "/nix/store/x86-shared.drv",
+          },
+        },
+        {
+          "aarch64-darwin": {
+            shared: "/nix/store/darwin-shared.drv",
+          },
+          "aarch64-linux": {
+            linuxOnly: "/nix/store/arm-new.drv",
+            shared: "/nix/store/arm-shared.drv",
+          },
+          "x86_64-linux": {
+            linuxOnly: "/nix/store/x86-old.drv",
+            shared: "/nix/store/x86-shared.drv",
+          },
+        },
+      ),
+      [
+        {
+          package: "linuxOnly",
+          runner: "ubuntu-24.04-arm",
+          system: "aarch64-linux",
+        },
+      ],
+    );
   });
 
   it("builds only packages available on each system", (): void => {
@@ -38,9 +79,17 @@ describe("CI package build discovery", (): void => {
         "x86_64-linux": ["linuxOnly", "shared"],
       }),
       [
-        { package: "linuxOnly", runner: "ubuntu-24.04", system: "x86_64-linux" },
+        {
+          package: "linuxOnly",
+          runner: "ubuntu-24.04",
+          system: "x86_64-linux",
+        },
         { package: "shared", runner: "ubuntu-24.04", system: "x86_64-linux" },
-        { package: "shared", runner: "ubuntu-24.04-arm", system: "aarch64-linux" },
+        {
+          package: "shared",
+          runner: "ubuntu-24.04-arm",
+          system: "aarch64-linux",
+        },
         { package: "shared", runner: "macos-26", system: "aarch64-darwin" },
       ],
     );

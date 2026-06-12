@@ -1,14 +1,21 @@
 #!/usr/bin/env -S deno run --allow-env --allow-read --allow-run
 
 import { run, writeOutput } from "./lib.ts";
+import { toFileUrl } from "@jsr/std__path";
 
-const BUILD_ALL_SENTINEL = "__all__";
-const PACKAGE_INFRASTRUCTURE_PATHS = new Set(["flake.lock", "flake.nix", "packages/.gitignore"]);
+const PACKAGE_CHECKS_EXPR =
+  'checks: builtins.mapAttrs (_: check: builtins.unsafeDiscardStringContext check.drvPath) (builtins.removeAttrs checks [ "pre-commit" "treefmt" ])';
+
+interface SystemTarget {
+  readonly runner: string;
+  readonly system: string;
+}
+
 const SYSTEMS = [
   { runner: "ubuntu-24.04", system: "x86_64-linux" },
   { runner: "ubuntu-24.04-arm", system: "aarch64-linux" },
   { runner: "macos-26", system: "aarch64-darwin" },
-] as const;
+] as const satisfies readonly SystemTarget[];
 
 interface BuildTarget {
   readonly package: string;
@@ -16,62 +23,91 @@ interface BuildTarget {
   readonly system: string;
 }
 
+type PackageDrvPaths = Readonly<Record<string, string>>;
+type PackageDrvPathsBySystem = Readonly<Record<string, PackageDrvPaths>>;
+
 function packagesFromInput(value: string | undefined): readonly string[] {
   return [
     ...new Set((value ?? "").split(" ").filter((name: string): boolean => name.length > 0)),
   ].toSorted();
 }
 
-function changedPackageNames(
-  files: readonly string[],
-): readonly string[] | typeof BUILD_ALL_SENTINEL {
-  const packages = new Set<string>();
-  for (const file of files) {
-    if (
-      PACKAGE_INFRASTRUCTURE_PATHS.has(file) ||
-      file.startsWith("flake/") ||
-      file.startsWith("lib/")
-    ) {
-      return BUILD_ALL_SENTINEL;
-    }
-
-    if (file.startsWith("packages/")) {
-      const [, name] = file.split("/");
-      if (name !== undefined && name.length > 0) {
-        packages.add(name);
-      }
-    }
-  }
-
-  return [...packages].toSorted();
+function localGitFlakeRef(rev: string): string {
+  return `git+${toFileUrl(Deno.cwd()).href}?rev=${encodeURIComponent(rev)}`;
 }
 
-async function changedFiles(baseSha: string): Promise<readonly string[]> {
-  const result = await run(["git", "diff", "--name-only", `${baseSha}...HEAD`], { capture: true });
-  return result.stdout.split("\n").filter((file: string): boolean => file.length > 0);
-}
-
-async function availablePackages(system: string): Promise<readonly string[]> {
+async function packageDrvPaths(flakeRef: string, system: string): Promise<PackageDrvPaths> {
   const result = await run(
-    [
-      "nix",
-      "eval",
-      "--json",
-      `.#checks.${system}`,
-      "--apply",
-      'checks: builtins.attrNames (builtins.removeAttrs checks [ "pre-commit" "treefmt" ])',
-    ],
+    ["nix", "eval", "--json", `${flakeRef}#checks.${system}`, "--apply", PACKAGE_CHECKS_EXPR],
     { capture: true },
   );
   const value = JSON.parse(result.stdout);
-  if (
-    !Array.isArray(value) ||
-    !value.every((name: unknown): name is string => typeof name === "string")
-  ) {
-    throw new Error(`Unexpected package list for ${system}`);
+  if (typeof value !== "object" || value === null || Array.isArray(value)) {
+    throw new TypeError(`Unexpected package drvPath map for ${system}`);
   }
 
-  return value.toSorted();
+  const entries: [string, string][] = [];
+  for (const [name, drvPath] of Object.entries(value)) {
+    if (typeof drvPath !== "string") {
+      throw new TypeError(`Unexpected drvPath for ${system}.${name}`);
+    }
+    entries.push([name, drvPath]);
+  }
+
+  return Object.fromEntries(entries);
+}
+
+async function packageDrvPathsBySystem(flakeRef: string): Promise<PackageDrvPathsBySystem> {
+  return Object.fromEntries(
+    await Promise.all(
+      SYSTEMS.map(
+        async (target: SystemTarget): Promise<readonly [string, PackageDrvPaths]> => [
+          target.system,
+          await packageDrvPaths(flakeRef, target.system),
+        ],
+      ),
+    ),
+  );
+}
+
+function availablePackagesBySystem(
+  drvPathsBySystem: PackageDrvPathsBySystem,
+): Readonly<Record<string, readonly string[]>> {
+  return Object.fromEntries(
+    Object.entries(drvPathsBySystem).map(
+      (entry: readonly [string, PackageDrvPaths]): readonly [string, readonly string[]] => {
+        const [system, drvPaths] = entry;
+        return [system, Object.keys(drvPaths).toSorted()];
+      },
+    ),
+  );
+}
+
+function changedDerivationPackages(
+  before: PackageDrvPaths,
+  after: PackageDrvPaths,
+): readonly string[] {
+  return Object.keys(after)
+    .filter((name: string): boolean => before[name] !== after[name])
+    .toSorted();
+}
+
+function changedDerivationTargets(
+  beforeBySystem: Readonly<PackageDrvPathsBySystem>,
+  afterBySystem: Readonly<PackageDrvPathsBySystem>,
+): readonly BuildTarget[] {
+  return SYSTEMS.flatMap((target: SystemTarget): readonly BuildTarget[] =>
+    changedDerivationPackages(
+      beforeBySystem[target.system] ?? {},
+      afterBySystem[target.system] ?? {},
+    ).map(
+      (name: string): BuildTarget => ({
+        package: name,
+        runner: target.runner,
+        system: target.system,
+      }),
+    ),
+  );
 }
 
 function missingPackages(
@@ -101,57 +137,53 @@ function buildMatrix(
   });
 }
 
-async function requestedPackages(
+async function requestedBuildTargets(
   eventName: string | undefined,
   baseSha: string | undefined,
   packagesInput: string | undefined,
   buildAllPackages: string | undefined,
   availableBySystem: Readonly<Record<string, readonly string[]>>,
-): Promise<readonly string[]> {
+  currentDrvPathsBySystem: PackageDrvPathsBySystem,
+): Promise<readonly BuildTarget[]> {
   if (buildAllPackages === "true") {
-    return [...new Set(Object.values(availableBySystem).flat())].toSorted();
+    return buildMatrix(
+      [...new Set(Object.values(availableBySystem).flat())].toSorted(),
+      availableBySystem,
+    );
   }
 
   const explicit = packagesFromInput(packagesInput);
   if (explicit.length > 0) {
-    return explicit;
+    const missing = missingPackages(explicit, availableBySystem);
+    if (missing.length > 0) {
+      throw new Error(`Unknown check attrs: ${missing.join(", ")}`);
+    }
+    return buildMatrix(explicit, availableBySystem);
   }
 
   if (eventName === "pull_request" && baseSha !== undefined && baseSha.length > 0) {
-    const changed = changedPackageNames(await changedFiles(baseSha));
-    return changed === BUILD_ALL_SENTINEL
-      ? [...new Set(Object.values(availableBySystem).flat())].toSorted()
-      : changed;
+    return changedDerivationTargets(
+      await packageDrvPathsBySystem(localGitFlakeRef(baseSha)),
+      currentDrvPathsBySystem,
+    );
   }
 
   return [];
 }
 
 async function discoverCiPackageBuilds(): Promise<void> {
-  const availableBySystem = Object.fromEntries(
-    await Promise.all(
-      SYSTEMS.map(
-        async (target): Promise<readonly [string, readonly string[]]> => [
-          target.system,
-          await availablePackages(target.system),
-        ],
-      ),
-    ),
-  );
+  const currentDrvPathsBySystem = await packageDrvPathsBySystem(".");
+  const availableBySystem = availablePackagesBySystem(currentDrvPathsBySystem);
 
-  const requested = await requestedPackages(
+  const include = await requestedBuildTargets(
     Deno.env.get("GITHUB_EVENT_NAME"),
     Deno.env.get("BASE_SHA"),
     Deno.env.get("PACKAGES"),
     Deno.env.get("BUILD_ALL_PACKAGES"),
     availableBySystem,
+    currentDrvPathsBySystem,
   );
-  const missing = missingPackages(requested, availableBySystem);
-  if (missing.length > 0) {
-    throw new Error(`Unknown check attrs: ${missing.join(", ")}`);
-  }
 
-  const include = buildMatrix(requested, availableBySystem);
   await writeOutput("hasPackages", String(include.length > 0));
   await writeOutput("matrix", JSON.stringify({ include }));
 }
@@ -160,4 +192,10 @@ if (import.meta.main) {
   void discoverCiPackageBuilds();
 }
 
-export { buildMatrix, changedPackageNames, packagesFromInput, requestedPackages };
+export {
+  buildMatrix,
+  changedDerivationPackages,
+  changedDerivationTargets,
+  packagesFromInput,
+  requestedBuildTargets,
+};
