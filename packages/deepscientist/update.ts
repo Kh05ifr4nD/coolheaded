@@ -10,6 +10,7 @@ import type { PackageHashConfig } from "coolheaded/packageConfigTypes.ts";
 import { fetchFromGitHubHash } from "coolheaded/sourceHash.ts";
 import { latestNpmVersion } from "coolheaded/latestVersion.ts";
 import { npmPackageHashConfig } from "coolheaded/npmPackageUpdater.ts";
+import { withTemporaryDirectory } from "coolheaded/temporaryDirectory.ts";
 
 const NPM_PACKAGE_NAME = "@researai/deepscientist";
 const PIN_FILE_PATH = scriptPath("pin.json", import.meta.url);
@@ -28,14 +29,6 @@ function sourceUrl(version: string): string {
   return `https://github.com/ResearAI/DeepScientist/archive/refs/tags/v${version}.tar.gz`;
 }
 
-function temporaryDirectory(): Effect.Effect<string, Error> {
-  return commandOutput("mktemp", ["-d"]);
-}
-
-function removeDirectory(path: string): Effect.Effect<void, Error> {
-  return Effect.asVoid(commandOutput("rm", ["-rf", path]));
-}
-
 function prefetchNpmDepsOutPath(): Effect.Effect<string, Error> {
   return commandOutput("nix", [
     "build",
@@ -51,107 +44,99 @@ function npmDepsHash(version: string): Effect.Effect<string, Error> {
   return Effect.flatMap(
     prefetchNpmDepsOutPath(),
     (outPath: string): Effect.Effect<string, Error> =>
-      Effect.flatMap(
-        temporaryDirectory(),
+      withTemporaryDirectory(
         (workspacePath: string): Effect.Effect<string, Error> =>
-          Effect.ensuring(
+          Effect.zipRight(
+            commandOutput("curl", [
+              "-fsSL",
+              sourceUrl(version),
+              "-o",
+              `${workspacePath}/source.tgz`,
+            ]),
             Effect.zipRight(
-              commandOutput("curl", [
-                "-fsSL",
-                sourceUrl(version),
-                "-o",
-                `${workspacePath}/source.tgz`,
-              ]),
+              commandOutput(
+                "tar",
+                ["-xzf", `${workspacePath}/source.tgz`, "--strip-components=1"],
+                workspacePath,
+              ),
               Effect.zipRight(
-                commandOutput(
-                  "tar",
-                  ["-xzf", `${workspacePath}/source.tgz`, "--strip-components=1"],
-                  workspacePath,
-                ),
+                commandOutput("sh", [
+                  "-c",
+                  `jq '
+                  .dependencies |= del(
+                    .["@anthropic-ai/claude-code"],
+                    .["@openai/codex"],
+                    .["opencode-ai"]
+                  )
+                ' "$1" > "$1.tmp" && mv "$1.tmp" "$1"`,
+                  "sh",
+                  `${workspacePath}/package.json`,
+                ]),
                 Effect.zipRight(
                   commandOutput("sh", [
                     "-c",
                     `jq '
-                      .dependencies |= del(
-                        .["@anthropic-ai/claude-code"],
-                        .["@openai/codex"],
-                        .["opencode-ai"]
-                      )
-                    ' "$1" > "$1.tmp" && mv "$1.tmp" "$1"`,
-                    "sh",
-                    `${workspacePath}/package.json`,
-                  ]),
-                  Effect.zipRight(
-                    commandOutput("sh", [
-                      "-c",
-                      `jq '
-                        .packages[""].dependencies |= del(
-                          .["@anthropic-ai/claude-code"],
-                          .["@openai/codex"],
-                          .["opencode-ai"]
+                    .packages[""].dependencies |= del(
+                      .["@anthropic-ai/claude-code"],
+                      .["@openai/codex"],
+                      .["opencode-ai"]
+                    )
+                    | .packages |= with_entries(
+                        select(
+                          (.key | test("^node_modules/@anthropic-ai/claude-code$")) | not
                         )
-                        | .packages |= with_entries(
-                            select(
-                              (.key | test("^node_modules/@anthropic-ai/claude-code$")) | not
-                            )
-                            | select(
-                              (.key | test("^node_modules/@openai/codex(-.*)?$")) | not
-                            )
-                            | select(
-                              (.key | test("^node_modules/(opencode-ai|opencode-.+)$")) | not
-                            )
-                          )
-                      ' "$1" > "$1.tmp" && mv "$1.tmp" "$1"`,
-                      "sh",
-                      `${workspacePath}/package-lock.json`,
-                    ]),
-                    commandOutput(`${outPath.trim()}/bin/prefetch-npm-deps`, [
-                      `${workspacePath}/package-lock.json`,
-                    ]),
-                  ),
+                        | select(
+                          (.key | test("^node_modules/@openai/codex(-.*)?$")) | not
+                        )
+                        | select(
+                          (.key | test("^node_modules/(opencode-ai|opencode-.+)$")) | not
+                        )
+                      )
+                  ' "$1" > "$1.tmp" && mv "$1.tmp" "$1"`,
+                    "sh",
+                    `${workspacePath}/package-lock.json`,
+                  ]),
+                  commandOutput(`${outPath.trim()}/bin/prefetch-npm-deps`, [
+                    `${workspacePath}/package-lock.json`,
+                  ]),
                 ),
               ),
             ),
-            Effect.catchAll(removeDirectory(workspacePath), () => Effect.void),
           ),
       ),
   );
 }
 
 function generatedUvLock(version: string): Effect.Effect<string, Error> {
-  return Effect.flatMap(
-    temporaryDirectory(),
+  return withTemporaryDirectory(
     (workspacePath: string): Effect.Effect<string, Error> =>
-      Effect.ensuring(
+      Effect.zipRight(
+        commandOutput("curl", ["-fsSL", sourceUrl(version), "-o", `${workspacePath}/source.tgz`]),
         Effect.zipRight(
-          commandOutput("curl", ["-fsSL", sourceUrl(version), "-o", `${workspacePath}/source.tgz`]),
+          commandOutput(
+            "tar",
+            ["-xzf", `${workspacePath}/source.tgz`, "--strip-components=1"],
+            workspacePath,
+          ),
           Effect.zipRight(
             commandOutput(
-              "tar",
-              ["-xzf", `${workspacePath}/source.tgz`, "--strip-components=1"],
-              workspacePath,
-            ),
-            Effect.zipRight(
-              commandOutput(
-                "nix",
-                [
-                  "run",
-                  "--inputs-from",
-                  REPOSITORY_ROOT_PATH,
-                  "nixpkgs#uv",
-                  "--",
-                  "lock",
-                  "--project",
-                  workspacePath,
-                  "--no-progress",
-                ],
+              "nix",
+              [
+                "run",
+                "--inputs-from",
                 REPOSITORY_ROOT_PATH,
-              ),
-              commandOutput("cat", [`${workspacePath}/uv.lock`]),
+                "nixpkgs#uv",
+                "--",
+                "lock",
+                "--project",
+                workspacePath,
+                "--no-progress",
+              ],
+              REPOSITORY_ROOT_PATH,
             ),
+            commandOutput("cat", [`${workspacePath}/uv.lock`]),
           ),
         ),
-        Effect.catchAll(removeDirectory(workspacePath), () => Effect.void),
       ),
   );
 }

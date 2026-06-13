@@ -79,6 +79,6 @@ packageLib.mkGitHubReleaseBinaryPackage {
 
   meta = {
     license = lib.licenses.mit;
-    description = "AI coding agent built for the terminal";
+    description = "Open source AI coding agent";
   };
 }

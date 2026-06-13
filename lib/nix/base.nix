@@ -104,6 +104,7 @@ let
       mainProgram ? pname,
       nativeBuildInputs ? [ ],
       nativeInstallCheckInputs ? [ ],
+      passthru ? { },
       postFixup ? "",
       preFixup ? "",
       preVersionCheck ? "",
@@ -142,6 +143,7 @@ let
 
         inherit
           doInstallCheck
+          passthru
           versionCheckKeepEnvironment
           versionCheckProgram
           versionCheckProgramArg

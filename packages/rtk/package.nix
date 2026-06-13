@@ -67,7 +67,7 @@ rustPlatform.buildRustPackage (finalAttrs: {
   meta = {
     homepage = "https://github.com/rtk-ai/rtk";
     license = lib.licenses.asl20;
-    description = "High-performance CLI proxy that reduces LLM token consumption by 60-90%";
+    description = "CLI proxy that reduces LLM token consumption by 60-90% on common dev commands";
     mainProgram = pname;
     platforms = lib.platforms.unix;
     sourceProvenance = with lib.sourceTypes; [ fromSource ];

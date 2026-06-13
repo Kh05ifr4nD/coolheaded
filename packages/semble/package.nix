@@ -4,6 +4,7 @@
   fetchFromGitHub,
   fetchPypi,
   makeWrapper,
+  packageLib,
 }:
 let
   pname = "semble";
@@ -45,7 +46,7 @@ let
     meta = {
       homepage = "https://github.com/MinishLab/model2vec";
       license = lib.licenses.mit;
-      description = "Distill a small fast model from any sentence transformer";
+      description = "Fast State-of-the-Art Static Embeddings";
     };
   };
 
@@ -79,7 +80,7 @@ let
     meta = {
       homepage = "https://github.com/MinishLab/vicinity";
       license = lib.licenses.mit;
-      description = "Lightweight nearest neighbors library with flexible backends";
+      description = "Lightweight Nearest Neighbors with Flexible Backends";
     };
   };
 
@@ -111,7 +112,7 @@ let
     meta = {
       homepage = "https://github.com/xhluca/bm25s";
       license = lib.licenses.mit;
-      description = "Fast lexical search using Best Matching 25";
+      description = "Fast BM25 search in Python, powered by Numpy and Numba";
     };
   };
 in
@@ -175,13 +176,9 @@ python3.pkgs.buildPythonApplication {
   meta = {
     homepage = "https://github.com/MinishLab/semble";
     license = lib.licenses.mit;
-    description = "Fast and accurate local code search for AI agents";
+    description = "Fast and Accurate Code Search for Agents";
     mainProgram = pname;
-    platforms = [
-      "aarch64-darwin"
-      "aarch64-linux"
-      "x86_64-linux"
-    ];
+    platforms = packageLib.supportedSystems;
     sourceProvenance = with lib.sourceTypes; [ fromSource ];
     changelog = "https://github.com/MinishLab/semble/releases/tag/v${pin.version}";
   };

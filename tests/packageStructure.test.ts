@@ -5,6 +5,7 @@ import { join } from "@jsr/std__path";
 const PACKAGES_DIRECTORY_PATH = new globalThis.URL("../packages/", import.meta.url).pathname;
 const PACKAGE_DIRECTORY_PATTERN = /^[a-z][A-Za-z0-9]*$/u;
 const ALLOWED_PACKAGE_FILES = new Set([
+  "checks.nix",
   "generatedPackage.nix",
   "package.nix",
   "pin.json",

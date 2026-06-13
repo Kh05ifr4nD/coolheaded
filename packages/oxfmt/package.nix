@@ -80,6 +80,7 @@ packageLib.mkGitHubReleaseBinaryPackage {
 
   meta = {
     license = lib.licenses.mit;
-    description = "Formatter for JavaScript and TypeScript built on the Oxc compiler stack";
+    # https://oxc.rs/docs/guide/usage/formatter.html
+    description = "Rust-powered, Prettier-compatible code formatter built for the JavaScript ecosystem";
   };
 }

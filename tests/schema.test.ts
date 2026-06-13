@@ -96,15 +96,15 @@ describe("parsePackageHashConfig", (): void => {
 describe("npm registry URL helpers", (): void => {
   it("builds scoped package tarball URLs", (): void => {
     assertEquals(
-      npmScopedTarballUrl("@openai/codex", "codex", "0.137.0-linux-x64"),
-      "https://registry.npmjs.org/@openai/codex/-/codex-0.137.0-linux-x64.tgz",
+      npmScopedTarballUrl("@scope/example", "example", "0.137.0-linux-x64"),
+      "https://registry.npmjs.org/@scope/example/-/example-0.137.0-linux-x64.tgz",
     );
   });
 
   it("encodes scoped package names", (): void => {
     assertEquals(
-      npmRegistryPackageUrl("@openai/codex"),
-      "https://registry.npmjs.org/%40openai%2Fcodex",
+      npmRegistryPackageUrl("@scope/example"),
+      "https://registry.npmjs.org/%40scope%2Fexample",
     );
   });
 

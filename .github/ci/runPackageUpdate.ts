@@ -1,6 +1,5 @@
 #!/usr/bin/env -S deno run --allow-env --allow-read --allow-run --allow-write
 
-import { DENO_DEPENDENCY_HASH_FILE_PATH, updateDenoDependencyHash } from "./runDenoDepsUpdate.ts";
 import {
   assertOnlyChangedFiles,
   changedFiles,
@@ -12,11 +11,43 @@ import {
 } from "./lib.ts";
 import { compareVersions } from "coolheaded/version.ts";
 
-function packageAllowedFile(name: string, file: string): boolean {
-  return (
-    file.startsWith(`packages/${name}/`) ||
-    (name === "deno" && file === DENO_DEPENDENCY_HASH_FILE_PATH)
+const PACKAGE_UPDATE_ALLOWED_FILES_EXPR = `
+let
+  config = builtins.fromJSON (builtins.getEnv "PACKAGE_UPDATE_CONFIG");
+  flake = builtins.getFlake (toString ./.);
+  package = flake.packages.\${config.system}.\${config.name};
+in
+  package.passthru.updateAllowedFiles or []
+`;
+
+function isStringList(value: unknown): value is readonly string[] {
+  return Array.isArray(value) && value.every((item: unknown): boolean => typeof item === "string");
+}
+
+function parseStringList(value: unknown): readonly string[] {
+  if (!isStringList(value)) {
+    throw new Error("Invalid package update allowed files JSON");
+  }
+
+  return value;
+}
+
+async function packageUpdateAllowedFiles(system: string, name: string): Promise<readonly string[]> {
+  const result = await run(
+    ["nix", "eval", "--json", "--impure", "--expr", PACKAGE_UPDATE_ALLOWED_FILES_EXPR],
+    {
+      capture: true,
+      env: {
+        PACKAGE_UPDATE_CONFIG: JSON.stringify({ name, system }),
+      },
+    },
   );
+  const parsed: unknown = JSON.parse(result.stdout);
+  return parseStringList(parsed);
+}
+
+function packageAllowedFile(name: string, extraFiles: readonly string[], file: string): boolean {
+  return file.startsWith(`packages/${name}/`) || extraFiles.includes(file);
 }
 
 function assertVersionAdvanced(
@@ -61,11 +92,11 @@ async function runPackageUpdate(
   }
 
   const system = await currentSystem();
-  if (name === "deno") {
-    await updateDenoDependencyHash(system);
-  }
+  const extraAllowedFiles = await packageUpdateAllowedFiles(system, name);
   const files = await changedFiles();
-  assertOnlyChangedFiles(files, (file: string): boolean => packageAllowedFile(name, file));
+  assertOnlyChangedFiles(files, (file: string): boolean =>
+    packageAllowedFile(name, extraAllowedFiles, file),
+  );
 
   const attr = `.#packages.${system}.${name}`;
   const newVersion = await nixEvalRaw(`${attr}.version`);

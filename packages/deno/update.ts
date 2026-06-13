@@ -1,8 +1,14 @@
-import { runUpdateScript, scriptPath, updateNewerPinVersion } from "coolheaded/updateScript.ts";
+import {
+  commandOutput,
+  runUpdateScript,
+  scriptPath,
+  updateNewerPinVersion,
+} from "coolheaded/updateScript.ts";
 import { Effect } from "effect";
 import type { SupportedSystem } from "coolheaded/system.ts";
 import { latestGitHubVersion } from "coolheaded/latestVersion.ts";
 import { releaseHashConfig } from "coolheaded/releaseUpdater.ts";
+import { updateDenoDependencyHash } from "coolheadedCi/runDenoDepsUpdate.ts";
 import { writePackageHashConfig } from "coolheaded/pinJson.ts";
 
 const DENO_RELEASE_VERSION_PREFIX = "v";
@@ -32,6 +38,10 @@ function sha256SumUrls(version: string): Readonly<Record<SupportedSystem, string
   };
 }
 
+function currentSystem(): Effect.Effect<string, Error> {
+  return commandOutput("nix", ["eval", "--impure", "--raw", "--expr", "builtins.currentSystem"]);
+}
+
 function updateProgram(args: readonly string[]): Effect.Effect<void, Error> {
   return updateNewerPinVersion(
     args,
@@ -40,7 +50,20 @@ function updateProgram(args: readonly string[]): Effect.Effect<void, Error> {
     (version: string): Effect.Effect<void, Error> =>
       Effect.flatMap(
         releaseHashConfig(version, sha256SumUrls(version), "sha256Sum"),
-        (config): Effect.Effect<void> => writePackageHashConfig(PIN_FILE_PATH, config),
+        (config): Effect.Effect<void, Error> =>
+          Effect.zipRight(
+            writePackageHashConfig(PIN_FILE_PATH, config),
+            Effect.flatMap(
+              currentSystem(),
+              (system: string): Effect.Effect<void, Error> =>
+                Effect.tryPromise({
+                  catch(error: unknown): Error {
+                    return error instanceof Error ? error : new Error(String(error));
+                  },
+                  try: (): Promise<void> => updateDenoDependencyHash(system),
+                }),
+            ),
+          ),
       ),
   );
 }

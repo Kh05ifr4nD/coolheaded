@@ -28,6 +28,6 @@ packageLib.mkGitHubReleaseBinaryPackage {
   meta = {
     homepage = "https://www.shellcheck.net";
     license = lib.licenses.gpl3Plus;
-    description = "Static analysis tool for shell scripts";
+    description = "Shell script static analysis tool";
   };
 }

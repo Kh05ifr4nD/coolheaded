@@ -7,17 +7,17 @@ import { parsePackageName } from "coolheaded/packageName.ts";
 const PACKAGE_NAME_PATTERN = /^[a-z][A-Za-z0-9]*$/u;
 
 describe("parsePackageName", (): void => {
-  it("accepts codex", (): void => {
-    assertEquals(parsePackageName("codex"), "codex");
+  it("accepts lowercase package directory names", (): void => {
+    assertEquals(parsePackageName("example"), "example");
   });
 
   it("rejects scoped npm names as package directory names", (): void => {
     assertThrows(
       (): void => {
-        parsePackageName("@openai/codex");
+        parsePackageName("@scope/example");
       },
       Error,
-      "Invalid package name: @openai/codex",
+      "Invalid package name: @scope/example",
     );
   });
 

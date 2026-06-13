@@ -44,11 +44,7 @@ jobs:
         with:
           persist-credentials: false
       - uses: cachix/install-nix-action@v31
-      - run: nix fmt -- --ci
-      - run: nix develop -c actionlint
-      - run: nix develop -c deno task check
-      - run: nix develop -c deno task lint
-      - run: nix develop -c deno task test
+      - run: nix develop -c pre-commit run --all-files
       - name: Realize bun2nix cache entry creator
         run: |
           system="$(nix eval --impure --raw --expr builtins.currentSystem)"

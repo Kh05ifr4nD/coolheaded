@@ -147,6 +147,7 @@ stdenvNoCC.mkDerivation {
     license = lib.licenses.agpl3Only;
     mainProgram = "trellis";
     platforms = packageLib.supportedSystems;
-    description = "AI-assisted development workflow framework for Cursor, Claude Code and more";
+    sourceProvenance = with lib.sourceTypes; [ fromSource ];
+    description = "Agent harness";
   };
 }

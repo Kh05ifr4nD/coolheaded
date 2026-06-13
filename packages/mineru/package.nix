@@ -226,7 +226,7 @@ packageLib.mkUvApplication {
   meta = pin: {
     homepage = "https://github.com/opendatalab/MinerU";
     license = lib.licenses.unfreeRedistributable;
-    description = "High-accuracy document parsing engine for LLM · RAG · Agent workflows";
+    description = "Transforms complex documents like PDFs and Office docs into LLM-ready markdown/JSON for your Agentic workflows";
     changelog = "https://github.com/opendatalab/MinerU/releases/tag/mineru-${pin.version}-released";
   };
 }

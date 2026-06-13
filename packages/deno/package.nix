@@ -68,6 +68,8 @@ packageLib.mkReleaseBinaryPackage {
     '';
   };
 
+  passthru.updateAllowedFiles = [ "flake/gitHooks.nix" ];
+
   meta = {
     homepage = "https://deno.com/";
     license = lib.licenses.mit;
