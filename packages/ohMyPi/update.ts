@@ -10,6 +10,7 @@ function latestVersion(): Effect.Effect<string, Error> {
   return latestGitHubVersion({
     owner: "can1357",
     repo: "oh-my-pi",
+    source: "releases",
   });
 }
 
