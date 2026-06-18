@@ -384,7 +384,7 @@ wheels = [
 
 [[package]]
 name = "fastapi"
-version = "0.137.1"
+version = "0.137.2"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
     { name = "annotated-doc" },
@@ -393,9 +393,9 @@ dependencies = [
     { name = "typing-extensions" },
     { name = "typing-inspection" },
 ]
-sdist = { url = "https://files.pythonhosted.org/packages/d5/b1/e5b92c59d2c37817e77c1a8c2fc1f79cdcc04c68253e5406b43e3204cba7/fastapi-0.137.1.tar.gz", hash = "sha256:822360704230d9533d8d9475399613525968aa2f0b5bd2a3ccc9f18c88fd541c", size = 408293, upload-time = "2026-06-15T11:28:20.79Z" }
+sdist = { url = "https://files.pythonhosted.org/packages/e2/29/cc5819dc24d3daa80cdaa1aec023bf8652a70dd7fd1c96b0b225c99a7690/fastapi-0.137.2.tar.gz", hash = "sha256:b9d893bebc97dcfbdcb1917e88a292d062844ea19445a5fa4f7eb28c4baea9e3", size = 410332, upload-time = "2026-06-18T06:58:24.434Z" }
 wheels = [
-    { url = "https://files.pythonhosted.org/packages/da/35/380b9a5922f4340e51c309cde09e5bd32e62f02302971bee30dc15aa0624/fastapi-0.137.1-py3-none-any.whl", hash = "sha256:64f6983c59e45c4b9fdc44e57cb8035c2451ee91ea8e8ec042aca37de7cf6b69", size = 121877, upload-time = "2026-06-15T11:28:19.523Z" },
+    { url = "https://files.pythonhosted.org/packages/2f/ed/0c6b644e99fb5697d8bdcd36cdb47c52e77a63fc7a1514b1f03a6ecab955/fastapi-0.137.2-py3-none-any.whl", hash = "sha256:791d36261e916a98b25ac85ee591bc3db159394070f6d3d096d94fb378f60ce2", size = 122252, upload-time = "2026-06-18T06:58:26.074Z" },
 ]
 
 [[package]]
@@ -968,7 +968,7 @@ wheels = [
 
 [[package]]
 name = "openai"
-version = "2.42.0"
+version = "2.43.0"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
     { name = "anyio" },
@@ -980,9 +980,9 @@ dependencies = [
     { name = "tqdm" },
     { name = "typing-extensions" },
 ]
-sdist = { url = "https://files.pythonhosted.org/packages/6b/e2/c8c7eb634fd2438c2f3fc5c385dd34d0f9d04d6623bcfdf3adcefcf6d7ca/openai-2.42.0.tar.gz", hash = "sha256:5263ee2868608571499df225471770238c8f3ff1ac296874bfc096bbabb6da3a", size = 785143, upload-time = "2026-06-16T21:52:35.798Z" }
+sdist = { url = "https://files.pythonhosted.org/packages/f3/fa/88d0c58a0c58df7e6758e66b99c5d028d5e0bb49f8812d7203940cd9dbf1/openai-2.43.0.tar.gz", hash = "sha256:e74d238200a26868977002190fb6631613480a93dfe0c9c982e77021ed60a017", size = 785369, upload-time = "2026-06-17T17:06:56.06Z" }
 wheels = [
-    { url = "https://files.pythonhosted.org/packages/01/61/8ea2cbff2531ee0210706aff60174cd10a5a14c1ca17a8c29b1eb34d0b1b/openai-2.42.0-py3-none-any.whl", hash = "sha256:8cd46b1877cfd4aea7ade9474940cc4f78dbd41cce3893de11c12510d0b70caf", size = 1354709, upload-time = "2026-06-16T21:52:33.712Z" },
+    { url = "https://files.pythonhosted.org/packages/a3/d2/ba767f4bbb30776c03d40906a2d3afad716a165ffa1771fc23b8992f7920/openai-2.43.0-py3-none-any.whl", hash = "sha256:65a670b54fadf2268c9e1330133373c963eb779ee969e5cbad419ec2c21dce97", size = 1355077, upload-time = "2026-06-17T17:06:53.614Z" },
 ]
 
 [[package]]
@@ -1128,7 +1128,7 @@ wheels = [
 
 [[package]]
 name = "openviking"
-version = "0.4.2"
+version = "0.4.4"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
     { name = "apscheduler" },
@@ -1184,25 +1184,25 @@ dependencies = [
     { name = "xlrd" },
     { name = "xxhash" },
 ]
-sdist = { url = "https://files.pythonhosted.org/packages/f3/67/1177fcf41e423390f0dbf4ccaa51edd9716aec0c526c24209407ad399a4c/openviking-0.4.2.tar.gz", hash = "sha256:3323bcfeb64b19c6bf0a6ab74e55c71c2accc916639c89dd47fc0f2cb106cf81", size = 54479244, upload-time = "2026-06-17T07:17:34.252Z" }
+sdist = { url = "https://files.pythonhosted.org/packages/e6/b7/50843059cb22074a4e409e9ad89658b62bee2acbf8841575599f510d6374/openviking-0.4.4.tar.gz", hash = "sha256:29813e6a3642ebde1294ca54109db9a68bc5b08d18a1641a211b9605ede1978b", size = 54618023, upload-time = "2026-06-18T14:05:35.574Z" }
 wheels = [
-    { url = "https://files.pythonhosted.org/packages/a3/7c/c93bafade1371da1838afbbfaf48a62561150e3ae99107851fd996ff2605/openviking-0.4.2-cp310-abi3-macosx_14_0_arm64.whl", hash = "sha256:776c10893e00b997e2862bed8ba8ce0336954051806bddd6b1fb089d80082a4c", size = 17504407, upload-time = "2026-06-17T07:17:21.132Z" },
-    { url = "https://files.pythonhosted.org/packages/91/8d/7b54c3fe5349ccc0fefb90b46091af17b3bab6e2456853009feb16e580c8/openviking-0.4.2-cp310-abi3-macosx_15_0_x86_64.whl", hash = "sha256:d099afa34121473dfb0b790b3f3ae3679cf403043ec0c68cfc3e2b2b501bccd4", size = 19802466, upload-time = "2026-06-17T07:17:24.372Z" },
-    { url = "https://files.pythonhosted.org/packages/bc/9e/346d1f4a2a5a2288ec5333b8d936619cdc7153d2a68a78dc49c2e354a8b9/openviking-0.4.2-cp310-abi3-manylinux_2_31_aarch64.whl", hash = "sha256:ca5ec70054b1565e40a93d162fcf61d16b31d0d5ab822971e9f3566ee9f2cd06", size = 18587416, upload-time = "2026-06-17T07:17:26.785Z" },
-    { url = "https://files.pythonhosted.org/packages/c6/0f/e0343a50aedb4ec46394b263000cee61adae07627b509fe8227ce9f245f3/openviking-0.4.2-cp310-abi3-manylinux_2_31_x86_64.whl", hash = "sha256:b9163821763815b9fb92c7b35618637fea9d6acdeee1f842810511cf29246fad", size = 20932801, upload-time = "2026-06-17T07:17:29.339Z" },
-    { url = "https://files.pythonhosted.org/packages/11/c5/b4cb49432bbfdc981c52d31c76e50111013184c5b8f9a6cd504ae747bc89/openviking-0.4.2-cp310-abi3-win_amd64.whl", hash = "sha256:2a6a588add40b3ac2d32dbb0c94c5a2c46b36575b9061b1125b942d419c9d19d", size = 23292877, upload-time = "2026-06-17T07:17:31.533Z" },
+    { url = "https://files.pythonhosted.org/packages/bb/77/3d8432e51a1c0cf13d813e1882706df3fe4ecd303191080cdb64b1aac7ae/openviking-0.4.4-cp310-abi3-macosx_14_0_arm64.whl", hash = "sha256:e4ed5ece03be0514cf1e1c9e78d5e78ffc77449760e1f0207f0425f4031b89d0", size = 17880208, upload-time = "2026-06-18T14:05:18.813Z" },
+    { url = "https://files.pythonhosted.org/packages/f2/ea/a7d9f21a39b97111bcc3ca0d5fdef311774805b463e8a29ce9cbf347d6f7/openviking-0.4.4-cp310-abi3-macosx_15_0_x86_64.whl", hash = "sha256:72d55ff5ac9c9b969cee8ea5eb9058975e4a773722b04b20c71eea360e002cc3", size = 20187729, upload-time = "2026-06-18T14:05:22.222Z" },
+    { url = "https://files.pythonhosted.org/packages/27/6f/e9860089da70cbca04521d6ba3974fad02cf3a3f6dd0993add8373ac5f48/openviking-0.4.4-cp310-abi3-manylinux_2_31_aarch64.whl", hash = "sha256:df4408be74d8553bfcf91a082968799736cf794351538d9b1f9cf67c976cd66f", size = 18938603, upload-time = "2026-06-18T14:05:25.18Z" },
+    { url = "https://files.pythonhosted.org/packages/e4/8d/206aa3e209269d4c16739ae023e8bc2ab465773c3a192ed63458cc681449/openviking-0.4.4-cp310-abi3-manylinux_2_31_x86_64.whl", hash = "sha256:d5ba058158767f2abd9a508a5287c9ce0f6185c2967c11a87770ca72d6d313ea", size = 21319187, upload-time = "2026-06-18T14:05:28.117Z" },
+    { url = "https://files.pythonhosted.org/packages/c9/3d/0252bb51cbf8e986c99eae048cd8d780ffdfc8473c4954b7783791c74765/openviking-0.4.4-cp310-abi3-win_amd64.whl", hash = "sha256:0f2962abddf9d02ec567402b3b9dbf94225536d2866273e0400201141140355d", size = 23712247, upload-time = "2026-06-18T14:05:31.18Z" },
 ]
 
 [[package]]
 name = "openvikingproject"
-version = "0.4.2"
+version = "0.4.4"
 source = { virtual = "." }
 dependencies = [
     { name = "openviking" },
 ]
 
 [package.metadata]
-requires-dist = [{ name = "openviking", specifier = "==0.4.2" }]
+requires-dist = [{ name = "openviking", specifier = "==0.4.4" }]
 
 [[package]]
 name = "packaging"
