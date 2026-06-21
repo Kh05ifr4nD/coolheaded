@@ -5,8 +5,8 @@ let
 
   denoDependenciesHashes = {
     aarch64-darwin = "sha256-y7n31mS+OWlxmq3MSJd+tFqkwzt3S7Ba8pkFGGk40n8=";
-    aarch64-linux = "sha256-DmhbWriTe8DdgAldbeZ4n/7yUN4Hq8QX9cJ0H+q/goM=";
-    x86_64-linux = "sha256-DmhbWriTe8DdgAldbeZ4n/7yUN4Hq8QX9cJ0H+q/goM=";
+    aarch64-linux = "sha256-D6MSO2vtxcH1nZViXIpNbvhi3JsRsiCH9KOQWW0DH1k=";
+    x86_64-linux = "sha256-D6MSO2vtxcH1nZViXIpNbvhi3JsRsiCH9KOQWW0DH1k=";
   };
 
   denoDependencies =
