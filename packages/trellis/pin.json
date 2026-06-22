@@ -1,10 +1,10 @@
 {
-  "version": "0.6.3",
+  "version": "0.6.4",
   "hashes": {
-    "aarch64-darwin": "sha512-PakzmJU3cpQiQkljbv8mpJ4Jk8oZ2SlwnzJXv3lqMyrkllSFnmUe1HV6CAOSkx/qYDbShCqrS+6O71g78fQkGQ==",
-    "aarch64-linux": "sha512-PakzmJU3cpQiQkljbv8mpJ4Jk8oZ2SlwnzJXv3lqMyrkllSFnmUe1HV6CAOSkx/qYDbShCqrS+6O71g78fQkGQ==",
-    "x86_64-linux": "sha512-PakzmJU3cpQiQkljbv8mpJ4Jk8oZ2SlwnzJXv3lqMyrkllSFnmUe1HV6CAOSkx/qYDbShCqrS+6O71g78fQkGQ=="
+    "aarch64-darwin": "sha512-AHFr8cclNifnmDVueTip+HSu+4Djp2MexRcVyspeB/XE6m4Z8W5wk3Vt6Nf1c3lpabUqcfnlBgDHlF+vpUzNbQ==",
+    "aarch64-linux": "sha512-AHFr8cclNifnmDVueTip+HSu+4Djp2MexRcVyspeB/XE6m4Z8W5wk3Vt6Nf1c3lpabUqcfnlBgDHlF+vpUzNbQ==",
+    "x86_64-linux": "sha512-AHFr8cclNifnmDVueTip+HSu+4Djp2MexRcVyspeB/XE6m4Z8W5wk3Vt6Nf1c3lpabUqcfnlBgDHlF+vpUzNbQ=="
   },
-  "sourceHash": "sha256-cJ9AqPmrDeHdkRSp4uHbKocB66x6VWnPRKgPgStSiio=",
+  "sourceHash": "sha256-EStqEp9kelEGo9uxjvALSq3Pu52BP1aLZpm8z0xC4oc=",
   "pnpmDepsHash": "sha256-tGTo+CZkXXewdUHOXr92QkV5nWkTlfQQBshcsZAJid0="
 }
