@@ -13,99 +13,79 @@ function isRecord(value: unknown): value is Readonly<Record<string, unknown>> {
   return typeof value === "object" && value !== null && !Array.isArray(value);
 }
 
-function objectRecord(
-  value: unknown,
-  name: string,
-): Effect.Effect<Readonly<Record<string, unknown>>, InvalidPackageHashConfigError> {
-  if (!isRecord(value)) {
-    return Effect.fail(new InvalidPackageHashConfigError(`${name} must be an object`));
-  }
-
-  return Effect.succeed(value);
+function packageHashConfigError(error: unknown): InvalidPackageHashConfigError {
+  return error instanceof InvalidPackageHashConfigError
+    ? error
+    : new InvalidPackageHashConfigError(String(error));
 }
 
-function hashForSystem(
-  hashes: Readonly<Record<string, unknown>>,
-  system: SupportedSystem,
-): Effect.Effect<string, InvalidPackageHashConfigError> {
-  const hash = hashes[system];
-  if (typeof hash !== "string" || hash.length === 0) {
-    return Effect.fail(new InvalidPackageHashConfigError(`Missing hash for ${system}`));
+function objectRecord(value: unknown, name: string): Readonly<Record<string, unknown>> {
+  if (!isRecord(value)) {
+    throw new InvalidPackageHashConfigError(`${name} must be an object`);
   }
 
-  return Effect.succeed(hash);
+  return value;
+}
+
+function hashForSystem(hashes: Readonly<Record<string, unknown>>, system: SupportedSystem): string {
+  const hash = hashes[system];
+  if (typeof hash !== "string" || hash.length === 0) {
+    throw new InvalidPackageHashConfigError(`Missing hash for ${system}`);
+  }
+
+  return hash;
 }
 
 function optionalNonEmptyString(
   object: Readonly<Record<string, unknown>>,
   fieldName: string,
-): Effect.Effect<string | undefined, InvalidPackageHashConfigError> {
+): string | undefined {
   const value = object[fieldName];
   if (value === undefined) {
-    return Effect.succeed(void 0);
+    return void 0;
   }
 
   if (typeof value !== "string" || value.length === 0) {
-    return Effect.fail(
-      new InvalidPackageHashConfigError(`${fieldName} must be a non-empty string`),
-    );
+    throw new InvalidPackageHashConfigError(`${fieldName} must be a non-empty string`);
   }
 
-  return Effect.succeed(value);
+  return value;
 }
 
-function packageHashes(
-  value: unknown,
-): Effect.Effect<Readonly<Record<SupportedSystem, string>>, InvalidPackageHashConfigError> {
-  return Effect.flatMap(
-    objectRecord(value, "hashes"),
-    (
-      hashes: Readonly<Record<string, unknown>>,
-    ): Effect.Effect<Readonly<Record<SupportedSystem, string>>, InvalidPackageHashConfigError> =>
-      Effect.all({
-        "aarch64-darwin": hashForSystem(hashes, "aarch64-darwin"),
-        "aarch64-linux": hashForSystem(hashes, "aarch64-linux"),
-        "x86_64-linux": hashForSystem(hashes, "x86_64-linux"),
-      }),
-  );
+function packageHashes(value: unknown): Readonly<Record<SupportedSystem, string>> {
+  const hashes = objectRecord(value, "hashes");
+
+  return {
+    "aarch64-darwin": hashForSystem(hashes, "aarch64-darwin"),
+    "aarch64-linux": hashForSystem(hashes, "aarch64-linux"),
+    "x86_64-linux": hashForSystem(hashes, "x86_64-linux"),
+  };
+}
+
+function parsePackageHashConfig(value: unknown): PackageHashConfig {
+  const object = objectRecord(value, "package hash config");
+  const { version } = object;
+  if (typeof version !== "string" || version.length === 0) {
+    throw new InvalidPackageHashConfigError("Missing package version");
+  }
+
+  const binaryVersion = optionalNonEmptyString(object, "binaryVersion");
+
+  return {
+    ...(binaryVersion === undefined ? {} : { binaryVersion }),
+    hashes: packageHashes(object["hashes"]),
+    version,
+  };
 }
 
 function packageHashConfig(
   value: unknown,
 ): Effect.Effect<PackageHashConfig, InvalidPackageHashConfigError> {
-  return Effect.flatMap(
-    objectRecord(value, "package hash config"),
-    (
-      object: Readonly<Record<string, unknown>>,
-    ): Effect.Effect<PackageHashConfig, InvalidPackageHashConfigError> => {
-      const { version } = object;
-      if (typeof version !== "string" || version.length === 0) {
-        return Effect.fail(new InvalidPackageHashConfigError("Missing package version"));
-      }
-
-      return Effect.map(
-        Effect.all({
-          binaryVersion: optionalNonEmptyString(object, "binaryVersion"),
-          hashes: packageHashes(object["hashes"]),
-        }),
-        (
-          config: Readonly<{
-            binaryVersion: string | undefined;
-            hashes: Readonly<Record<SupportedSystem, string>>;
-          }>,
-        ): PackageHashConfig => ({
-          ...(config.binaryVersion === undefined ? {} : { binaryVersion: config.binaryVersion }),
-          hashes: config.hashes,
-          version,
-        }),
-      );
-    },
-  );
-}
-
-function parsePackageHashConfig(value: unknown): PackageHashConfig {
-  return Effect.runSync(packageHashConfig(value));
+  return Effect.try({
+    catch: packageHashConfigError,
+    try: (): PackageHashConfig => parsePackageHashConfig(value),
+  });
 }
 
 export { InvalidPackageHashConfigError, packageHashConfig, parsePackageHashConfig };
-export type { PackageHashConfig };
+export type { PackageHashConfig } from "./packageConfigTypes.ts";

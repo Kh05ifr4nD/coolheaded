@@ -51,12 +51,15 @@ function oxfmtBinaryVersion(version: string): Effect.Effect<string, Error> {
 }
 
 function packageHashConfig(version: string): Effect.Effect<PackageHashConfig, Error> {
+  const urls = releaseAssetUrls(version);
+  const hashConfig = releaseHashConfig(version, urls, "sha256Digest");
+
   return Effect.map(
     Effect.all({
       binaryVersion: oxfmtBinaryVersion(version),
-      config: releaseHashConfig(version, releaseAssetUrls(version), "sha256Digest"),
+      hashConfig,
     }),
-    ({ binaryVersion: resolvedBinaryVersion, config }): PackageHashConfig => ({
+    ({ binaryVersion: resolvedBinaryVersion, hashConfig: config }): PackageHashConfig => ({
       ...config,
       binaryVersion: resolvedBinaryVersion,
     }),

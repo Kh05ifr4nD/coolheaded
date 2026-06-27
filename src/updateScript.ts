@@ -235,7 +235,10 @@ function runUpdateScript(
   program: (args: readonly string[]) => Effect.Effect<void, Error>,
 ): void {
   if (denoRuntime().mainModule === moduleUrl) {
-    Effect.runFork(Effect.catchAll(program(denoRuntime().args), reportErrorEffect));
+    const updateEffect = program(denoRuntime().args);
+    const reportedEffect = Effect.catchAll(updateEffect, reportErrorEffect);
+
+    Effect.runFork(reportedEffect);
   }
 }
 

@@ -11,15 +11,12 @@ function isRecord(value: unknown): value is Readonly<Record<string, unknown>> {
   return typeof value === "object" && value !== null && !Array.isArray(value);
 }
 
-function parseRegistryMetadata(
-  value: unknown,
-  url: string,
-): Effect.Effect<NpmPackageMetadata, UpdateError> {
+function parseRegistryMetadata(value: unknown, url: string): NpmPackageMetadata {
   if (!isRecord(value) || !isRecord(value["versions"])) {
-    return Effect.fail(new UpdateError(`Invalid npm registry JSON from ${url}`));
+    throw new UpdateError(`Invalid npm registry JSON from ${url}`);
   }
 
-  return Effect.succeed(value);
+  return value;
 }
 
 function fetchNpmMetadata(packageName: string): Effect.Effect<NpmPackageMetadata, UpdateError> {
@@ -40,7 +37,7 @@ function fetchNpmMetadata(packageName: string): Effect.Effect<NpmPackageMetadata
       }
 
       const metadata: unknown = await response.json();
-      return Effect.runSync(parseRegistryMetadata(metadata, url));
+      return parseRegistryMetadata(metadata, url);
     },
   });
 }

@@ -14,16 +14,23 @@ class InvalidPackageNameError extends Error {
   }
 }
 
-function packageName(value: string): Effect.Effect<PackageName, InvalidPackageNameError> {
+function parsePackageName(value: string): PackageName {
   if (!PACKAGE_NAME_PATTERN.test(value)) {
-    return Effect.fail(new InvalidPackageNameError(value));
+    throw new InvalidPackageNameError(value);
   }
 
-  return Effect.succeed(value);
+  return value;
 }
 
-function parsePackageName(value: string): PackageName {
-  return Effect.runSync(packageName(value));
+function packageName(value: string): Effect.Effect<PackageName, InvalidPackageNameError> {
+  try {
+    return Effect.succeed(parsePackageName(value));
+  } catch (error: unknown) {
+    const packageNameError =
+      error instanceof InvalidPackageNameError ? error : new InvalidPackageNameError(value);
+
+    return Effect.fail(packageNameError);
+  }
 }
 
 export { InvalidPackageNameError, packageName, parsePackageName };

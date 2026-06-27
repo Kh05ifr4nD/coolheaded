@@ -31,10 +31,10 @@ function npmVersionIntegrity(
 }
 
 export {
-  InvalidNpmMetadataError,
   npmPlatformPackageVersion,
   npmRegistryPackageUrl,
   npmScopedTarballUrl,
   npmVersionIntegrity,
 };
-export type { NpmPackageMetadata };
+export { InvalidNpmMetadataError } from "./npmRegistryErrors.ts";
+export type { NpmPackageMetadata } from "./npmRegistryTypes.ts";
