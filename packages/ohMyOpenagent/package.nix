@@ -88,7 +88,7 @@ packageLib.mkBinaryPackage {
     assertFileExists "${packageRoot}/dist/cli/index.js"
     assertFileExists "${packageRoot}/.agents/skills"
     assertFileExists "${packageRoot}/.opencode/skills"
-    assertFileExists "${packageRoot}/packages/ast-grep-mcp/dist/cli.js"
+    assertFileExists "${packageRoot}/dist/skills/ast-grep/SKILL.md"
     assertFileExists "${packageRoot}/packages/git-bash-mcp/dist/cli.js"
     assertFileExists "${packageRoot}/packages/lsp-tools-mcp/dist/cli.js"
     assertFileExists "${packageRoot}/packages/shared-skills/skills"
