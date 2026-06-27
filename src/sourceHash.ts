@@ -47,17 +47,13 @@ function fetchFromGitHubHash(
   source: GitHubSource,
   repositoryRootPath: string,
 ): Effect.Effect<string, Error> {
+  const expression = fetchFromGitHubExpression(source, repositoryRootPath);
+
   return Effect.catchAll(
     Effect.flatMap(
       commandOutput(
         "nix",
-        [
-          "build",
-          "--impure",
-          "--no-link",
-          "--expr",
-          fetchFromGitHubExpression(source, repositoryRootPath),
-        ],
+        ["build", "--impure", "--no-link", "--expr", expression],
         repositoryRootPath,
       ),
       (): Effect.Effect<string, Error> =>

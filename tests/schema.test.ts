@@ -1,4 +1,4 @@
-import { assertEquals, assertThrows } from "@jsr/std__assert";
+import { assertEquals, assertRejects, assertThrows } from "@jsr/std__assert";
 import { describe, it } from "@jsr/std__testing/bdd";
 import { npmHashConfigForSystems, npmHashesForSystems } from "coolheaded/npmUpdater.ts";
 import {
@@ -121,12 +121,12 @@ describe("npm registry URL helpers", (): void => {
 });
 
 describe("npmHashesForSystems", (): void => {
-  it("maps platform suffixes to integrity hashes through Effect", (): void => {
+  it("maps platform suffixes to integrity hashes through Effect", async (): Promise<void> => {
     const suffixes = {
       "x86_64-linux": "linux-x64",
     } as const;
 
-    const hashes = Effect.runSync(
+    const hashes = await Effect.runPromise(
       npmHashesForSystems(
         {
           versions: {
@@ -147,13 +147,11 @@ describe("npmHashesForSystems", (): void => {
     });
   });
 
-  it("fails when platform metadata is missing", (): void => {
-    assertThrows(
-      (): void => {
-        Effect.runSync(
-          npmHashesForSystems({ versions: {} }, "0.137.0", {
-            "x86_64-linux": "linux-x64",
-          }),
+  it("fails when platform metadata is missing", async (): Promise<void> => {
+    await assertRejects(
+      async (): Promise<void> => {
+        await Effect.runPromise(
+          npmHashesForSystems({ versions: {} }, "0.137.0", { "x86_64-linux": "linux-x64" }),
         );
       },
       Error,
@@ -163,14 +161,14 @@ describe("npmHashesForSystems", (): void => {
 });
 
 describe("npmHashConfigForSystems", (): void => {
-  it("keeps the requested package version in the generated config", (): void => {
+  it("keeps the requested package version in the generated config", async (): Promise<void> => {
     const suffixes = {
       "aarch64-darwin": "darwin-arm64",
       "aarch64-linux": "linux-arm64",
       "x86_64-linux": "linux-x64",
     } as const;
 
-    const config = Effect.runSync(
+    const config = await Effect.runPromise(
       npmHashConfigForSystems(
         {
           versions: {

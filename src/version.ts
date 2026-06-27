@@ -4,7 +4,7 @@ function semverParts(version: string): readonly number[] {
   return version
     .split(/[.+-]/u)
     .slice(0, 3)
-    .map((part: string): number => Number.parseInt(part, 10));
+    .map((part: string): number => Math.trunc(Number(part)));
 }
 
 function compareVersions(left: string, right: string): number {

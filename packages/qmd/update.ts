@@ -41,77 +41,80 @@ function bun2nixOutPath(): Effect.Effect<string, Error> {
   ]);
 }
 
-function generatedBunNix(version: string): Effect.Effect<string, Error> {
-  return Effect.flatMap(
-    bun2nixOutPath(),
-    (outPath: string): Effect.Effect<string, Error> =>
-      withTemporaryDirectory(
-        (workspacePath: string): Effect.Effect<string, Error> =>
-          Effect.zipRight(
-            commandOutput("curl", [
-              "-fsSL",
-              sourceUrl(version),
-              "-o",
-              `${workspacePath}/source.tgz`,
-            ]),
-            Effect.zipRight(
-              commandOutput(
-                "tar",
-                ["-xzf", `${workspacePath}/source.tgz`, "--strip-components=1"],
-                workspacePath,
-              ),
-              Effect.zipRight(
-                commandOutput(
-                  `${outPath.trim()}/bin/bun2nix`,
-                  ["-o", `${workspacePath}/generatedPackage.nix`],
-                  workspacePath,
-                ),
-                commandOutput("cat", [`${workspacePath}/generatedPackage.nix`]),
-              ),
-            ),
-          ),
-      ),
+function downloadSourceArchive(
+  workspacePath: string,
+  version: string,
+): Effect.Effect<string, Error> {
+  return commandOutput("curl", ["-fsSL", sourceUrl(version), "-o", `${workspacePath}/source.tgz`]);
+}
+
+function extractSourceArchive(workspacePath: string): Effect.Effect<string, Error> {
+  return commandOutput(
+    "tar",
+    ["-xzf", `${workspacePath}/source.tgz`, "--strip-components=1"],
+    workspacePath,
   );
+}
+
+function generatedBunNixFromWorkspace(
+  bun2nixPath: string,
+  workspacePath: string,
+  version: string,
+): Effect.Effect<string, Error> {
+  return Effect.gen(function* generatedBunNixFromWorkspaceSteps(): Effect.fn.Return<string, Error> {
+    yield* downloadSourceArchive(workspacePath, version);
+    yield* extractSourceArchive(workspacePath);
+    yield* commandOutput(
+      bun2nixPath,
+      ["-o", `${workspacePath}/generatedPackage.nix`],
+      workspacePath,
+    );
+
+    return yield* commandOutput("cat", [`${workspacePath}/generatedPackage.nix`]);
+  });
+}
+
+function generatedBunNix(version: string): Effect.Effect<string, Error> {
+  return Effect.flatMap(bun2nixOutPath(), (outPath: string): Effect.Effect<string, Error> => {
+    const bun2nixPath = `${outPath.trim()}/bin/bun2nix`;
+
+    return withTemporaryDirectory(
+      (workspacePath: string): Effect.Effect<string, Error> =>
+        generatedBunNixFromWorkspace(bun2nixPath, workspacePath, version),
+    );
+  });
 }
 
 function serializePin(pin: QmdPin): string {
   return `${JSON.stringify(pin, ["version", "hash"], 2)}\n`;
 }
 
-function updateProgram(args: readonly string[]): Effect.Effect<void, Error> {
-  return updateNewerPinVersion(
-    args,
-    latestVersion,
-    PIN_FILE_PATH,
-    (version: string): Effect.Effect<void, Error> =>
-      Effect.flatMap(
-        Effect.all({
-          bunNix: generatedBunNix(version),
-          hash: fetchFromGitHubHash(
-            {
-              owner: "tobi",
-              repo: "qmd",
-              tag: `v${version}`,
-            },
-            REPOSITORY_ROOT_PATH,
-          ),
-        }),
-        ({ bunNix, hash }): Effect.Effect<void, Error> =>
-          Effect.zipRight(
-            writeTextFile(
-              PIN_FILE_PATH,
-              serializePin({
-                hash: hash.trim(),
-                version,
-              }),
-            ),
-            Effect.zipRight(
-              writeTextFile(GENERATED_PACKAGE_FILE_PATH, `${bunNix.trim()}\n`),
-              formatNixFile(GENERATED_PACKAGE_FILE_PATH),
-            ),
-          ),
+function writeUpdatedFiles(version: string): Effect.Effect<void, Error> {
+  return Effect.gen(function* writeUpdatedFilesSteps(): Effect.fn.Return<void, Error> {
+    const { bunNix, hash } = yield* Effect.all({
+      bunNix: generatedBunNix(version),
+      hash: fetchFromGitHubHash(
+        {
+          owner: "tobi",
+          repo: "qmd",
+          tag: `v${version}`,
+        },
+        REPOSITORY_ROOT_PATH,
       ),
-  );
+    });
+    const pin = serializePin({
+      hash: hash.trim(),
+      version,
+    });
+
+    yield* writeTextFile(PIN_FILE_PATH, pin);
+    yield* writeTextFile(GENERATED_PACKAGE_FILE_PATH, `${bunNix.trim()}\n`);
+    yield* formatNixFile(GENERATED_PACKAGE_FILE_PATH);
+  });
+}
+
+function updateProgram(args: readonly string[]): Effect.Effect<void, Error> {
+  return updateNewerPinVersion(args, latestVersion, PIN_FILE_PATH, writeUpdatedFiles);
 }
 
 async function main(args: readonly string[]): Promise<void> {
