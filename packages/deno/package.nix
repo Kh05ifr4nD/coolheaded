@@ -68,7 +68,7 @@ packageLib.mkReleaseBinaryPackage {
     '';
   };
 
-  passthru.updateAllowedFiles = [ "flake/gitHooks.nix" ];
+  passthru.updateAllowedFiles = [ "flake/denoDependencies.nix" ];
 
   meta = {
     homepage = "https://deno.com/";

@@ -35,5 +35,10 @@ let
     else
       { }
   ) packages;
+  denoDependencies = import ./denoDependencies.nix {
+    inherit pkgs;
+    inherit (pkgs) lib;
+    deno = packages.deno;
+  };
 in
-packages // packageChecks
+packages // packageChecks // { inherit denoDependencies; }
