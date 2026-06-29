@@ -1,13 +1,17 @@
 import { describe, it } from "@jsr/std__testing/bdd";
 import { assertEquals } from "@jsr/std__assert";
 import { join } from "@jsr/std__path";
+import { serializePinJson } from "coolheaded/pinJson.ts";
+
+type PinJsonConfig = Parameters<typeof serializePinJson>[0];
 
 const PACKAGES_DIRECTORY_PATH = new globalThis.URL("../packages/", import.meta.url).pathname;
-const PACKAGE_DIRECTORY_PATTERN = /^[a-z][A-Za-z0-9]*$/u;
+const PACKAGE_DIRECTORY_PATTERN = /^[A-Za-z][A-Za-z0-9]*(?:-[A-Za-z0-9][A-Za-z0-9]*)*$/u;
 const ALLOWED_PACKAGE_FILES = new Set([
   "checks.nix",
   "generatedPackage.nix",
   "package.nix",
+  "package-lock.json",
   "pin.json",
   "update.ts",
   "uv.lock",
@@ -93,28 +97,39 @@ async function packageStructureProblems(name: string): Promise<PackageStructureP
   };
 }
 
-function pinJsonHasCanonicalOrder(contents: string): boolean {
-  if (!contents.startsWith('{\n  "version":')) {
-    return false;
-  }
+function isRecord(value: unknown): value is Readonly<Record<string, unknown>> {
+  return typeof value === "object" && value !== null && !Array.isArray(value);
+}
 
-  const lines = contents.split("\n");
-  const binaryVersionIndex = lines.findIndex((line: string): boolean =>
-    line.startsWith('  "binaryVersion": "'),
+function isOptionalString(value: unknown): value is string | undefined {
+  return value === undefined || typeof value === "string";
+}
+
+function isStringRecord(value: unknown): value is Readonly<Record<string, string>> {
+  return (
+    isRecord(value) &&
+    Object.values(value).every((entry: unknown): boolean => typeof entry === "string")
   );
-  const hashesIndex = lines.indexOf('  "hashes": {');
-  if (hashesIndex === -1) {
-    return true;
-  }
-  if (binaryVersionIndex !== -1 && binaryVersionIndex !== hashesIndex - 1) {
+}
+
+function isPinJsonConfig(value: unknown): value is PinJsonConfig {
+  if (!isRecord(value) || typeof value["version"] !== "string") {
     return false;
   }
 
   return (
-    lines[hashesIndex + 1]?.startsWith('    "aarch64-darwin": "') === true &&
-    lines[hashesIndex + 2]?.startsWith('    "aarch64-linux": "') === true &&
-    lines[hashesIndex + 3]?.startsWith('    "x86_64-linux": "') === true
+    isOptionalString(value["binaryVersion"]) &&
+    isOptionalString(value["cargoVendorHash"]) &&
+    isOptionalString(value["npmVendorHash"]) &&
+    isOptionalString(value["packageHash"]) &&
+    isOptionalString(value["sourceHash"]) &&
+    (value["platformPackageHashes"] === undefined || isStringRecord(value["platformPackageHashes"]))
   );
+}
+
+function pinJsonHasCanonicalOrder(contents: string): boolean {
+  const pin: unknown = JSON.parse(contents);
+  return isPinJsonConfig(pin) ? contents === serializePinJson(pin) : false;
 }
 
 async function invalidPinOrder(name: string): Promise<string | undefined> {

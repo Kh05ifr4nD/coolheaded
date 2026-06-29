@@ -1,0 +1,55 @@
+diff --git a/packages/omo-codex/scripts/install-dist/install-local.mjs b/packages/omo-codex/scripts/install-dist/install-local.mjs
+index 3b4b9b5..fcd4e7a 100755
+--- a/packages/omo-codex/scripts/install-dist/install-local.mjs
++++ b/packages/omo-codex/scripts/install-dist/install-local.mjs
+@@ -6823,4 +6823,4 @@ function collectCommands(value, commands) {
+ }
+ // packages/omo-codex/src/install/codex-cache-install.ts
+-import { cp as cp2, mkdir as mkdir3, readFile as readFile7, rename, rm as rm3 } from "node:fs/promises";
++import { chmod as chmod2, cp as cp2, lstat as lstat9, mkdir as mkdir3, readFile as readFile7, readdir as readdir7, rename, rm as rm3 } from "node:fs/promises";
+ import { basename as basename2, dirname as dirname3, join as join10, sep as sep5 } from "node:path";
+@@ -7199,6 +7199,7 @@ async function installCachedPlugin(input) {
+   await rm3(tempPath, { recursive: true, force: true });
+   try {
+     await copyDirectory(input.sourcePath, tempPath);
++    await normalizeCopiedPluginCachePermissions(tempPath);
+     await rewriteCachedPackageLocalFileDependencies(tempPath, input.sourcePath);
+     await copyBundledMcpRuntimeDists({ pluginRoot: tempPath, sourceRoot: input.sourcePath });
+     await maybeRunNpmInstall(tempPath, input.runCommand, ["ci", "--omit=dev"]);
+@@ -7210,6 +7211,7 @@ async function installCachedPlugin(input) {
+     await assertHookCommandTargets(tempPath);
+     await promoteDirectory(tempPath, targetPath, input.renameDirectory ?? rename);
+   } catch (error) {
++    await normalizeCopiedPluginCachePermissions(tempPath).catch(() => undefined);
+     await rm3(tempPath, { recursive: true, force: true });
+     throw error;
+   }
+@@ -7253,6 +7255,19 @@ async function copyDirectory(sourcePath, targetPath) {
+   await mkdir3(dirname3(targetPath), { recursive: true });
+   await cp2(sourcePath, targetPath, { recursive: true, filter: (source) => shouldCopyPluginPath(source, sourcePath) });
+ }
++async function normalizeCopiedPluginCachePermissions(path) {
++  const stats = await lstat9(path);
++  if (stats.isSymbolicLink())
++    return;
++  if (stats.isDirectory()) {
++    await chmod2(path, stats.mode | 0o700);
++    const entries = await readdir7(path, { withFileTypes: true });
++    for (const entry of entries)
++      await normalizeCopiedPluginCachePermissions(join10(path, entry.name));
++    return;
++  }
++  await chmod2(path, stats.mode | 0o200);
++}
+ async function promoteDirectory(tempPath, targetPath, renameDirectory) {
+   const backupPath = createBackupSiblingPath(targetPath);
+   await rm3(backupPath, { recursive: true, force: true });
+@@ -8686,6 +8701,7 @@ async function writeSnapshotPlugin(marketplaceRoot, plugin) {
+   await cp3(plugin.sourcePath, tempPath, {
+     recursive: true,
+     filter: (source) => shouldCopyMarketplaceSourcePath(source, plugin.sourcePath)
+   });
++  await normalizeCopiedPluginCachePermissions(tempPath);
+   await copyBundledMcpRuntimeDists({ pluginRoot: tempPath, sourceRoot: plugin.sourcePath });
+   await rm7(targetPath, { recursive: true, force: true });
+   await rename3(tempPath, targetPath);

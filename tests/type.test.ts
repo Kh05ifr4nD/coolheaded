@@ -15,7 +15,7 @@ assertType<
     PackageHashConfig,
     {
       readonly binaryVersion?: string;
-      readonly hashes: ReadonlyHashes;
+      readonly platformPackageHashes: ReadonlyHashes;
       readonly version: string;
     }
   >

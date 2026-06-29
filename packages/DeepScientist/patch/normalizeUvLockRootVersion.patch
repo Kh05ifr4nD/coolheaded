@@ -1,0 +1,13 @@
+diff --git a/uv.lock b/uv.lock
+index 1111111..2222222 100644
+--- a/uv.lock
++++ b/uv.lock
+@@ -277,7 +277,7 @@ wheels = [
+ 
+ [[package]]
+ name = "deepscientist"
+-version = "1.5.12"
++version = "1.6.0"
+ source = { editable = "." }
+ dependencies = [
+     { name = "cryptography" },

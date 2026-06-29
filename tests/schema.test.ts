@@ -19,18 +19,18 @@ const COMPLETE_HASHES = {
 describe("parsePackageHashConfig", (): void => {
   it("accepts complete package pins", (): void => {
     const config = parsePackageHashConfig({
-      hashes: COMPLETE_HASHES,
+      platformPackageHashes: COMPLETE_HASHES,
       version: "0.137.0",
     });
 
     assertEquals(config.version, "0.137.0");
-    assertEquals(config.hashes["x86_64-linux"], "sha512-c");
+    assertEquals(config.platformPackageHashes["x86_64-linux"], "sha512-c");
   });
 
   it("accepts package pins with a distinct binary version", (): void => {
     const config = parsePackageHashConfig({
       binaryVersion: "0.54.0",
-      hashes: COMPLETE_HASHES,
+      platformPackageHashes: COMPLETE_HASHES,
       version: "1.69.0",
     });
 
@@ -43,7 +43,7 @@ describe("parsePackageHashConfig", (): void => {
       (): void => {
         parsePackageHashConfig({
           binaryVersion: "",
-          hashes: COMPLETE_HASHES,
+          platformPackageHashes: COMPLETE_HASHES,
           version: "1.69.0",
         });
       },
@@ -56,7 +56,7 @@ describe("parsePackageHashConfig", (): void => {
     assertThrows(
       (): void => {
         parsePackageHashConfig({
-          hashes: {
+          platformPackageHashes: {
             "aarch64-darwin": "sha512-a",
             "aarch64-linux": "sha512-b",
           },
@@ -76,7 +76,7 @@ describe("parsePackageHashConfig", (): void => {
         fc.string({ minLength: 1 }),
         (darwinHash: string, armHash: string, x64Hash: string): void => {
           const config = parsePackageHashConfig({
-            hashes: {
+            platformPackageHashes: {
               "aarch64-darwin": darwinHash,
               "aarch64-linux": armHash,
               "x86_64-linux": x64Hash,
@@ -84,9 +84,9 @@ describe("parsePackageHashConfig", (): void => {
             version: "0.137.0",
           });
 
-          assertEquals(config.hashes["aarch64-darwin"], darwinHash);
-          assertEquals(config.hashes["aarch64-linux"], armHash);
-          assertEquals(config.hashes["x86_64-linux"], x64Hash);
+          assertEquals(config.platformPackageHashes["aarch64-darwin"], darwinHash);
+          assertEquals(config.platformPackageHashes["aarch64-linux"], armHash);
+          assertEquals(config.platformPackageHashes["x86_64-linux"], x64Hash);
         },
       ),
     );
@@ -195,7 +195,7 @@ describe("npmHashConfigForSystems", (): void => {
     );
 
     assertEquals(config, {
-      hashes: {
+      platformPackageHashes: {
         "aarch64-darwin": "sha512-darwin",
         "aarch64-linux": "sha512-linux-arm",
         "x86_64-linux": "sha512-linux-x64",

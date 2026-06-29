@@ -63,9 +63,9 @@ function npmHashConfigForSystems(
 ): Effect.Effect<PackageHashConfig, InvalidNpmMetadataError> {
   return Effect.map(
     npmHashesForSystems(metadata, version, suffixes),
-    (hashes: Readonly<Record<string, string>>): PackageHashConfig =>
+    (platformPackageHashes: Readonly<Record<string, string>>): PackageHashConfig =>
       parsePackageHashConfig({
-        hashes,
+        platformPackageHashes,
         version,
       }),
   );

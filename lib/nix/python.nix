@@ -11,6 +11,42 @@
 let
   inherit (callPackages pyprojectNix.build.util { }) mkApplication;
 
+  lockInputProjectName = "coolheaded-lock-input";
+  lockInputProjectVersion = "0";
+
+  pythonRequirement =
+    python:
+    let
+      pythonMinorVersion = python.pythonVersion;
+      match = builtins.match "([0-9]+)\\.([0-9]+)" pythonMinorVersion;
+    in
+    if match == null then
+      throw "Invalid Python minor version: ${pythonMinorVersion}"
+    else
+      ">=${pythonMinorVersion}";
+
+  mkUvLockProject =
+    {
+      dependencies,
+      python,
+      extraBuildDependencies ? { },
+      name ? lockInputProjectName,
+      optionalDependencies ? { },
+      version ? lockInputProjectVersion,
+    }:
+    {
+      project = {
+        inherit dependencies name version;
+        requires-python = pythonRequirement python;
+      }
+      // lib.optionalAttrs (optionalDependencies != { }) {
+        optional-dependencies = optionalDependencies;
+      };
+    }
+    // lib.optionalAttrs (extraBuildDependencies != { }) {
+      tool.uv.extra-build-dependencies = extraBuildDependencies;
+    };
+
   mkUvPythonSet =
     {
       python,
@@ -112,5 +148,10 @@ let
       );
 in
 {
-  inherit mkUvApplication mkUvPythonSet;
+  inherit
+    mkUvApplication
+    mkUvLockProject
+    mkUvPythonSet
+    pythonRequirement
+    ;
 }

@@ -60,7 +60,7 @@ in
       stages = [ "prepare-commit-msg" ];
     };
 
-    denoCheck = denoTaskHook "check" [ ];
+    denoCheck = denoTaskHook "check" [ pkgs.cue ];
     denoTest = denoTaskHook "test" [ ];
 
     denolint = {
@@ -94,7 +94,7 @@ in
 
     shellcheck = {
       enable = true;
-      package = packages.shellcheck;
+      package = packages.ShellCheck;
       files = "^lib/package\\.sh$";
     };
 

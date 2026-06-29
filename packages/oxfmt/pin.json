@@ -1,7 +1,7 @@
 {
   "version": "1.71.0",
   "binaryVersion": "0.56.0",
-  "hashes": {
+  "platformPackageHashes": {
     "aarch64-darwin": "sha256-a3iQxIxKO3MiKzytkDFWsToxpGGiGeAWdBb7GogRP0A=",
     "aarch64-linux": "sha256-Jr3Wyr3FzNKgTzYhfsixrxQSC6naCfLunHQUfs9fjek=",
     "x86_64-linux": "sha256-Yb4Dg6Uwk+kmKNYes9x8YeYkCtWZMIGjt2qYux/gck8="

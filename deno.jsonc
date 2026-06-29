@@ -88,7 +88,8 @@
   },
   "nodeModulesDir": "auto",
   "tasks": {
-    "check": "deno check .github/ci/**/*.ts packages/*/update.ts src/**/*.ts tests/**/*.ts",
+    "check": "deno check .github/ci/**/*.ts packages/*/update.ts src/**/*.ts tests/**/*.ts && deno task check:fileSpec",
+    "check:fileSpec": "deno run --allow-read --allow-run=cue,git --allow-write src/checkFileSpec.ts",
     "install": "deno install",
     "lint": "deno lint && deno task lint:oxlint",
     "lint:oxlint": "oxlint",

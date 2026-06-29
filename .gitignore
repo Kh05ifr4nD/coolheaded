@@ -27,6 +27,7 @@
 !/deno.lock
 !/flake.lock
 !/flake.nix
+!/FileSpec.cue
 !/README.md
 !/tsconfig.json
 !/tsReset.d.ts

@@ -118,8 +118,8 @@ function releaseHashConfig(
 ): Effect.Effect<PackageHashConfig, UpdateError> {
   return Effect.map(
     releaseHashes(urls, source),
-    (hashes: Readonly<Record<SupportedSystem, string>>): PackageHashConfig =>
-      parsePackageHashConfig({ hashes, version }),
+    (platformPackageHashes: Readonly<Record<SupportedSystem, string>>): PackageHashConfig =>
+      parsePackageHashConfig({ platformPackageHashes, version }),
   );
 }
 

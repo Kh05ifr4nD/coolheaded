@@ -206,7 +206,9 @@ let
               version
               ;
           };
-          hash = pin.hashes.${system} or (throw "Missing ${pname} ${version} hash for ${system}");
+          hash =
+            pin.platformPackageHashes.${system}
+              or (throw "Missing ${pname} ${version} package hash for ${system}");
         };
 
         meta = {

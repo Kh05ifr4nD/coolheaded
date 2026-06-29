@@ -52,8 +52,8 @@ function optionalNonEmptyString(
   return value;
 }
 
-function packageHashes(value: unknown): Readonly<Record<SupportedSystem, string>> {
-  const hashes = objectRecord(value, "hashes");
+function platformPackageHashes(value: unknown): Readonly<Record<SupportedSystem, string>> {
+  const hashes = objectRecord(value, "platformPackageHashes");
 
   return {
     "aarch64-darwin": hashForSystem(hashes, "aarch64-darwin"),
@@ -73,7 +73,7 @@ function parsePackageHashConfig(value: unknown): PackageHashConfig {
 
   return {
     ...(binaryVersion === undefined ? {} : { binaryVersion }),
-    hashes: packageHashes(object["hashes"]),
+    platformPackageHashes: platformPackageHashes(object["platformPackageHashes"]),
     version,
   };
 }

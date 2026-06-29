@@ -65,7 +65,7 @@ function npmPackageHashConfig(
         npmVersionIntegrity(metadata, version),
         (hash: string): PackageHashConfig =>
           parsePackageHashConfig({
-            hashes: {
+            platformPackageHashes: {
               "aarch64-darwin": hash,
               "aarch64-linux": hash,
               "x86_64-linux": hash,

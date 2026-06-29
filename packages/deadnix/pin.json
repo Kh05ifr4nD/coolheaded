@@ -1,5 +1,5 @@
 {
   "version": "1.3.1",
-  "hash": "sha256-WrzIqt28RhoFYhCMu5oY5jAdGh0Gv5uryW/1jTX99aY=",
-  "cargoHash": "sha256-IgGuWIsDsiMqscO4B876iTCdrR+nI9bpTQOyxjCtjMk="
+  "sourceHash": "sha256-WrzIqt28RhoFYhCMu5oY5jAdGh0Gv5uryW/1jTX99aY=",
+  "cargoVendorHash": "sha256-IgGuWIsDsiMqscO4B876iTCdrR+nI9bpTQOyxjCtjMk="
 }

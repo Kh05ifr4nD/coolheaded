@@ -63,7 +63,7 @@ let
     owner = "tobi";
     repo = "qmd";
     tag = "v${pin.version}";
-    inherit (pin) hash;
+    hash = pin.sourceHash;
   };
 
   bunDeps = bun2nix.fetchBunDeps {

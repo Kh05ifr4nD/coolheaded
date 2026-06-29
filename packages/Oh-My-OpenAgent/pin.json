@@ -1,0 +1,9 @@
+{
+  "version": "4.13.0",
+  "packageHash": "sha512-FXemola9/q/YDok+DXfo5Kv2yrcwQ2Pd/5e0+16WE58Gmig+IdxeFIHIpK5nnleDPCAoSN05N9oi01edEEvqBw==",
+  "platformPackageHashes": {
+    "aarch64-darwin": "sha512-kodcbS4wcZeTLtlIIHncVqNeUTxou3sOEZTQZG0v9+gZ0mdFVmJ5BEEbndNddSi8ZNFB525766vEbgqTxdKB9g==",
+    "aarch64-linux": "sha512-8dnTUq+Wi7J34rfRSXrANJn1MWDbS4UtF6nflzdM4+dgEgtycw5iZv37Y5U9QS9Bevnho5tMtPR7P7Ea8mIauQ==",
+    "x86_64-linux": "sha512-hJV/tBsHB/16TgJX8zbenTKBSZluyjWREJt82wGq9dJ6ASIEU+kx3qb+1Lz+Jn+L6sAY4hWOMzGadBfog9/0gA=="
+  }
+}

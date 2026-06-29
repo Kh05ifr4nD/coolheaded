@@ -22,10 +22,10 @@ rustPlatform.buildRustPackage (finalAttrs: {
     owner = "rtk-ai";
     repo = "rtk";
     tag = "v${finalAttrs.version}";
-    inherit (pin) hash;
+    hash = pin.sourceHash;
   };
 
-  cargoHash = pin.cargoHash;
+  cargoHash = pin.cargoVendorHash;
 
   strictDeps = true;
   __structuredAttrs = true;

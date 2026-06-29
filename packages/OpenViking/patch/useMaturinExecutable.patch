@@ -1,0 +1,13 @@
+diff --git a/setup.py b/setup.py
+index 1111111..2222222 100644
+--- a/setup.py
++++ b/setup.py
+@@ -298,9 +298,7 @@ class OpenVikingBuildExt(build_ext):
+                 print("Building ragfs-python (Rust RAGFS binding) via maturin...")
+                 env = _sanitize_native_build_env(os.environ.copy())
+                 build_args = [
+-                    sys.executable,
+-                    "-m",
+                     "maturin",
+                     "build",
+                     "--release",

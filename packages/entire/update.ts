@@ -67,7 +67,7 @@ function assetHash(checksums: string, asset: string): Effect.Effect<string, Erro
   return Effect.succeed(hexToSRI(hash));
 }
 
-function packageHashes(
+function platformPackageHashes(
   checksums: string,
 ): Effect.Effect<Readonly<Record<SupportedSystem, string>>, Error> {
   return Effect.all({
@@ -84,8 +84,12 @@ function updateProgram(args: readonly string[]): Effect.Effect<void, Error> {
     PIN_FILE_PATH,
     (version: string): Effect.Effect<void, Error> =>
       Effect.flatMap(
-        Effect.flatMap(fetchChecksums(version), packageHashes),
-        (hashes): Effect.Effect<void> => writePackageHashConfig(PIN_FILE_PATH, { hashes, version }),
+        Effect.flatMap(fetchChecksums(version), platformPackageHashes),
+        (hashes): Effect.Effect<void> =>
+          writePackageHashConfig(PIN_FILE_PATH, {
+            platformPackageHashes: hashes,
+            version,
+          }),
       ),
   );
 }

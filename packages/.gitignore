@@ -1,6 +1,8 @@
 !/*/
 !/*/generatedPackage.nix
+!/*/checks.nix
 !/*/package.nix
+!/*/package-lock.json
 !/*/patch/
 !/*/patch/*.patch
 !/*/pin.json

@@ -1,0 +1,8 @@
+{
+  "version": "1.17.11",
+  "platformPackageHashes": {
+    "aarch64-darwin": "sha256-QHI0RgE96oJS7qTxgNcH916AWvVO6FoU/XwSZRO6g0I=",
+    "aarch64-linux": "sha256-bAroISQBx4+dzd6tNdOFlTx6ROsWFjCTZbWFA9vRtM0=",
+    "x86_64-linux": "sha256-au/Lu38EzbRkK+Ugjdv6uzw9J0+Ba/Qr/3LupcJE3KI="
+  }
+}
