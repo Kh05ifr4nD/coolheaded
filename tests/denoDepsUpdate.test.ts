@@ -1,11 +1,10 @@
 import {
+  denoDependencyBuildCommand,
   denoDependencyHash,
-  denoDependencyHashSystems,
   directSpecifierVersions,
   isDenoDependencyHashMismatch,
   parsedNixHash,
   replaceDenoDependencyHash,
-  replaceDenoDependencyHashes,
   versionChanges,
 } from "coolheadedCi/runDenoDepsUpdate.ts";
 import { describe, it } from "@jsr/std__testing/bdd";
@@ -41,49 +40,40 @@ describe("Deno deps update helpers", (): void => {
     );
   });
 
-  it("extracts Deno dependency hashes from git hook Nix", (): void => {
+  it("extracts Deno dependency hashes from the Deno dependency module", (): void => {
     assertEquals(
       denoDependencyHash(
         `
         {
-          denoDependenciesHashes = {
-            aarch64-darwin = "sha256-darwin=";
-          };
+          hash = "sha256-denoDependencies=";
         }
         `,
-        "aarch64-darwin",
       ),
-      "sha256-darwin=",
+      "sha256-denoDependencies=",
     );
   });
 
-  it("replaces Deno dependency hashes for one or more systems", (): void => {
+  it("replaces the Deno dependency hash", (): void => {
     const content = `
-      aarch64-darwin = "sha256-oldDarwin=";
-      aarch64-linux = "sha256-oldLinux=";
-      x86_64-linux = "sha256-oldLinux=";
+      hash = "sha256-old=";
     `;
 
     assertEquals(
-      replaceDenoDependencyHash(content, "aarch64-darwin", "sha256-newDarwin="),
+      replaceDenoDependencyHash(content, "sha256-new="),
       `
-      aarch64-darwin = "sha256-newDarwin=";
-      aarch64-linux = "sha256-oldLinux=";
-      x86_64-linux = "sha256-oldLinux=";
+      hash = "sha256-new=";
     `,
     );
-    assertEquals(
-      replaceDenoDependencyHashes(
-        content,
-        denoDependencyHashSystems("x86_64-linux"),
-        "sha256-newLinux=",
-      ),
-      `
-      aarch64-darwin = "sha256-oldDarwin=";
-      aarch64-linux = "sha256-newLinux=";
-      x86_64-linux = "sha256-newLinux=";
-    `,
-    );
+  });
+
+  it("builds the Deno dependency check directly", (): void => {
+    assertEquals(denoDependencyBuildCommand("x86_64-linux"), [
+      "nix",
+      "build",
+      ".#checks.x86_64-linux.denoDependencies",
+      "--no-link",
+      "--print-build-logs",
+    ]);
   });
 
   it("parses fixed-output hashes from Nix mismatch output", (): void => {

@@ -2,6 +2,7 @@
 
 import {
   DENO_DEPENDENCY_HASH_FILE_PATH,
+  buildDenoDependencyCheck,
   isDenoDependencyHashMismatch,
   updateDenoDependencyHash,
 } from "./runDenoDepsUpdate.ts";
@@ -33,10 +34,7 @@ async function lockedRevision(name: string): Promise<string> {
 }
 
 async function repairDenoDependencyHashIfNeeded(system: string): Promise<void> {
-  const result = await run(
-    ["nix", "build", `.#checks.${system}.pre-commit`, "--no-link", "--print-build-logs"],
-    { check: false },
-  );
+  const result = await buildDenoDependencyCheck(system);
 
   if (result.code === 0) {
     return;

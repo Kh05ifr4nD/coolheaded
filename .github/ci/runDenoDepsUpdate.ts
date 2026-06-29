@@ -11,9 +11,8 @@ import {
   writeOutput,
 } from "./lib.ts";
 
-const DENO_DEPENDENCY_HASH_FILE_PATH = "flake/gitHooks.nix";
+const DENO_DEPENDENCY_HASH_FILE_PATH = "flake/denoDependencies.nix";
 const FAKE_HASH = "sha256-AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA=";
-const LINUX_SYSTEMS = ["aarch64-linux", "x86_64-linux"] as const;
 
 function directSpecifierVersions(lock: unknown): Readonly<Record<string, string>> {
   if (!isRecord(lock) || !isRecord(lock["specifiers"])) {
@@ -45,55 +44,35 @@ function versionChanges(
   return changes.join("\n");
 }
 
-function denoDependencyHashSystems(system: string): readonly string[] {
-  return system === "aarch64-linux" || system === "x86_64-linux" ? LINUX_SYSTEMS : [system];
+function denoDependencyHashPattern(): RegExp {
+  return /(?<prefix>hash = ")sha256-[A-Za-z0-9+/=]+(?<suffix>";)/u;
 }
 
-function escapedRegExpLiteral(value: string): string {
-  return value.replaceAll(/[.*+?^${}()|[\]\\]/gu, String.raw`\$&`);
-}
-
-function denoDependencyHashPattern(system: string): RegExp {
-  return new RegExp(
-    `(?<prefix>${escapedRegExpLiteral(system)} = ")sha256-[A-Za-z0-9+/=]+(?<suffix>";)`,
-    "u",
-  );
-}
-
-function denoDependencyHash(content: string, system: string): string {
-  const match = denoDependencyHashPattern(system).exec(content);
+function denoDependencyHash(content: string): string {
+  const match = denoDependencyHashPattern().exec(content);
   if (match?.[0] === undefined) {
-    throw new Error(`Missing Deno dependency hash for ${system}`);
+    throw new Error("Missing Deno dependency hash");
   }
 
   const hashMatch = /sha256-[A-Za-z0-9+/=]+/u.exec(match[0]);
   if (hashMatch?.[0] === undefined) {
-    throw new Error(`Malformed Deno dependency hash for ${system}`);
+    throw new Error("Malformed Deno dependency hash");
   }
 
   return hashMatch[0];
 }
 
-function replaceDenoDependencyHash(content: string, system: string, hash: string): string {
-  const pattern = denoDependencyHashPattern(system);
+function replaceDenoDependencyHash(content: string, hash: string): string {
+  const pattern = denoDependencyHashPattern();
   if (!pattern.test(content)) {
-    throw new Error(`Missing Deno dependency hash for ${system}`);
+    throw new Error("Missing Deno dependency hash");
   }
 
   return content.replace(pattern, `$<prefix>${hash}$<suffix>`);
 }
 
-function replaceDenoDependencyHashes(
-  content: string,
-  systems: readonly string[],
-  hash: string,
-): string {
-  let updated = content;
-  for (const system of systems) {
-    updated = replaceDenoDependencyHash(updated, system, hash);
-  }
-
-  return updated;
+function denoDependencyBuildCommand(system: string): readonly string[] {
+  return ["nix", "build", `.#checks.${system}.denoDependencies`, "--no-link", "--print-build-logs"];
 }
 
 function parsedNixHash(output: string): string {
@@ -111,11 +90,14 @@ function isDenoDependencyHashMismatch(output: string): boolean {
   );
 }
 
+async function buildDenoDependencyCheck(
+  system: string,
+): Promise<Readonly<{ code: number; stdout: string; stderr: string }>> {
+  return await run(denoDependencyBuildCommand(system), { check: false });
+}
+
 async function buildDenoDependencyHash(system: string): Promise<string> {
-  const result = await run(
-    ["nix", "build", `.#checks.${system}.pre-commit`, "--no-link", "--print-build-logs"],
-    { check: false },
-  );
+  const result = await buildDenoDependencyCheck(system);
   if (result.code === 0) {
     throw new Error("Expected fake Deno dependency hash to fail, but the build succeeded");
   }
@@ -137,14 +119,13 @@ async function buildDenoDependencyHashWithFakeHash(
 }
 
 async function updateDenoDependencyHash(system: string): Promise<void> {
-  const systems = denoDependencyHashSystems(system);
   const original = await Deno.readTextFile(DENO_DEPENDENCY_HASH_FILE_PATH);
-  const fake = replaceDenoDependencyHash(original, system, FAKE_HASH);
+  const fake = replaceDenoDependencyHash(original, FAKE_HASH);
   const hash = await buildDenoDependencyHashWithFakeHash(system, original, fake);
 
   await Deno.writeTextFile(
     DENO_DEPENDENCY_HASH_FILE_PATH,
-    replaceDenoDependencyHashes(original, systems, hash),
+    replaceDenoDependencyHash(original, hash),
   );
 }
 
@@ -178,14 +159,14 @@ if (import.meta.main) {
 }
 
 export {
+  buildDenoDependencyCheck,
   DENO_DEPENDENCY_HASH_FILE_PATH,
+  denoDependencyBuildCommand,
   denoDependencyHash,
-  denoDependencyHashSystems,
   directSpecifierVersions,
   isDenoDependencyHashMismatch,
   parsedNixHash,
   replaceDenoDependencyHash,
-  replaceDenoDependencyHashes,
   runDenoDepsUpdate,
   updateDenoDependencyHash,
   versionChanges,
