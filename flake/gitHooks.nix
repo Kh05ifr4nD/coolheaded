@@ -3,38 +3,11 @@
 let
   inherit (config) packages;
 
-  denoDependenciesHashes = {
-    aarch64-darwin = "sha256-y7n31mS+OWlxmq3MSJd+tFqkwzt3S7Ba8pkFGGk40n8=";
-    aarch64-linux = "sha256-/GifO3Y0B9ien7bfNdb4xIAzEdFT6aFMdoaU2j1sOuA=";
-    x86_64-linux = "sha256-/GifO3Y0B9ien7bfNdb4xIAzEdFT6aFMdoaU2j1sOuA=";
+  denoDependencies = import ./denoDependencies.nix {
+    inherit pkgs;
+    inherit (pkgs) lib;
+    deno = packages.deno;
   };
-
-  denoDependencies =
-    pkgs.runCommand "coolheaded-deno-dependencies"
-      {
-        nativeBuildInputs = [ packages.deno ];
-        outputHash =
-          denoDependenciesHashes.${pkgs.stdenv.hostPlatform.system}
-            or (throw "Missing Deno dependency hash for ${pkgs.stdenv.hostPlatform.system}");
-        outputHashAlgo = "sha256";
-        outputHashMode = "recursive";
-      }
-      ''
-        cp -a ${pkgs.lib.cleanSource ../.} source
-        chmod -R u+w source
-        cd source
-
-        export DENO_DIR="$TMPDIR/deno-cache"
-        export HOME="$TMPDIR/home"
-        mkdir -p "$DENO_DIR" "$HOME"
-
-        deno install
-        deno cache --lock=deno.lock --config=deno.jsonc .github/ci/**/*.ts packages/*/update.ts src/**/*.ts tests/**/*.ts
-
-        mkdir -p "$out"
-        cp -a node_modules "$out/node_modules"
-        cp -a "$DENO_DIR" "$out/deno-cache"
-      '';
 
   preCommitRootSrc =
     pkgs.runCommand "coolheaded-pre-commit-source" { nativeBuildInputs = [ packages.deno ]; }
@@ -42,7 +15,6 @@ let
         cp -a ${pkgs.lib.cleanSource ../.} "$out"
         chmod -R u+w "$out"
         cp -a ${denoDependencies}/node_modules "$out/node_modules"
-        cp -a ${denoDependencies}/deno-cache "$out/.deno-cache"
         mkdir -p "$out/.generated"
         deno types > "$out/.generated/deno.d.ts"
       '';
@@ -51,7 +23,7 @@ let
     enable = true;
     package = packages.deno;
     inherit extraPackages;
-    entry = "env DENO_DIR=.deno-cache ${packages.deno}/bin/deno task ${task}";
+    entry = "${packages.deno}/bin/deno task ${task}";
     pass_filenames = false;
     always_run = true;
   };

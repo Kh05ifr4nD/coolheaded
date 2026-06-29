@@ -41,12 +41,12 @@ describe("Deno deps update helpers", (): void => {
     );
   });
 
-  it("extracts Deno dependency hashes from git hook Nix", (): void => {
+  it("extracts Deno dependency hashes from the Deno dependency module", (): void => {
     assertEquals(
       denoDependencyHash(
         `
         {
-          denoDependenciesHashes = {
+          hashes = {
             aarch64-darwin = "sha256-darwin=";
           };
         }
