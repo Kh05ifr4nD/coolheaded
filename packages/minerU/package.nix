@@ -6,6 +6,7 @@
   fetchPypi,
   ffmpeg_4,
   ffmpeg_6,
+  libsndfile,
   python3,
   python3Packages,
   rdma-core,
@@ -60,6 +61,13 @@ let
       opencv-python-headless = prev.opencv-python-headless.overrideAttrs (oldAttrs: {
         postFixup = (oldAttrs.postFixup or "") + ''
           rm -rf "$out/${sitePackages}/cv2"
+        '';
+      });
+      soundfile = prev.soundfile.overrideAttrs (oldAttrs: {
+        postInstall = (oldAttrs.postInstall or "") + ''
+          substituteInPlace "$out/${sitePackages}/soundfile.py" \
+            --replace-fail "_find_library('sndfile')" \
+              "'${libsndfile.out}/lib/libsndfile${packageLib.stdenv.hostPlatform.extensions.sharedLibrary}'"
         '';
       });
       xgrammar = prev.xgrammar.overrideAttrs (oldAttrs: {
