@@ -53,10 +53,13 @@ let
       pyproject,
       packageOverrides ? (_final: _prev: { }),
       sourcePreference ? "wheel",
+      uvLock ? null,
       workspaceRoot ? base.packageDirectory,
     }:
     let
-      workspace = uv2nix.lib.workspace.loadWorkspace { inherit pyproject workspaceRoot; };
+      workspace = uv2nix.lib.workspace.loadWorkspace (
+        { inherit pyproject workspaceRoot; } // lib.optionalAttrs (uvLock != null) { inherit uvLock; }
+      );
       overlay = workspace.mkPyprojectOverlay { inherit sourcePreference; };
     in
     (callPackage pyprojectNix.build.packages { inherit python; }).overrideScope (
@@ -83,6 +86,7 @@ let
       postInstall ? "",
       preVersionCheck ? "",
       sourcePreference ? "wheel",
+      uvLock ? null,
       versionCheckKeepEnvironment ? [ ],
       versionCheckProgram ? "${placeholder "out"}/bin/${pname}",
       versionCheckProgramArg ? "--version",
@@ -96,6 +100,7 @@ let
           packageOverrides
           python
           sourcePreference
+          uvLock
           workspaceRoot
           ;
         pyproject = resolve pyproject;

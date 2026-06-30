@@ -1,5 +1,5 @@
 ---
-name: follow-oxlint-imports
+name: followOxlintImports
 description: Use when editing TypeScript imports/exports, fixing oxlint import/sort/type-import errors, adding a module dependency, or reviewing changes that touch import declarations.
 ---
 

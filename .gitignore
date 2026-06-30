@@ -8,26 +8,27 @@
 !/.agents/skills/*/SKILL.md
 
 !/.github/
-!/lib/
-!/lib/package.sh
-!/lib/nix/
-!/lib/nix/*.nix
+
 !/flake/
 !/flake/*.nix
+!/lib/
+!/lib/nix/
+!/lib/nix/*.nix
+!/lib/package.sh
 !/packages/
 !/src/
 !/src/*.ts
 !/tests/
-!/tests/**
+!/tests/*.ts
 
 !/.oxfmtrc.jsonc
 !/.oxlintrc.jsonc
 !/AGENTS.md
 !/deno.jsonc
 !/deno.lock
+!/fileSpec.cue
 !/flake.lock
 !/flake.nix
-!/FileSpec.cue
 !/README.md
 !/tsconfig.json
 !/tsReset.d.ts

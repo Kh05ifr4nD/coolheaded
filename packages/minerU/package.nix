@@ -1,6 +1,7 @@
 {
   lib,
   packageLib,
+  cacert,
   cmake,
   fetchPypi,
   ffmpeg_4,
@@ -15,6 +16,7 @@
 }:
 let
   pname = "mineru";
+  exposeGpuServerEntrypoints = withAll && packageLib.stdenv.hostPlatform.isLinux;
 
   pyproject =
     pin:
@@ -31,7 +33,7 @@ let
     final: prev:
     let
       sitePackages = "lib/python${python3.pythonVersion}/site-packages";
-      enableCudaPackageOverrides = withAll && packageLib.stdenv.hostPlatform.isLinux;
+      enableCudaPackageOverrides = exposeGpuServerEntrypoints;
       enableNvidiaWheelOverrides = withAll && packageLib.system == "x86_64-linux";
       torchLibraryPath = "${final.torch}/${sitePackages}/torch/lib";
       torchBuildInputs = [
@@ -216,9 +218,66 @@ packageLib.mkUvApplication {
   python = python3;
   extras = lib.optionals withAll [ "all" ];
 
+  postInstall = ''
+    ${lib.optionalString (!withAll) ''
+      rm -f "$out/bin/mineru-gradio"
+    ''}
+
+    ${lib.optionalString (!exposeGpuServerEntrypoints) ''
+      rm -f "$out/bin/mineru-lmdeploy-server"
+      rm -f "$out/bin/mineru-vllm-server"
+    ''}
+  '';
+
   installCheck = ''
+    export HOME="$PWD/installCheckHome"
+    export XDG_CACHE_HOME="$PWD/installCheckCache"
+    export TMPDIR="$PWD/installCheckTmp"
+    export SSL_CERT_FILE="${cacert}/etc/ssl/certs/ca-bundle.crt"
+    export REQUESTS_CA_BUNDLE="$SSL_CERT_FILE"
+    mkdir -p "$HOME" "$XDG_CACHE_HOME" "$TMPDIR"
+
     "$out/bin/mineru" --help > /dev/null
+    "$out/bin/mineru-api" --help > /dev/null
     "$out/bin/mineru-models-download" --help > /dev/null
+    "$out/bin/mineru-openai-server" --help > /dev/null
+    "$out/bin/mineru-router" --help > /dev/null
+
+    ${lib.optionalString withAll ''
+      "$out/bin/mineru-gradio" --help > /dev/null
+
+      mineruPython="$(dirname "$(readlink "$out/bin/mineru")")/python"
+      "$mineruPython" - <<'PY'
+      import importlib
+
+      for module in [
+          "mineru.cli.vlm_server",
+          "mineru.model.vlm.lmdeploy_server",
+      ]:
+          importlib.import_module(module)
+      PY
+
+      ${lib.optionalString exposeGpuServerEntrypoints ''
+        test -x "$out/bin/mineru-lmdeploy-server" || failCheck "mineru-lmdeploy-server missing from Linux all variant"
+        test -x "$out/bin/mineru-vllm-server" || failCheck "mineru-vllm-server missing from Linux all variant"
+        "$mineruPython" - <<'PY'
+        import importlib
+
+        importlib.import_module("mineru.model.vlm.vllm_server")
+        PY
+      ''}
+
+      ${lib.optionalString (!exposeGpuServerEntrypoints) ''
+        test ! -e "$out/bin/mineru-lmdeploy-server" || failCheck "mineru-lmdeploy-server is not supported on this platform"
+        test ! -e "$out/bin/mineru-vllm-server" || failCheck "mineru-vllm-server is not supported on this platform"
+      ''}
+    ''}
+
+    ${lib.optionalString (!withAll) ''
+      test ! -e "$out/bin/mineru-gradio" || failCheck "mineru-gradio requires optional all dependencies"
+      test ! -e "$out/bin/mineru-lmdeploy-server" || failCheck "mineru-lmdeploy-server requires optional all dependencies"
+      test ! -e "$out/bin/mineru-vllm-server" || failCheck "mineru-vllm-server requires optional all dependencies"
+    ''}
   '';
 
   meta = pin: {

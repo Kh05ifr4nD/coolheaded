@@ -1,6 +1,6 @@
 const CUE_SCHEMA_NAME = "#FileSpec";
 const REGULAR_FILE_NODE = true;
-const FILE_SPEC_SCHEMA_FILE_NAME = "FileSpec.cue";
+const FILE_SPEC_SCHEMA_FILE_NAME = "fileSpec.cue";
 
 type FileSpecNode = typeof REGULAR_FILE_NODE | FileSpec;
 
@@ -118,7 +118,11 @@ async function validateFileSpec(repositoryRoot: string, spec: FileSpec): Promise
 async function checkedFileSpec(): Promise<void> {
   const repositoryRootOutput = await commandOutput("git", ["rev-parse", "--show-toplevel"]);
   const repositoryRoot = repositoryRootOutput.trim();
-  const filesOutput = await commandOutput("git", ["ls-files", "--cached", "-z"]);
+  const filesOutput = await commandOutput(
+    "git",
+    ["ls-files", "--cached", "--full-name", "-z"],
+    repositoryRoot,
+  );
   const spec = fileSpec(gitPaths(filesOutput));
 
   await validateFileSpec(repositoryRoot, spec);
@@ -144,3 +148,5 @@ async function main(moduleUrl: string): Promise<void> {
 }
 
 void main(import.meta.url);
+
+export { checkedFileSpec };

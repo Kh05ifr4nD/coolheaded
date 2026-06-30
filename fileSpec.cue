@@ -3,7 +3,7 @@ package fileSpec
 #RegularFile: true
 
 #PatchDirectory: {
-	[=~"^[A-Za-z0-9][A-Za-z0-9._-]*\\.patch$"]: #RegularFile
+	[=~"^[a-z][A-Za-z0-9._-]*\\.patch$"]: #RegularFile
 }
 
 #PackageDirectory: {
@@ -20,7 +20,7 @@ package fileSpec
 #FileSpec: {
 	".agents"!: {
 		skills!: {
-			"follow-oxlint-imports"!: {
+			"followOxlintImports"!: {
 				"SKILL.md"!: #RegularFile
 			}
 		}
@@ -57,7 +57,7 @@ package fileSpec
 	"deno.lock"!:               #RegularFile
 	"flake.lock"!:              #RegularFile
 	"flake.nix"!:               #RegularFile
-	"FileSpec.cue"!:           #RegularFile
+	"fileSpec.cue"!:           #RegularFile
 	"tsReset.d.ts"!:            #RegularFile
 	"tsconfig.json"!:           #RegularFile
 
@@ -85,7 +85,7 @@ package fileSpec
 
 	packages!: {
 		".gitignore"!:             #RegularFile
-		[=~"^[A-Za-z][A-Za-z0-9]*(?:-[A-Za-z0-9][A-Za-z0-9]*)*$"]: #PackageDirectory
+		[=~"^[a-z][A-Za-z0-9]*(?:-[a-z][A-Za-z0-9]*)*$"]: #PackageDirectory
 	}
 
 	src!: {
@@ -99,7 +99,6 @@ package fileSpec
 		"npmUpdater.ts"!:           #RegularFile
 		"packageConfig.ts"!:        #RegularFile
 		"packageConfigTypes.ts"!:   #RegularFile
-		"packageName.ts"!:          #RegularFile
 		"pinJson.ts"!:              #RegularFile
 		"releaseUpdater.ts"!:       #RegularFile
 		"rustPackageUpdater.ts"!:   #RegularFile
@@ -112,14 +111,13 @@ package fileSpec
 	}
 
 	tests!: {
-		"ciPackageBuilds.test.ts"!:  #RegularFile
-		"denoDepsUpdate.test.ts"!:   #RegularFile
-		"latestVersion.test.ts"!:    #RegularFile
-		"packageName.test.ts"!:      #RegularFile
-		"packageStructure.test.ts"!: #RegularFile
-		"schema.test.ts"!:           #RegularFile
-		"testingTypes.ts"!:          #RegularFile
-		"type.test.ts"!:             #RegularFile
-		"updatePr.test.ts"!:         #RegularFile
+		"ciPackageBuilds.ts"!:  #RegularFile
+		"denoDepsUpdate.ts"!:   #RegularFile
+		"latestVersion.ts"!:    #RegularFile
+		"packageStructure.ts"!: #RegularFile
+		"schema.ts"!:           #RegularFile
+		"testingTypes.ts"!:     #RegularFile
+		"type.ts"!:             #RegularFile
+		"updatePr.ts"!:         #RegularFile
 	}
 }
