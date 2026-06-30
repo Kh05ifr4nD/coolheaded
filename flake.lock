@@ -303,11 +303,11 @@
         ]
       },
       "locked": {
-        "lastModified": 1782684852,
-        "narHash": "sha256-xwLes1tbSPgSTk7DhLpMufIvGNyvBNkIkT/ITAs29Yg=",
+        "lastModified": 1782764688,
+        "narHash": "sha256-ZkgkgXq1R6FVmdBobj8EZX3abhDuuVzg8p7XRcCTAdo=",
         "owner": "Mic92",
         "repo": "wrap-buddy",
-        "rev": "d4ff94f08e9b07b1a9e4d723170d655d76300992",
+        "rev": "11a84a530e4dbd7279fa6a0df82f5f91de71c7fd",
         "type": "github"
       },
       "original": {
