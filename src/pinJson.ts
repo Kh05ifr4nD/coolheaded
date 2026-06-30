@@ -1,7 +1,9 @@
 import type { Effect } from "effect";
 import type { PackageHashConfig } from "./packageConfigTypes.ts";
-import type { SupportedSystem } from "./system.ts";
+import { SUPPORTED_SYSTEMS } from "./system.ts";
 import { writeTextFile } from "./updateScript.ts";
+
+type SupportedSystem = (typeof SUPPORTED_SYSTEMS)[number];
 
 const JSON_INDENT = 2;
 const PACKAGE_VERSION_FIELD = "version";
@@ -23,11 +25,7 @@ const UPSTREAM_ARTIFACT_HASH_FIELDS = [
   AUXILIARY_UPSTREAM_SOURCE_HASH_FIELD,
 ] as const satisfies readonly string[];
 
-const PLATFORM_ARTIFACT_HASH_FIELDS = [
-  "aarch64-darwin",
-  "aarch64-linux",
-  "x86_64-linux",
-] as const satisfies readonly SupportedSystem[];
+const PLATFORM_ARTIFACT_HASH_FIELDS = SUPPORTED_SYSTEMS;
 
 const GENERATED_DEPENDENCY_HASH_FIELDS = [
   RUST_DEPENDENCY_VENDOR_HASH_FIELD,

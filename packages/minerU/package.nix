@@ -225,6 +225,18 @@ packageLib.mkUvApplication {
 
   python = python3;
   extras = lib.optionals withAll [ "all" ];
+  expectedExecutables = [
+    "mineru"
+    "mineru-api"
+    "mineru-models-download"
+    "mineru-openai-server"
+    "mineru-router"
+  ]
+  ++ lib.optionals withAll [ "mineru-gradio" ]
+  ++ lib.optionals exposeGpuServerEntrypoints [
+    "mineru-lmdeploy-server"
+    "mineru-vllm-server"
+  ];
 
   postInstall = ''
     ${lib.optionalString (!withAll) ''

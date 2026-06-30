@@ -8,7 +8,7 @@ import { Effect } from "effect";
 import type { SupportedSystem } from "coolheaded/system.ts";
 import { latestGitHubVersion } from "coolheaded/latestVersion.ts";
 import { releaseHashConfig } from "coolheaded/releaseUpdater.ts";
-import { updateDenoDependencyHash } from "coolheadedCi/runDenoDepsUpdate.ts";
+import { updateDenoDependencyHash } from "coolheaded/denoDependencies.ts";
 import { writePackageHashConfig } from "coolheaded/pinJson.ts";
 
 const DENO_RELEASE_VERSION_PREFIX = "v";

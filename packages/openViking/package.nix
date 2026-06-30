@@ -103,6 +103,14 @@ packageLib.mkUvApplication {
     });
   };
 
+  expectedExecutables = [
+    "openviking"
+    "openviking-package-version"
+    "openviking-server"
+    "ov"
+  ]
+  ++ lib.optionals withBot [ "vikingbot" ];
+
   postInstall = ''
     ${lib.optionalString (!withBot) ''
       rm -f "$out/bin/vikingbot"

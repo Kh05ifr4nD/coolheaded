@@ -54,6 +54,10 @@ packageLib.mkReleaseBinaryPackage {
   '';
 
   installCheck = {
+    expectedExecutables = [
+      "deno"
+      "dx"
+    ];
     helpContains = "Usage: deno";
     extra = ''
       dxHelpOutput="$("$out/bin/dx" --help 2>&1)"

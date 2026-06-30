@@ -199,6 +199,10 @@ stdenvNoCC.mkDerivation {
   installCheckPhase = ''
     runHook preInstallCheck
 
+    . ${../../lib/package.sh}
+
+    assertExecutableSet "$out/bin" ${lib.escapeShellArgs launcherNames}
+
     "$out/bin/ds" --help > /dev/null
     "$out/bin/research" --help > /dev/null
     test -e "$out/libexec/deepscientist/pyproject.toml"

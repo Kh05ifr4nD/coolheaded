@@ -88,10 +88,11 @@ package fileSpec
 		[=~"^[a-z][A-Za-z0-9]*(?:-[a-z][A-Za-z0-9]*)*$"]: #PackageDirectory
 	}
 
-	src!: {
-		"checkFileSpec.ts"!:        #RegularFile
-		"latestVersion.ts"!:        #RegularFile
-		"npmLockUpdater.ts"!:       #RegularFile
+		src!: {
+			"checkFileSpec.ts"!:        #RegularFile
+			"denoDependencies.ts"!:     #RegularFile
+			"latestVersion.ts"!:        #RegularFile
+			"npmLockUpdater.ts"!:       #RegularFile
 		"npmPackageUpdater.ts"!:    #RegularFile
 		"npmRegistry.ts"!:          #RegularFile
 		"npmRegistryErrors.ts"!:    #RegularFile
@@ -115,8 +116,9 @@ package fileSpec
 		"denoDepsUpdate.ts"!:   #RegularFile
 		"latestVersion.ts"!:    #RegularFile
 		"packageStructure.ts"!: #RegularFile
-		"schema.ts"!:           #RegularFile
-		"testingTypes.ts"!:     #RegularFile
+			"schema.ts"!:           #RegularFile
+			"systems.ts"!:          #RegularFile
+			"testingTypes.ts"!:     #RegularFile
 		"type.ts"!:             #RegularFile
 		"updatePr.ts"!:         #RegularFile
 	}

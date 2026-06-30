@@ -23,6 +23,11 @@ packageLib.mkUvApplication {
 
   python = python3;
   extras = [ "mcp" ];
+  expectedExecutables = [
+    "semble"
+    "semble-mcp"
+    "semble-package-version"
+  ];
   workspaceRoot = workspaceSrc;
 
   packageOverrides = _final: prev: {

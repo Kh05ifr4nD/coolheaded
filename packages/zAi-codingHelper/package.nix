@@ -106,6 +106,8 @@ buildNpmPackage {
     installCheckTmp="$PWD/installCheckTmp"
     mkdir -p "$installCheckHome" "$installCheckTmp"
 
+    assertExecutableSet "$out/bin" coding-helper chelper
+
     HOME="$installCheckHome" TMPDIR="$installCheckTmp" "$out/bin/coding-helper" --help | grep -q "Coding Tool Helper"
     HOME="$installCheckHome" TMPDIR="$installCheckTmp" "$out/bin/chelper" --version | grep -q '${pin.version}'
     assertFileExists "${packageRoot}/dist/cli.js"

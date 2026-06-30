@@ -10,6 +10,7 @@ packageLib.mkUvApplication {
   inherit pname;
 
   python = python3;
+  expectedExecutables = [ "specify" ];
   packageName = "specify-cli";
 
   pyproject =

@@ -176,6 +176,8 @@ stdenv.mkDerivation (finalAttrs: {
     installCheckHome="$PWD/installCheckHome"
     mkdir -p "$installCheckHome"
 
+    assertExecutableSet "$out/bin" qmd
+
     helpOutput="$(HOME="$installCheckHome" "$out/bin/qmd" --help 2>&1)"
     case "$helpOutput" in
       *"Usage:"*) ;;

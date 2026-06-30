@@ -1,6 +1,7 @@
 #!/usr/bin/env -S deno run --allow-env --allow-read --allow-run
 
 import { run, writeOutput } from "./lib.ts";
+import type { SupportedSystem } from "coolheaded/system.ts";
 import { toFileUrl } from "@jsr/std__path";
 
 const PACKAGE_CHECKS_EXPR =
@@ -8,7 +9,7 @@ const PACKAGE_CHECKS_EXPR =
 
 interface SystemTarget {
   readonly runner: string;
-  readonly system: string;
+  readonly system: SupportedSystem;
 }
 
 const SYSTEMS = [
@@ -206,4 +207,5 @@ export {
   comparesCheckedOutBase,
   packagesFromInput,
   requestedBuildTargets,
+  SYSTEMS,
 };

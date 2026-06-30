@@ -77,6 +77,7 @@ let
       pyproject,
       meta,
       doInstallCheck ? base.canExecute,
+      expectedExecutables ? [ ],
       extras ? [ ],
       installCheck ? "",
       nativeInstallCheckInputs ? [ ],
@@ -138,6 +139,7 @@ let
             versionCheckProgramArg
             ;
           installCheckPhase = base.mkInstallCheckPhase {
+            inherit expectedExecutables;
             executable = versionCheckProgram;
             extra = installCheck;
           };

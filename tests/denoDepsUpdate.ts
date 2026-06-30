@@ -1,13 +1,12 @@
 import {
   denoDependencyBuildCommand,
   denoDependencyHash,
-  directSpecifierVersions,
   isDenoDependencyHashMismatch,
   parsedNixHash,
   replaceDenoDependencyHash,
-  versionChanges,
-} from "coolheadedCi/runDenoDepsUpdate.ts";
+} from "coolheaded/denoDependencies.ts";
 import { describe, it } from "@jsr/std__testing/bdd";
+import { directSpecifierVersions, versionChanges } from "coolheadedCi/runDenoDepsUpdate.ts";
 import { assertEquals } from "@jsr/std__assert";
 
 describe("Deno deps update helpers", (): void => {

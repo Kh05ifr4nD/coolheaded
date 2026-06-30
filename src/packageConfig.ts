@@ -1,6 +1,8 @@
 import { Effect } from "effect";
 import type { PackageHashConfig } from "./packageConfigTypes.ts";
-import type { SupportedSystem } from "./system.ts";
+import { SUPPORTED_SYSTEMS } from "./system.ts";
+
+type SupportedSystem = (typeof SUPPORTED_SYSTEMS)[number];
 
 class InvalidPackageHashConfigError extends Error {
   public constructor(message: string) {
@@ -54,12 +56,13 @@ function optionalNonEmptyString(
 
 function platformPackageHashes(value: unknown): Readonly<Record<SupportedSystem, string>> {
   const hashes = objectRecord(value, "platformPackageHashes");
+  const [aarch64Darwin, aarch64Linux, x8664Linux] = SUPPORTED_SYSTEMS;
 
   return {
-    "aarch64-darwin": hashForSystem(hashes, "aarch64-darwin"),
-    "aarch64-linux": hashForSystem(hashes, "aarch64-linux"),
-    "x86_64-linux": hashForSystem(hashes, "x86_64-linux"),
-  };
+    [aarch64Darwin]: hashForSystem(hashes, aarch64Darwin),
+    [aarch64Linux]: hashForSystem(hashes, aarch64Linux),
+    [x8664Linux]: hashForSystem(hashes, x8664Linux),
+  } satisfies Readonly<Record<SupportedSystem, string>>;
 }
 
 function parsePackageHashConfig(value: unknown): PackageHashConfig {

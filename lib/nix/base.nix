@@ -62,14 +62,22 @@ let
   mkInstallCheckPhase =
     {
       executable,
+      expectedExecutables ? [ ],
       extra ? "",
       helpContains ? null,
       helpFlag ? "--help",
     }:
+    let
+      expectedExecutableArguments = lib.escapeShellArgs expectedExecutables;
+    in
     ''
       runHook preInstallCheck
 
       . ${packageShell}
+
+      ${lib.optionalString (expectedExecutables != [ ]) ''
+        assertExecutableSet "$out/bin" ${expectedExecutableArguments}
+      ''}
 
       ${lib.optionalString (helpContains != null) ''
         helpOutput="$("${executable}" ${helpFlag} 2>&1)"
@@ -95,6 +103,7 @@ let
       doInstallCheck ? canExecute,
       dontUnpack ? false,
       executablePath ? if dontUnpack then "$src" else mainProgram,
+      expectedExecutables ? [ mainProgram ],
       installCheck ? { },
       installPhase ? ''
         runHook preInstall
@@ -150,7 +159,11 @@ let
           wrapBuddyExtraNeeded
           ;
         installCheckPhase = mkInstallCheckPhase (
-          { executable = "$out/bin/${mainProgram}"; } // installCheck
+          {
+            executable = "$out/bin/${mainProgram}";
+            inherit expectedExecutables;
+          }
+          // installCheck
         );
 
         meta = {

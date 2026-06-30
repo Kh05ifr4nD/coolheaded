@@ -1,4 +1,5 @@
 import {
+  SYSTEMS,
   buildMatrix,
   changedDerivationPackages,
   changedDerivationTargets,
@@ -6,9 +7,14 @@ import {
   packagesFromInput,
 } from "coolheadedCi/discoverCiPackageBuilds.ts";
 import { describe, it } from "@jsr/std__testing/bdd";
+import { SUPPORTED_SYSTEMS } from "coolheaded/system.ts";
 import { assertEquals } from "@jsr/std__assert";
 
 describe("CI package build discovery", (): void => {
+  it("keeps CI runner targets aligned with supported systems", (): void => {
+    assertEquals(SYSTEMS.map(({ system }) => system).toSorted(), [...SUPPORTED_SYSTEMS].toSorted());
+  });
+
   it("parses explicit package inputs", (): void => {
     assertEquals(packagesFromInput("betaPackage alphaPackage betaPackage"), [
       "alphaPackage",
