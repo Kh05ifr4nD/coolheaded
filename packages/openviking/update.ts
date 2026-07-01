@@ -17,6 +17,9 @@ name = "openvikingProject"
 version = "${version}"
 requires-python = ">=3.14,<3.15"
 dependencies = ["openviking==${version}"]
+
+[tool.uv.extra-build-dependencies]
+sgmllib3k = ["setuptools"]
 `;
 }
 
