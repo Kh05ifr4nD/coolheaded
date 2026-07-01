@@ -48,18 +48,18 @@ package fileSpec
 		}
 	}
 
-	".gitignore"!:              #RegularFile
-	".oxfmtrc.jsonc"!:          #RegularFile
-	".oxlintrc.jsonc"!:         #RegularFile
-	"AGENTS.md"!:               #RegularFile
-	"README.md"!:               #RegularFile
-	"deno.jsonc"!:              #RegularFile
-	"deno.lock"!:               #RegularFile
-	"flake.lock"!:              #RegularFile
-	"flake.nix"!:               #RegularFile
-	"fileSpec.cue"!:           #RegularFile
-	"tsReset.d.ts"!:            #RegularFile
-	"tsconfig.json"!:           #RegularFile
+	".gitignore"!:      #RegularFile
+	".oxfmtrc.jsonc"!:  #RegularFile
+	".oxlintrc.jsonc"!: #RegularFile
+	"AGENTS.md"!:       #RegularFile
+	"README.md"!:       #RegularFile
+	"deno.jsonc"!:      #RegularFile
+	"deno.lock"!:       #RegularFile
+	"flake.lock"!:      #RegularFile
+	"flake.nix"!:       #RegularFile
+	"fileSpec.cue"!:    #RegularFile
+	"tsReset.d.ts"!:    #RegularFile
+	"tsconfig.json"!:   #RegularFile
 
 	flake!: {
 		"checks.nix"!:           #RegularFile
@@ -90,6 +90,7 @@ package fileSpec
 			"npmRegistry.ts"!:        #RegularFile
 			"npmRegistryErrors.ts"!:  #RegularFile
 			"npmRegistryTypes.ts"!:   #RegularFile
+			"npmTarballUpdater.ts"!:  #RegularFile
 			"npmUpdater.ts"!:         #RegularFile
 			"packageConfig.ts"!:      #RegularFile
 			"packageConfigTypes.ts"!: #RegularFile
@@ -106,7 +107,7 @@ package fileSpec
 	}
 
 	packages!: {
-		".gitignore"!:             #RegularFile
+		".gitignore"!:                                    #RegularFile
 		[=~"^[a-z][A-Za-z0-9]*(?:-[a-z][A-Za-z0-9]*)*$"]: #PackageDirectory
 	}
 
@@ -115,9 +116,9 @@ package fileSpec
 		"denoDepsUpdate.ts"!:   #RegularFile
 		"latestVersion.ts"!:    #RegularFile
 		"packageStructure.ts"!: #RegularFile
-			"schema.ts"!:           #RegularFile
-			"systems.ts"!:          #RegularFile
-			"testingTypes.ts"!:     #RegularFile
+		"schema.ts"!:           #RegularFile
+		"systems.ts"!:          #RegularFile
+		"testingTypes.ts"!:     #RegularFile
 		"type.ts"!:             #RegularFile
 		"updatePr.ts"!:         #RegularFile
 	}

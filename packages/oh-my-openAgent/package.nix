@@ -92,12 +92,12 @@ packageLib.mkBinaryPackage {
     test ! -e "$out/bin/lazycodex" || failCheck "unexpected lazycodex launcher"
     assertFileExists "${packageRoot}/launcher/oh-my-openagent.js"
     assertFileExists "${packageRoot}/dist/cli/index.js"
-    assertFileExists "${packageRoot}/.agents/skills"
-    assertFileExists "${packageRoot}/.opencode/skills"
+    assertDirectoryExists "${packageRoot}/.agents/skills"
+    assertDirectoryExists "${packageRoot}/.opencode/skills"
     assertFileExists "${packageRoot}/dist/skills/ast-grep/SKILL.md"
     assertFileExists "${packageRoot}/packages/git-bash-mcp/dist/cli.js"
     assertFileExists "${packageRoot}/packages/lsp-tools-mcp/dist/cli.js"
-    assertFileExists "${packageRoot}/packages/shared-skills/skills"
+    assertDirectoryExists "${packageRoot}/packages/shared-skills/skills"
   '';
 
   meta = {

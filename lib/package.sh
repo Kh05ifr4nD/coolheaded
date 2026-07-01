@@ -5,9 +5,19 @@ failCheck() {
   exit 1
 }
 
+assertPathExists() {
+  path="$1"
+  test -e "$path" || failCheck "missing expected path: $path"
+}
+
 assertFileExists() {
   path="$1"
-  test -e "$path" || failCheck "missing expected file: $path"
+  test -f "$path" || failCheck "missing expected file: $path"
+}
+
+assertDirectoryExists() {
+  path="$1"
+  test -d "$path" || failCheck "missing expected directory: $path"
 }
 
 assertExecutableExists() {

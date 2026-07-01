@@ -24,7 +24,14 @@ let
       ;
   };
   github = import ./github.nix { inherit base; };
-  npm = import ./npm.nix { inherit base lib; };
+  npm = import ./npm.nix {
+    inherit
+      base
+      fetchurl
+      lib
+      versionCheckHook
+      ;
+  };
   python = import ./python.nix {
     inherit
       base

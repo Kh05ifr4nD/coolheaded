@@ -1,12 +1,28 @@
 import { Effect } from "effect";
-import { commandOutput } from "./updateScript.ts";
+import { UpdateError } from "./updateScript.ts";
 
 function temporaryDirectory(): Effect.Effect<string, Error> {
-  return commandOutput("mktemp", ["-d"]);
+  return Effect.tryPromise({
+    catch(error: unknown): Error {
+      return error instanceof Error
+        ? error
+        : new UpdateError("Failed to create temporary directory");
+    },
+    async try(): Promise<string> {
+      return await Deno.makeTempDir({ prefix: "coolheaded-" });
+    },
+  });
 }
 
 function removeDirectory(path: string): Effect.Effect<void, Error> {
-  return Effect.asVoid(commandOutput("rm", ["-rf", path]));
+  return Effect.tryPromise({
+    catch(error: unknown): Error {
+      return error instanceof Error ? error : new UpdateError(`Failed to remove ${path}`);
+    },
+    async try(): Promise<void> {
+      await Deno.remove(path, { recursive: true });
+    },
+  });
 }
 
 function withTemporaryDirectory<Success, Failure extends Error>(
