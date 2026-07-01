@@ -1,6 +1,10 @@
 import { assertEquals, assertRejects, assertThrows } from "@jsr/std__assert";
 import { describe, it } from "@jsr/std__testing/bdd";
-import { hexSha256ToSRI, releaseUrlsFromTargets } from "coolheaded/releaseUpdater.ts";
+import {
+  hexSha256ToSRI,
+  releaseHashUpdateProgram,
+  releaseUrlsFromTargets,
+} from "coolheaded/releaseUpdater.ts";
 import { npmHashConfigForSystems, npmHashesForSystems } from "coolheaded/npmUpdater.ts";
 import {
   npmPlatformPackageVersion,
@@ -230,5 +234,41 @@ describe("release helpers", (): void => {
       hexSha256ToSRI("e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"),
       "sha256-47DEQpj8HBSa+/TImW+5JCeuQeRkm5NMpJWZG3hSuFU=",
     );
+  });
+
+  it("writes release hash pins through the shared update program", async (): Promise<void> => {
+    const pinFilePath = await Deno.makeTempFile();
+    const emptySha256 = "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855";
+
+    try {
+      await Effect.runPromise(
+        releaseHashUpdateProgram({
+          args: ["0.1.0"],
+          latestVersion: (): Effect.Effect<string, Error> => Effect.succeed("0.2.0"),
+          pinFilePath,
+          source: "sha256Sum",
+          urlsForVersion: () =>
+            releaseUrlsFromTargets(
+              {
+                "aarch64-darwin": `data:text/plain,${emptySha256}`,
+                "aarch64-linux": `data:text/plain,${emptySha256}`,
+                "x86_64-linux": `data:text/plain,${emptySha256}`,
+              },
+              (target: string): string => target,
+            ),
+        }),
+      );
+
+      assertEquals(JSON.parse(await Deno.readTextFile(pinFilePath)), {
+        platformPackageHashes: {
+          "aarch64-darwin": "sha256-47DEQpj8HBSa+/TImW+5JCeuQeRkm5NMpJWZG3hSuFU=",
+          "aarch64-linux": "sha256-47DEQpj8HBSa+/TImW+5JCeuQeRkm5NMpJWZG3hSuFU=",
+          "x86_64-linux": "sha256-47DEQpj8HBSa+/TImW+5JCeuQeRkm5NMpJWZG3hSuFU=",
+        },
+        version: "0.1.0",
+      });
+    } finally {
+      await Deno.remove(pinFilePath);
+    }
   });
 });

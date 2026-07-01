@@ -1,8 +1,9 @@
+import { UpdateError, updateNewerPinVersion } from "./updateScript.ts";
 import { Effect } from "effect";
 import type { PackageHashConfig } from "./packageConfigTypes.ts";
-import { UpdateError } from "./updateScript.ts";
 import { parsePackageHashConfig } from "./packageConfig.ts";
 import { systemRecord } from "./system.ts";
+import { writePackageHashConfig } from "./pinJson.ts";
 
 const HEX_BYTE_WIDTH = 2;
 const HEX_RADIX = 16;
@@ -11,6 +12,14 @@ type ReleaseHashSource = "sha256Digest" | "sha256Sum";
 type SupportedSystem = Parameters<Parameters<typeof systemRecord>[0]>[0];
 type ReleaseTargets = Readonly<Record<SupportedSystem, string>>;
 type ReleaseUrls = Readonly<Record<SupportedSystem, string>>;
+
+interface ReleaseHashUpdateOptions {
+  readonly args: readonly string[];
+  readonly latestVersion: () => Effect.Effect<string, Error>;
+  readonly pinFilePath: string;
+  readonly source: ReleaseHashSource;
+  readonly urlsForVersion: (version: string) => ReleaseUrls;
+}
 
 function fetchText(url: string): Effect.Effect<string, UpdateError> {
   return Effect.tryPromise({
@@ -133,5 +142,18 @@ function releaseHashConfig(
   );
 }
 
-export { hexSha256ToSRI, releaseHashConfig, releaseUrlsFromTargets };
+function releaseHashUpdateProgram(options: ReleaseHashUpdateOptions): Effect.Effect<void, Error> {
+  return updateNewerPinVersion(
+    options.args,
+    options.latestVersion,
+    options.pinFilePath,
+    (version: string): Effect.Effect<void, Error> =>
+      Effect.flatMap(
+        releaseHashConfig(version, options.urlsForVersion(version), options.source),
+        (config): Effect.Effect<void> => writePackageHashConfig(options.pinFilePath, config),
+      ),
+  );
+}
+
+export { hexSha256ToSRI, releaseHashConfig, releaseHashUpdateProgram, releaseUrlsFromTargets };
 export type { ReleaseHashSource, ReleaseTargets, ReleaseUrls };

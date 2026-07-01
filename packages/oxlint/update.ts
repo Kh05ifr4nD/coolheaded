@@ -1,8 +1,7 @@
-import { releaseHashConfig, releaseUrlsFromTargets } from "coolheaded/releaseUpdater.ts";
-import { runUpdateScript, scriptPath, updateNewerPinVersion } from "coolheaded/updateScript.ts";
+import { releaseHashUpdateProgram, releaseUrlsFromTargets } from "coolheaded/releaseUpdater.ts";
+import { runUpdateScript, scriptPath } from "coolheaded/updateScript.ts";
 import { Effect } from "effect";
 import { latestGitHubVersion } from "coolheaded/latestVersion.ts";
-import { writePackageHashConfig } from "coolheaded/pinJson.ts";
 
 const PIN_FILE_PATH = scriptPath("pin.json", import.meta.url);
 type ReleaseTargets = Parameters<typeof releaseUrlsFromTargets>[0];
@@ -27,22 +26,16 @@ function releaseAssetUrl(version: string, target: string): string {
 }
 
 function updateProgram(args: readonly string[]): Effect.Effect<void, Error> {
-  return updateNewerPinVersion(
+  return releaseHashUpdateProgram({
     args,
     latestVersion,
-    PIN_FILE_PATH,
-    (version: string): Effect.Effect<void, Error> =>
-      Effect.flatMap(
-        releaseHashConfig(
-          version,
-          releaseUrlsFromTargets(OXLINT_RELEASE_TARGETS, (target: string): string =>
-            releaseAssetUrl(version, target),
-          ),
-          "sha256Digest",
-        ),
-        (config): Effect.Effect<void> => writePackageHashConfig(PIN_FILE_PATH, config),
+    pinFilePath: PIN_FILE_PATH,
+    source: "sha256Digest",
+    urlsForVersion: (version: string) =>
+      releaseUrlsFromTargets(OXLINT_RELEASE_TARGETS, (target: string): string =>
+        releaseAssetUrl(version, target),
       ),
-  );
+  });
 }
 
 async function main(args: readonly string[]): Promise<void> {
