@@ -48,11 +48,16 @@ packageLib.mkUvApplication {
         --ignore-agent-tools \
         --script sh
 
-      assertFileExists sample/.specify/extensions/agent-context/agent-context-config.yml
+      assertFileExists sample/.specify/integrations/codex.manifest.json
+      assertFileExists sample/.specify/integrations/speckit.manifest.json
+      assertFileExists sample/.specify/workflows/speckit/workflow.yml
       assertFileExists sample/.agents/skills/speckit-specify/SKILL.md
       (cd sample && "$out/bin/specify" integration list > /dev/null)
-      test -w sample/.specify/extensions/agent-context/agent-context-config.yml \
-        || failCheck "agent-context config is not writable"
+      (cd sample && "$out/bin/specify" workflow list > /dev/null)
+      test -w sample/.specify/workflows/speckit/workflow.yml \
+        || failCheck "speckit workflow file is not writable"
+      test -w sample/.agents/skills/speckit-specify/SKILL.md \
+        || failCheck "speckit specify skill is not writable"
     )
   '';
 
