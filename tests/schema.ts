@@ -4,20 +4,20 @@ import {
   hexSha256ToSRI,
   releaseHashUpdateProgram,
   releaseUrlsFromTargets,
-} from "coolheaded/releaseUpdater.ts";
-import { npmHashConfigForSystems, npmHashesForSystems } from "coolheaded/npmUpdater.ts";
+} from "coolheaded/updates/release.ts";
+import { npmHashConfigForSystems, npmHashesForSystems } from "coolheaded/npm/hashes.ts";
 import {
   npmPackageHashUpdateProgram,
   npmPlatformPackageHashUpdateProgram,
-} from "coolheaded/npmPackageUpdater.ts";
+} from "coolheaded/npm/packageHashes.ts";
 import {
   npmPlatformPackageVersion,
   npmRegistryPackageUrl,
   npmScopedTarballUrl,
-} from "coolheaded/npmRegistry.ts";
+} from "coolheaded/npm/registry.ts";
 import { Effect } from "effect";
 import fc from "fast-check";
-import { parsePackageHashConfig } from "coolheaded/packageConfig.ts";
+import { parsePackageHashConfig } from "coolheaded/pins/schema.ts";
 
 const COMPLETE_HASHES = {
   "aarch64-darwin": "sha512-a",

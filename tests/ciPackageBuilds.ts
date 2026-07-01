@@ -7,7 +7,7 @@ import {
   packagesFromInput,
 } from "coolheadedCi/discoverCiPackageBuilds.ts";
 import { describe, it } from "@jsr/std__testing/bdd";
-import { SUPPORTED_SYSTEMS } from "coolheaded/system.ts";
+import { SUPPORTED_SYSTEMS } from "coolheaded/systems/supported.ts";
 import { assertEquals } from "@jsr/std__assert";
 
 describe("CI package build discovery", (): void => {

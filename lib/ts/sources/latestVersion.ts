@@ -1,6 +1,6 @@
-import { compareVersions, isSemver } from "./version.ts";
+import { compareVersions, isSemver } from "coolheaded/core/version.ts";
 import { Effect } from "effect";
-import { UpdateError } from "./updateScript.ts";
+import { UpdateError } from "coolheaded/core/updateScript.ts";
 
 interface LatestGitHubVersionOptions {
   readonly owner: string;

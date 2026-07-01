@@ -18,6 +18,9 @@
 !/lib/ts/
 !/lib/ts/*.json
 !/lib/ts/*.ts
+!/lib/ts/*/
+!/lib/ts/*/*.json
+!/lib/ts/*/*.ts
 !/packages/
 !/tests/
 !/tests/*.ts

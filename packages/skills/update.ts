@@ -1,6 +1,6 @@
 import { Effect } from "effect";
-import { runUpdateScript } from "coolheaded/updateScript.ts";
-import { updateNpmTarballPackage } from "coolheaded/npmTarballUpdater.ts";
+import { runUpdateScript } from "coolheaded/core/updateScript.ts";
+import { updateNpmTarballPackage } from "coolheaded/npm/tarball.ts";
 
 const NPM_PACKAGE_NAME = "skills";
 

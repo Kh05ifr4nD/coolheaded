@@ -1,8 +1,12 @@
 import { Effect } from "effect";
-import type { PackageHashConfig } from "./packageConfigTypes.ts";
-import { systemRecord } from "./system.ts";
+import { systemRecord } from "coolheaded/systems/supported.ts";
 
-type SupportedSystem = Parameters<Parameters<typeof systemRecord>[0]>[0];
+type SupportedSystem = keyof ReturnType<typeof systemRecord<string>>;
+interface PackageHashConfig {
+  readonly binaryVersion?: string;
+  readonly platformPackageHashes: Readonly<Record<SupportedSystem, string>>;
+  readonly version: string;
+}
 
 class InvalidPackageHashConfigError extends Error {
   public constructor(message: string) {
@@ -85,4 +89,4 @@ function packageHashConfig(
 }
 
 export { InvalidPackageHashConfigError, packageHashConfig, parsePackageHashConfig };
-export type { PackageHashConfig } from "./packageConfigTypes.ts";
+export type { PackageHashConfig };

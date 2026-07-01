@@ -1,10 +1,10 @@
-import { compareVersions, isSemver } from "coolheaded/version.ts";
+import { compareVersions, isSemver } from "coolheaded/core/version.ts";
 import { describe, it } from "@jsr/std__testing/bdd";
 import {
   latestGitHubVersion,
   latestNpmVersion,
   latestPyPiVersion,
-} from "coolheaded/latestVersion.ts";
+} from "coolheaded/sources/latestVersion.ts";
 import { Effect } from "effect";
 import { assertEquals } from "@jsr/std__assert";
 

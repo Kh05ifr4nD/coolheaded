@@ -3,7 +3,7 @@
 import {
   DENO_DEPENDENCY_HASH_FILE_PATH,
   updateDenoDependencyHash,
-} from "coolheaded/denoDependencies.ts";
+} from "coolheaded/repository/denoDependencies.ts";
 import {
   assertOnlyChangedFiles,
   changedFiles,

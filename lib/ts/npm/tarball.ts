@@ -5,12 +5,12 @@ import {
   scriptPath,
   updateNewerPinVersion,
   writeTextFile,
-} from "./updateScript.ts";
-import { generatedNpmPackageLock, prepareNpmTarballWorkspace } from "./npmLockUpdater.ts";
+} from "coolheaded/core/updateScript.ts";
+import { generatedNpmPackageLock, prepareNpmTarballWorkspace } from "coolheaded/npm/lock.ts";
 import { Effect } from "effect";
-import { latestNpmVersion } from "./latestVersion.ts";
-import { npmPackageHashConfig } from "./npmPackageUpdater.ts";
-import { writePinJson } from "./pinJson.ts";
+import { latestNpmVersion } from "coolheaded/sources/latestVersion.ts";
+import { npmPackageHashConfig } from "coolheaded/npm/packageHashes.ts";
+import { writePinJson } from "coolheaded/pins/json.ts";
 
 interface NpmTarballPackageUpdate {
   readonly args: readonly string[];

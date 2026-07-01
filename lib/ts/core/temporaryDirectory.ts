@@ -1,5 +1,5 @@
 import { Effect } from "effect";
-import { UpdateError } from "./updateScript.ts";
+import { UpdateError } from "coolheaded/core/updateScript.ts";
 
 function temporaryDirectory(): Effect.Effect<string, Error> {
   return Effect.tryPromise({

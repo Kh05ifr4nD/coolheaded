@@ -1,6 +1,6 @@
 import { Effect } from "effect";
-import { InvalidNpmMetadataError } from "./npmRegistryErrors.ts";
-import type { NpmPackageMetadata } from "./npmRegistryTypes.ts";
+import { InvalidNpmMetadataError } from "coolheaded/npm/errors.ts";
+import type { NpmPackageMetadata } from "coolheaded/npm/metadata.ts";
 
 function npmRegistryPackageUrl(packageName: string): string {
   return `https://registry.npmjs.org/${encodeURIComponent(packageName)}`;
@@ -36,5 +36,5 @@ export {
   npmScopedTarballUrl,
   npmVersionIntegrity,
 };
-export { InvalidNpmMetadataError } from "./npmRegistryErrors.ts";
-export type { NpmPackageMetadata } from "./npmRegistryTypes.ts";
+export { InvalidNpmMetadataError } from "coolheaded/npm/errors.ts";
+export type { NpmPackageMetadata } from "coolheaded/npm/metadata.ts";

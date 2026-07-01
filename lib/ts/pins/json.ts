@@ -1,7 +1,7 @@
 import type { Effect } from "effect";
-import type { PackageHashConfig } from "./packageConfigTypes.ts";
-import { SUPPORTED_SYSTEMS } from "./system.ts";
-import { writeTextFile } from "./updateScript.ts";
+import type { PackageHashConfig } from "coolheaded/pins/schema.ts";
+import { SUPPORTED_SYSTEMS } from "coolheaded/systems/supported.ts";
+import { writeTextFile } from "coolheaded/core/updateScript.ts";
 
 type SupportedSystem = (typeof SUPPORTED_SYSTEMS)[number];
 

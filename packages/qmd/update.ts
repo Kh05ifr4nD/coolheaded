@@ -5,12 +5,15 @@ import {
   scriptPath,
   updateNewerPinVersion,
   writeTextFile,
-} from "coolheaded/updateScript.ts";
-import { fetchGitHubSourceHash, prepareGitHubTagTarballWorkspace } from "coolheaded/sourceHash.ts";
+} from "coolheaded/core/updateScript.ts";
+import {
+  fetchGitHubSourceHash,
+  prepareGitHubTagTarballWorkspace,
+} from "coolheaded/sources/github.ts";
 import { Effect } from "effect";
-import { latestGitHubVersion } from "coolheaded/latestVersion.ts";
-import { withTemporaryDirectory } from "coolheaded/temporaryDirectory.ts";
-import { writePinJson } from "coolheaded/pinJson.ts";
+import { latestGitHubVersion } from "coolheaded/sources/latestVersion.ts";
+import { withTemporaryDirectory } from "coolheaded/core/temporaryDirectory.ts";
+import { writePinJson } from "coolheaded/pins/json.ts";
 
 const GENERATED_PACKAGE_FILE_PATH = scriptPath("generatedPackage.nix", import.meta.url);
 const PIN_FILE_PATH = scriptPath("pin.json", import.meta.url);

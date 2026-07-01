@@ -82,28 +82,41 @@ package fileSpec
 		}
 		"package.sh"!: #RegularFile
 		ts!: {
-			"checkFileSpec.ts"!:      #RegularFile
-			"denoDependencies.ts"!:   #RegularFile
-			"latestVersion.ts"!:      #RegularFile
-			"npmLockUpdater.ts"!:     #RegularFile
-			"npmPackageUpdater.ts"!:  #RegularFile
-			"npmRegistry.ts"!:        #RegularFile
-			"npmRegistryErrors.ts"!:  #RegularFile
-			"npmRegistryTypes.ts"!:   #RegularFile
-			"npmTarballUpdater.ts"!:  #RegularFile
-			"npmUpdater.ts"!:         #RegularFile
-			"packageConfig.ts"!:      #RegularFile
-			"packageConfigTypes.ts"!: #RegularFile
-			"pinJson.ts"!:            #RegularFile
-			"releaseUpdater.ts"!:     #RegularFile
-			"rustPackageUpdater.ts"!: #RegularFile
-			"sourceHash.ts"!:         #RegularFile
-			"system.ts"!:             #RegularFile
-			"systems.json"!:          #RegularFile
-			"temporaryDirectory.ts"!: #RegularFile
-			"updateScript.ts"!:       #RegularFile
-			"uvLockUpdater.ts"!:      #RegularFile
-			"version.ts"!:            #RegularFile
+			core!: {
+				"temporaryDirectory.ts"!: #RegularFile
+				"updateScript.ts"!:       #RegularFile
+				"version.ts"!:            #RegularFile
+			}
+			npm!: {
+				"errors.ts"!:        #RegularFile
+				"hashes.ts"!:        #RegularFile
+				"lock.ts"!:          #RegularFile
+				"metadata.ts"!:      #RegularFile
+				"packageHashes.ts"!: #RegularFile
+				"registry.ts"!:      #RegularFile
+				"tarball.ts"!:       #RegularFile
+			}
+			pins!: {
+				"json.ts"!:   #RegularFile
+				"schema.ts"!: #RegularFile
+			}
+			repository!: {
+				"denoDependencies.ts"!: #RegularFile
+				"fileSpec.ts"!:         #RegularFile
+			}
+			sources!: {
+				"github.ts"!:        #RegularFile
+				"latestVersion.ts"!: #RegularFile
+			}
+			systems!: {
+				"config.json"!:  #RegularFile
+				"supported.ts"!: #RegularFile
+			}
+			updates!: {
+				"release.ts"!:     #RegularFile
+				"rustPackage.ts"!: #RegularFile
+				"uvLock.ts"!:      #RegularFile
+			}
 		}
 	}
 

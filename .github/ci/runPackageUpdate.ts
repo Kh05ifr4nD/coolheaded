@@ -9,7 +9,7 @@ import {
   run,
   writeOutput,
 } from "./lib.ts";
-import { compareVersions } from "coolheaded/version.ts";
+import { compareVersions } from "coolheaded/core/version.ts";
 
 const PACKAGE_UPDATE_ALLOWED_FILES_EXPR = `
 let

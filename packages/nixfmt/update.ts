@@ -4,9 +4,9 @@ import {
   runUpdateScript,
   scriptPath,
   writeTextFile,
-} from "coolheaded/updateScript.ts";
+} from "coolheaded/core/updateScript.ts";
 import { Effect } from "effect";
-import { latestGitHubVersion } from "coolheaded/latestVersion.ts";
+import { latestGitHubVersion } from "coolheaded/sources/latestVersion.ts";
 
 const NIXFMT_RELEASE_VERSION_PREFIX = "v";
 const GENERATED_PACKAGE_FILE_PATH = scriptPath("generatedPackage.nix", import.meta.url);

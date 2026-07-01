@@ -1,7 +1,7 @@
-import { runUpdateScript, scriptPath } from "coolheaded/updateScript.ts";
+import { runUpdateScript, scriptPath } from "coolheaded/core/updateScript.ts";
 import { Effect } from "effect";
-import { latestGitHubVersion } from "coolheaded/latestVersion.ts";
-import { updateVersionedNixpkgsPythonUvLock } from "coolheaded/uvLockUpdater.ts";
+import { latestGitHubVersion } from "coolheaded/sources/latestVersion.ts";
+import { updateVersionedNixpkgsPythonUvLock } from "coolheaded/updates/uvLock.ts";
 
 const PIN_FILE_PATH = scriptPath("pin.json", import.meta.url);
 const PYTHON_PACKAGE = "python3";

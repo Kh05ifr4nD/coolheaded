@@ -4,13 +4,16 @@ import {
   scriptPath,
   updateNewerPinVersion,
   writeTextFile,
-} from "coolheaded/updateScript.ts";
-import { fetchGitHubSourceHash, prepareGitHubTagTarballWorkspace } from "coolheaded/sourceHash.ts";
+} from "coolheaded/core/updateScript.ts";
+import {
+  fetchGitHubSourceHash,
+  prepareGitHubTagTarballWorkspace,
+} from "coolheaded/sources/github.ts";
 import { Effect } from "effect";
-import { generatedNpmPackageLock } from "coolheaded/npmLockUpdater.ts";
-import { latestNpmVersion } from "coolheaded/latestVersion.ts";
-import { npmPackageHashConfig } from "coolheaded/npmPackageUpdater.ts";
-import { writePinJson } from "coolheaded/pinJson.ts";
+import { generatedNpmPackageLock } from "coolheaded/npm/lock.ts";
+import { latestNpmVersion } from "coolheaded/sources/latestVersion.ts";
+import { npmPackageHashConfig } from "coolheaded/npm/packageHashes.ts";
+import { writePinJson } from "coolheaded/pins/json.ts";
 
 const NPM_PACKAGE_NAME = "@researai/deepscientist";
 const PACKAGE_LOCK_FILE_PATH = scriptPath("package-lock.json", import.meta.url);

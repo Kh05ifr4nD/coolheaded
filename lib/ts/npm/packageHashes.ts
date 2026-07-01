@@ -1,15 +1,15 @@
-import { UpdateError, updateNewerPinVersion } from "./updateScript.ts";
-import { npmRegistryPackageUrl, npmVersionIntegrity } from "./npmRegistry.ts";
+import { UpdateError, updateNewerPinVersion } from "coolheaded/core/updateScript.ts";
+import { npmRegistryPackageUrl, npmVersionIntegrity } from "coolheaded/npm/registry.ts";
 import { Effect } from "effect";
-import type { NpmPackageMetadata } from "./npmRegistryTypes.ts";
-import type { PackageHashConfig } from "./packageConfigTypes.ts";
-import { latestNpmVersion } from "./latestVersion.ts";
-import { npmHashConfigForSystems } from "./npmUpdater.ts";
-import { parsePackageHashConfig } from "./packageConfig.ts";
-import { systemRecord } from "./system.ts";
-import { writePackageHashConfig } from "./pinJson.ts";
+import type { NpmPackageMetadata } from "coolheaded/npm/metadata.ts";
+import { latestNpmVersion } from "coolheaded/sources/latestVersion.ts";
+import { npmHashConfigForSystems } from "coolheaded/npm/hashes.ts";
+import { parsePackageHashConfig } from "coolheaded/pins/schema.ts";
+import { systemRecord } from "coolheaded/systems/supported.ts";
+import { writePackageHashConfig } from "coolheaded/pins/json.ts";
 
 type SupportedSystem = Parameters<Parameters<typeof systemRecord>[0]>[0];
+type PackageHashConfig = ReturnType<typeof parsePackageHashConfig>;
 type PlatformPackageSuffixes = Readonly<Record<SupportedSystem, string>>;
 
 interface NpmPackageHashUpdateOptions {

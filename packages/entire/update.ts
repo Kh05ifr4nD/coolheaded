@@ -1,9 +1,13 @@
-import { runUpdateScript, scriptPath, updateNewerPinVersion } from "coolheaded/updateScript.ts";
+import {
+  runUpdateScript,
+  scriptPath,
+  updateNewerPinVersion,
+} from "coolheaded/core/updateScript.ts";
 import { Effect } from "effect";
-import { hexSha256ToSRI } from "coolheaded/releaseUpdater.ts";
-import { latestGitHubVersion } from "coolheaded/latestVersion.ts";
-import { systemRecord } from "coolheaded/system.ts";
-import { writePackageHashConfig } from "coolheaded/pinJson.ts";
+import { hexSha256ToSRI } from "coolheaded/updates/release.ts";
+import { latestGitHubVersion } from "coolheaded/sources/latestVersion.ts";
+import { systemRecord } from "coolheaded/systems/supported.ts";
+import { writePackageHashConfig } from "coolheaded/pins/json.ts";
 
 const PIN_FILE_PATH = scriptPath("pin.json", import.meta.url);
 type SupportedSystem = Parameters<Parameters<typeof systemRecord>[0]>[0];

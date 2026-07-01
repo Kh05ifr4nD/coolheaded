@@ -1,4 +1,4 @@
-import { SUPPORTED_SYSTEMS, SYSTEM_TARGETS } from "coolheaded/system.ts";
+import { SUPPORTED_SYSTEMS, SYSTEM_TARGETS } from "coolheaded/systems/supported.ts";
 import { describe, it } from "@jsr/std__testing/bdd";
 import { assertEquals } from "@jsr/std__assert";
 
@@ -23,13 +23,16 @@ describe("supported systems", (): void => {
   });
 
   it("keeps flake-parts systems sourced from the shared system target contract", async (): Promise<void> => {
-    assertEquals(await fileContains("flake.nix", "builtins.readFile ./lib/ts/systems.json"), true);
+    assertEquals(
+      await fileContains("flake.nix", "builtins.readFile ./lib/ts/systems/config.json"),
+      true,
+    );
     assertEquals(await fileContains("flake.nix", "systems = supportedSystems;"), true);
   });
 
   it("keeps packageLib targets sourced from the shared system target contract", async (): Promise<void> => {
     assertEquals(
-      await fileContains("lib/nix/base.nix", "builtins.readFile ../ts/systems.json"),
+      await fileContains("lib/nix/base.nix", "builtins.readFile ../ts/systems/config.json"),
       true,
     );
     assertEquals(await fileContains("lib/nix/base.nix", "targetAttrs"), true);

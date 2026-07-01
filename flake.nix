@@ -53,7 +53,7 @@
       ...
     }:
     let
-      systemConfig = builtins.fromJSON (builtins.readFile ./lib/ts/systems.json);
+      systemConfig = builtins.fromJSON (builtins.readFile ./lib/ts/systems/config.json);
       supportedSystems = map (target: target.system) systemConfig.targets;
     in
     flakeParts.lib.mkFlake { inherit inputs; } {

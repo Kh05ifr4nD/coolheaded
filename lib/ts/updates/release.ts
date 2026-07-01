@@ -1,15 +1,15 @@
-import { UpdateError, updateNewerPinVersion } from "./updateScript.ts";
+import { UpdateError, updateNewerPinVersion } from "coolheaded/core/updateScript.ts";
 import { Effect } from "effect";
-import type { PackageHashConfig } from "./packageConfigTypes.ts";
-import { parsePackageHashConfig } from "./packageConfig.ts";
-import { systemRecord } from "./system.ts";
-import { writePackageHashConfig } from "./pinJson.ts";
+import { parsePackageHashConfig } from "coolheaded/pins/schema.ts";
+import { systemRecord } from "coolheaded/systems/supported.ts";
+import { writePackageHashConfig } from "coolheaded/pins/json.ts";
 
 const HEX_BYTE_WIDTH = 2;
 const HEX_RADIX = 16;
 
 type ReleaseHashSource = "sha256Digest" | "sha256Sum";
 type SupportedSystem = Parameters<Parameters<typeof systemRecord>[0]>[0];
+type PackageHashConfig = ReturnType<typeof parsePackageHashConfig>;
 type ReleaseTargets = Readonly<Record<SupportedSystem, string>>;
 type ReleaseUrls = Readonly<Record<SupportedSystem, string>>;
 

@@ -1,5 +1,5 @@
 import { Effect } from "effect";
-import { compareVersions } from "./version.ts";
+import { compareVersions } from "coolheaded/core/version.ts";
 
 interface RuntimeWritable {
   readonly write: (bytes: unknown) => Promise<number>;

@@ -4,7 +4,7 @@ import {
   isDenoDependencyHashMismatch,
   parsedNixHash,
   replaceDenoDependencyHash,
-} from "coolheaded/denoDependencies.ts";
+} from "coolheaded/repository/denoDependencies.ts";
 import { describe, it } from "@jsr/std__testing/bdd";
 import { directSpecifierVersions, versionChanges } from "coolheadedCi/runDenoDepsUpdate.ts";
 import { assertEquals } from "@jsr/std__assert";

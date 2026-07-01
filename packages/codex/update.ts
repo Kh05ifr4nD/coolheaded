@@ -1,7 +1,7 @@
-import { runUpdateScript, scriptPath } from "coolheaded/updateScript.ts";
+import { runUpdateScript, scriptPath } from "coolheaded/core/updateScript.ts";
 import { Effect } from "effect";
-import type { SupportedSystem } from "coolheaded/system.ts";
-import { npmPlatformPackageHashUpdateProgram } from "coolheaded/npmPackageUpdater.ts";
+import type { SupportedSystem } from "coolheaded/systems/supported.ts";
+import { npmPlatformPackageHashUpdateProgram } from "coolheaded/npm/packageHashes.ts";
 
 const CODEX_NPM_PACKAGE_NAME = "@openai/codex";
 const PIN_FILE_PATH = scriptPath("pin.json", import.meta.url);

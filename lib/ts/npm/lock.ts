@@ -1,7 +1,7 @@
-import { commandOutput, readTextFile } from "./updateScript.ts";
+import { commandOutput, readTextFile } from "coolheaded/core/updateScript.ts";
 import { Effect } from "effect";
-import { npmScopedTarballUrl } from "./npmRegistry.ts";
-import { withTemporaryDirectory } from "./temporaryDirectory.ts";
+import { npmScopedTarballUrl } from "coolheaded/npm/registry.ts";
+import { withTemporaryDirectory } from "coolheaded/core/temporaryDirectory.ts";
 
 const NPM_PACKAGE_LOCK_FILE_NAME = "package-lock.json";
 

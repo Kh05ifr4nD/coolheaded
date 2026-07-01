@@ -1,10 +1,10 @@
-import { npmPlatformPackageVersion, npmVersionIntegrity } from "./npmRegistry.ts";
+import { npmPlatformPackageVersion, npmVersionIntegrity } from "coolheaded/npm/registry.ts";
 import { Effect } from "effect";
-import type { InvalidNpmMetadataError } from "./npmRegistryErrors.ts";
-import type { NpmPackageMetadata } from "./npmRegistryTypes.ts";
-import type { PackageHashConfig } from "./packageConfigTypes.ts";
-import { parsePackageHashConfig } from "./packageConfig.ts";
+import type { InvalidNpmMetadataError } from "coolheaded/npm/errors.ts";
+import type { NpmPackageMetadata } from "coolheaded/npm/metadata.ts";
+import { parsePackageHashConfig } from "coolheaded/pins/schema.ts";
 
+type PackageHashConfig = ReturnType<typeof parsePackageHashConfig>;
 type NpmPlatformSuffixes<System extends string = string> = Readonly<Record<System, string>>;
 
 function entryHashEffect(
