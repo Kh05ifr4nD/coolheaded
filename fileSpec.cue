@@ -81,34 +81,33 @@ package fileSpec
 			"python.nix"!:  #RegularFile
 		}
 		"package.sh"!: #RegularFile
+		ts!: {
+			"checkFileSpec.ts"!:      #RegularFile
+			"denoDependencies.ts"!:   #RegularFile
+			"latestVersion.ts"!:      #RegularFile
+			"npmLockUpdater.ts"!:     #RegularFile
+			"npmPackageUpdater.ts"!:  #RegularFile
+			"npmRegistry.ts"!:        #RegularFile
+			"npmRegistryErrors.ts"!:  #RegularFile
+			"npmRegistryTypes.ts"!:   #RegularFile
+			"npmUpdater.ts"!:         #RegularFile
+			"packageConfig.ts"!:      #RegularFile
+			"packageConfigTypes.ts"!: #RegularFile
+			"pinJson.ts"!:            #RegularFile
+			"releaseUpdater.ts"!:     #RegularFile
+			"rustPackageUpdater.ts"!: #RegularFile
+			"sourceHash.ts"!:         #RegularFile
+			"system.ts"!:             #RegularFile
+			"temporaryDirectory.ts"!: #RegularFile
+			"updateScript.ts"!:       #RegularFile
+			"uvLockUpdater.ts"!:      #RegularFile
+			"version.ts"!:            #RegularFile
+		}
 	}
 
 	packages!: {
 		".gitignore"!:             #RegularFile
 		[=~"^[a-z][A-Za-z0-9]*(?:-[a-z][A-Za-z0-9]*)*$"]: #PackageDirectory
-	}
-
-		src!: {
-			"checkFileSpec.ts"!:        #RegularFile
-			"denoDependencies.ts"!:     #RegularFile
-			"latestVersion.ts"!:        #RegularFile
-			"npmLockUpdater.ts"!:       #RegularFile
-		"npmPackageUpdater.ts"!:    #RegularFile
-		"npmRegistry.ts"!:          #RegularFile
-		"npmRegistryErrors.ts"!:    #RegularFile
-		"npmRegistryTypes.ts"!:     #RegularFile
-		"npmUpdater.ts"!:           #RegularFile
-		"packageConfig.ts"!:        #RegularFile
-		"packageConfigTypes.ts"!:   #RegularFile
-		"pinJson.ts"!:              #RegularFile
-		"releaseUpdater.ts"!:       #RegularFile
-		"rustPackageUpdater.ts"!:   #RegularFile
-		"sourceHash.ts"!:           #RegularFile
-		"system.ts"!:               #RegularFile
-		"temporaryDirectory.ts"!:   #RegularFile
-		"updateScript.ts"!:         #RegularFile
-		"uvLockUpdater.ts"!:        #RegularFile
-		"version.ts"!:              #RegularFile
 	}
 
 	tests!: {

@@ -22,7 +22,7 @@
     "noUnusedLocals": true,
     "noUnusedParameters": true,
     "paths": {
-      "coolheaded/*": ["./src/*"],
+      "coolheaded/*": ["./lib/ts/*"],
       "coolheadedCi/*": ["./.github/ci/*"]
     },
     "resolveJsonModule": true,
@@ -41,7 +41,7 @@
     ".generated/deno.d.ts",
     ".github/ci/**/*.ts",
     "packages/*/update.ts",
-    "src/**/*.ts",
+    "lib/ts/**/*.ts",
     "tests/**/*.ts",
     "tsReset.d.ts"
   ]
