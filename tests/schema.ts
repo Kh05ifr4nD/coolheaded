@@ -7,6 +7,10 @@ import {
 } from "coolheaded/releaseUpdater.ts";
 import { npmHashConfigForSystems, npmHashesForSystems } from "coolheaded/npmUpdater.ts";
 import {
+  npmPackageHashUpdateProgram,
+  npmPlatformPackageHashUpdateProgram,
+} from "coolheaded/npmPackageUpdater.ts";
+import {
   npmPlatformPackageVersion,
   npmRegistryPackageUrl,
   npmScopedTarballUrl,
@@ -20,6 +24,30 @@ const COMPLETE_HASHES = {
   "aarch64-linux": "sha512-b",
   "x86_64-linux": "sha512-c",
 } as const;
+
+const OK_STATUS = 200;
+
+interface RequestLike {
+  readonly url: string;
+}
+
+interface UrlLike {
+  readonly href: string;
+}
+
+type FetchInput = RequestLike | string | UrlLike;
+
+function fetchInputUrl(input: FetchInput): string {
+  if (typeof input === "string") {
+    return input;
+  }
+
+  if ("href" in input) {
+    return input.href;
+  }
+
+  return input.url;
+}
 
 describe("parsePackageHashConfig", (): void => {
   it("accepts complete package pins", (): void => {
@@ -207,6 +235,115 @@ describe("npmHashConfigForSystems", (): void => {
       },
       version: "0.137.0",
     });
+  });
+});
+
+describe("npm package hash update programs", (): void => {
+  it("writes same-hash npm package pins through the shared update program", async (): Promise<void> => {
+    const originalFetch = globalThis.fetch;
+    const pinFilePath = await Deno.makeTempFile();
+
+    globalThis.fetch = ((input: FetchInput) => {
+      assertEquals(fetchInputUrl(input), "https://registry.npmjs.org/example");
+
+      return Promise.resolve(
+        globalThis.Response.json(
+          {
+            versions: {
+              "1.0.0": {
+                dist: {
+                  integrity: "sha512-package",
+                },
+              },
+            },
+          },
+          { status: OK_STATUS },
+        ),
+      );
+    }) as typeof globalThis.fetch;
+
+    try {
+      await Effect.runPromise(
+        npmPackageHashUpdateProgram({
+          args: ["1.0.0"],
+          packageName: "example",
+          pinFilePath,
+        }),
+      );
+
+      assertEquals(JSON.parse(await Deno.readTextFile(pinFilePath)), {
+        platformPackageHashes: {
+          "aarch64-darwin": "sha512-package",
+          "aarch64-linux": "sha512-package",
+          "x86_64-linux": "sha512-package",
+        },
+        version: "1.0.0",
+      });
+    } finally {
+      globalThis.fetch = originalFetch;
+      await Deno.remove(pinFilePath);
+    }
+  });
+
+  it("writes platform npm package pins through the shared update program", async (): Promise<void> => {
+    const originalFetch = globalThis.fetch;
+    const pinFilePath = await Deno.makeTempFile();
+
+    globalThis.fetch = ((input: FetchInput) => {
+      assertEquals(fetchInputUrl(input), "https://registry.npmjs.org/example");
+
+      return Promise.resolve(
+        globalThis.Response.json(
+          {
+            versions: {
+              "1.0.0-darwin-arm64": {
+                dist: {
+                  integrity: "sha512-darwin",
+                },
+              },
+              "1.0.0-linux-arm64": {
+                dist: {
+                  integrity: "sha512-linux-arm",
+                },
+              },
+              "1.0.0-linux-x64": {
+                dist: {
+                  integrity: "sha512-linux-x64",
+                },
+              },
+            },
+          },
+          { status: OK_STATUS },
+        ),
+      );
+    }) as typeof globalThis.fetch;
+
+    try {
+      await Effect.runPromise(
+        npmPlatformPackageHashUpdateProgram({
+          args: ["1.0.0"],
+          packageName: "example",
+          pinFilePath,
+          suffixes: {
+            "aarch64-darwin": "darwin-arm64",
+            "aarch64-linux": "linux-arm64",
+            "x86_64-linux": "linux-x64",
+          },
+        }),
+      );
+
+      assertEquals(JSON.parse(await Deno.readTextFile(pinFilePath)), {
+        platformPackageHashes: {
+          "aarch64-darwin": "sha512-darwin",
+          "aarch64-linux": "sha512-linux-arm",
+          "x86_64-linux": "sha512-linux-x64",
+        },
+        version: "1.0.0",
+      });
+    } finally {
+      globalThis.fetch = originalFetch;
+      await Deno.remove(pinFilePath);
+    }
   });
 });
 
