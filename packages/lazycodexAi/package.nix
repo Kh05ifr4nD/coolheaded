@@ -8,6 +8,7 @@
 }:
 let
   pname = "lazycodex-ai";
+  pin = builtins.fromJSON (builtins.readFile ./pin.json);
 
   platformMap = {
     aarch64-darwin = {
@@ -58,6 +59,8 @@ packageLib.mkNpmTarballPackage {
 
     . ${../../lib/package.sh}
 
+    patch -p1 < ${./patch/normalizeCopiedPluginCachePermissions.patch}
+
     packageRoot="$out/libexec/lazycodex-ai"
     mkdir -p "$packageRoot" "$out/bin"
     cp -R . "$packageRoot/"
@@ -71,6 +74,7 @@ packageLib.mkNpmTarballPackage {
     keepOnlyMatchingChildren "$pluginNodeModules/@code-yeongyu/comment-checker/vendor" "" '${platform.commentChecker}'
     makeWrapper "${nodejs}/bin/node" "$out/bin/lazycodex-ai" \
       --add-flags "$packageRoot/packages/omo-codex/scripts/install-local.mjs" \
+      --set-default LAZYCODEX_AI_NIX_SKIP_CACHE_NPM 1 \
       --prefix PATH : "${nodePath}"
 
     runHook postInstall
@@ -84,11 +88,39 @@ packageLib.mkNpmTarballPackage {
       *) failCheck "unexpected lazycodex-ai --help output" ;;
     esac
 
-    dryRunOutput="$("$out/bin/lazycodex-ai" --dry-run 2>&1)"
-    case "$dryRunOutput" in
-      *"omo install"*) ;;
-      *) failCheck "unexpected lazycodex-ai --dry-run output" ;;
-    esac
+    installCheckHome="$PWD/installCheckHome"
+    installCheckCodexHome="$PWD/installCheckCodexHome"
+    installCheckTmp="$PWD/installCheckTmp"
+    installOutput="$PWD/lazycodex-install.log"
+    mkdir -p "$installCheckHome" "$installCheckCodexHome" "$installCheckTmp"
+
+    chmod -R a-w "${packageRoot}/packages/omo-codex/plugin"
+
+    runLazyCodexInstallCheck() {
+      installAttempt="$1"
+      if ! HOME="$installCheckHome" \
+        CODEX_HOME="$installCheckCodexHome" \
+        TMPDIR="$installCheckTmp" \
+        OMO_CODEX_DISABLE_POSTHOG=1 \
+        "$out/bin/lazycodex-ai" install --no-tui > "$installOutput" 2>&1; then
+        sed -n '1,160p' "$installOutput" >&2
+        failCheck "lazycodex-ai install attempt $installAttempt against a read-only packaged plugin source failed"
+      fi
+    }
+
+    runLazyCodexInstallCheck 1
+    runLazyCodexInstallCheck 2
+
+    pluginRoot="$installCheckCodexHome/plugins/cache/sisyphuslabs/omo/${pin.version}"
+    assertFileExists "$pluginRoot/.codex-plugin/plugin.json"
+    assertFileExists "$installCheckCodexHome/config.toml"
+    test -w "$pluginRoot/.codex-plugin" \
+      || failCheck "installed plugin manifest directory is not writable"
+    test -w "$pluginRoot/components/lsp-daemon/dist" \
+      || failCheck "installed runtime dist directory is not writable"
+    staleTmp="$(find "$installCheckCodexHome/plugins/cache/sisyphuslabs/omo" \
+      -mindepth 1 -maxdepth 1 -name '.tmp-*' -print -quit)"
+    test -z "$staleTmp" || failCheck "left stale plugin temp directory: $staleTmp"
 
     test ! -e "$out/bin/lazycodex" || failCheck "unexpected lazycodex compatibility launcher"
     assertFileExists "${packageRoot}/packages/omo-codex/marketplace.json"
