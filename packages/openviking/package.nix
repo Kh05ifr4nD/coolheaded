@@ -19,6 +19,9 @@ packageLib.mkUvApplication {
       requires-python = ">=3.14,<3.15";
       dependencies = [ "openviking==${pin.version}" ];
     };
+    tool.uv.extra-build-dependencies = {
+      sgmllib3k = [ "setuptools" ];
+    };
   };
 
   postInstall = ''
