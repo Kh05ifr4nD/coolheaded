@@ -2,10 +2,12 @@ import { npmRegistryPackageUrl, npmVersionIntegrity } from "./npmRegistry.ts";
 import { Effect } from "effect";
 import type { NpmPackageMetadata } from "./npmRegistryTypes.ts";
 import type { PackageHashConfig } from "./packageConfigTypes.ts";
-import type { SupportedSystem } from "./system.ts";
 import { UpdateError } from "./updateScript.ts";
 import { npmHashConfigForSystems } from "./npmUpdater.ts";
 import { parsePackageHashConfig } from "./packageConfig.ts";
+import { systemRecord } from "./system.ts";
+
+type SupportedSystem = Parameters<Parameters<typeof systemRecord>[0]>[0];
 
 function isRecord(value: unknown): value is Readonly<Record<string, unknown>> {
   return typeof value === "object" && value !== null && !Array.isArray(value);
@@ -65,11 +67,7 @@ function npmPackageHashConfig(
         npmVersionIntegrity(metadata, version),
         (hash: string): PackageHashConfig =>
           parsePackageHashConfig({
-            platformPackageHashes: {
-              "aarch64-darwin": hash,
-              "aarch64-linux": hash,
-              "x86_64-linux": hash,
-            },
+            platformPackageHashes: systemRecord((_system: SupportedSystem): string => hash),
             version,
           }),
       ),

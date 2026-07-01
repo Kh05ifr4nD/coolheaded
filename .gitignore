@@ -16,6 +16,7 @@
 !/lib/nix/*.nix
 !/lib/package.sh
 !/lib/ts/
+!/lib/ts/*.json
 !/lib/ts/*.ts
 !/packages/
 !/tests/

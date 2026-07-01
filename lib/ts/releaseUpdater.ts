@@ -1,13 +1,14 @@
 import { Effect } from "effect";
 import type { PackageHashConfig } from "./packageConfigTypes.ts";
-import type { SupportedSystem } from "./system.ts";
 import { UpdateError } from "./updateScript.ts";
 import { parsePackageHashConfig } from "./packageConfig.ts";
+import { systemRecord } from "./system.ts";
 
 const HEX_BYTE_WIDTH = 2;
 const HEX_RADIX = 16;
 
 type ReleaseHashSource = "sha256Digest" | "sha256Sum";
+type SupportedSystem = Parameters<Parameters<typeof systemRecord>[0]>[0];
 type ReleaseUrls = Readonly<Record<SupportedSystem, string>>;
 
 function fetchText(url: string): Effect.Effect<string, UpdateError> {
@@ -104,11 +105,12 @@ function releaseHashes(
   urls: ReleaseUrls,
   source: ReleaseHashSource,
 ): Effect.Effect<Readonly<Record<SupportedSystem, string>>, UpdateError> {
-  return Effect.all({
-    "aarch64-darwin": hashForUrl(source, urls["aarch64-darwin"]),
-    "aarch64-linux": hashForUrl(source, urls["aarch64-linux"]),
-    "x86_64-linux": hashForUrl(source, urls["x86_64-linux"]),
-  });
+  return Effect.all(
+    systemRecord(
+      (system: SupportedSystem): Effect.Effect<string, UpdateError> =>
+        hashForUrl(source, urls[system]),
+    ),
+  );
 }
 
 function releaseHashConfig(

@@ -1,22 +1,11 @@
 #!/usr/bin/env -S deno run --allow-env --allow-read --allow-run
 
 import { run, writeOutput } from "./lib.ts";
-import type { SupportedSystem } from "coolheaded/system.ts";
+import { SYSTEM_TARGETS } from "coolheaded/system.ts";
 import { toFileUrl } from "@jsr/std__path";
 
 const PACKAGE_CHECKS_EXPR =
   'checks: builtins.mapAttrs (_: check: builtins.unsafeDiscardStringContext check.drvPath) (builtins.removeAttrs checks [ "pre-commit" "treefmt" ])';
-
-interface SystemTarget {
-  readonly runner: string;
-  readonly system: SupportedSystem;
-}
-
-const SYSTEMS = [
-  { runner: "ubuntu-24.04", system: "x86_64-linux" },
-  { runner: "ubuntu-24.04-arm", system: "aarch64-linux" },
-  { runner: "macos-26", system: "aarch64-darwin" },
-] as const satisfies readonly SystemTarget[];
 
 interface BuildTarget {
   readonly package: string;
@@ -26,6 +15,7 @@ interface BuildTarget {
 
 type PackageDrvPaths = Readonly<Record<string, string>>;
 type PackageDrvPathsBySystem = Readonly<Record<string, PackageDrvPaths>>;
+type SystemTarget = (typeof SYSTEM_TARGETS)[number];
 
 function packagesFromInput(value: string | undefined): readonly string[] {
   return [
@@ -66,7 +56,7 @@ async function packageDrvPaths(flakeRef: string, system: string): Promise<Packag
 async function packageDrvPathsBySystem(flakeRef: string): Promise<PackageDrvPathsBySystem> {
   return Object.fromEntries(
     await Promise.all(
-      SYSTEMS.map(
+      SYSTEM_TARGETS.map(
         async (target: SystemTarget): Promise<readonly [string, PackageDrvPaths]> => [
           target.system,
           await packageDrvPaths(flakeRef, target.system),
@@ -102,7 +92,7 @@ function changedDerivationTargets(
   beforeBySystem: Readonly<PackageDrvPathsBySystem>,
   afterBySystem: Readonly<PackageDrvPathsBySystem>,
 ): readonly BuildTarget[] {
-  return SYSTEMS.flatMap((target: SystemTarget): readonly BuildTarget[] =>
+  return SYSTEM_TARGETS.flatMap((target: SystemTarget): readonly BuildTarget[] =>
     changedDerivationPackages(
       beforeBySystem[target.system] ?? {},
       afterBySystem[target.system] ?? {},
@@ -128,7 +118,7 @@ function buildMatrix(
   requested: readonly string[],
   availableBySystem: Readonly<Record<string, readonly string[]>>,
 ): readonly BuildTarget[] {
-  return SYSTEMS.flatMap((target): readonly BuildTarget[] => {
+  return SYSTEM_TARGETS.flatMap((target: SystemTarget): readonly BuildTarget[] => {
     const availableForSystem = availableBySystem[target.system];
     const available = new Set(availableForSystem);
     return requested
@@ -207,5 +197,5 @@ export {
   comparesCheckedOutBase,
   packagesFromInput,
   requestedBuildTargets,
-  SYSTEMS,
 };
+export { SYSTEM_TARGETS } from "coolheaded/system.ts";

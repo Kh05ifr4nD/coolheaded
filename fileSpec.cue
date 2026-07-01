@@ -99,6 +99,7 @@ package fileSpec
 			"rustPackageUpdater.ts"!: #RegularFile
 			"sourceHash.ts"!:         #RegularFile
 			"system.ts"!:             #RegularFile
+			"systems.json"!:          #RegularFile
 			"temporaryDirectory.ts"!: #RegularFile
 			"updateScript.ts"!:       #RegularFile
 			"uvLockUpdater.ts"!:      #RegularFile

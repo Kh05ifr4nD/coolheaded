@@ -10,6 +10,9 @@
 let
   inherit (stdenv.hostPlatform) system;
 
+  systemConfig = builtins.fromJSON (builtins.readFile ../ts/systems.json);
+  systemTargetsConfig = systemConfig.targets;
+
   canExecute = stdenv.buildPlatform.canExecute stdenv.hostPlatform;
   isLinux = stdenv.hostPlatform.isLinux;
   packageShell = ../package.sh;
@@ -19,11 +22,16 @@ let
     else
       packageDirectory + "/pin.json";
 
-  supportedSystems = [
-    "aarch64-darwin"
-    "aarch64-linux"
-    "x86_64-linux"
-  ];
+  supportedSystems = map (target: target.system) systemTargetsConfig;
+
+  targetAttrs =
+    field:
+    lib.listToAttrs (
+      map (target: {
+        name = target.system;
+        value = target.${field};
+      }) systemTargetsConfig
+    );
 
   mkTargets =
     targets:
@@ -36,19 +44,11 @@ let
     else
       lib.listToAttrs (lib.zipListsWith (name: value: { inherit name value; }) supportedSystems targets);
 
-  systemTargets = mkTargets supportedSystems;
+  systemTargets = targetAttrs "system";
 
-  rustTargetTriples = mkTargets [
-    "aarch64-apple-darwin"
-    "aarch64-unknown-linux-gnu"
-    "x86_64-unknown-linux-gnu"
-  ];
+  rustTargetTriples = targetAttrs "rustTargetTriple";
 
-  npmReleaseTargets = mkTargets [
-    "darwin-arm64"
-    "linux-arm64"
-    "linux-x64"
-  ];
+  npmReleaseTargets = targetAttrs "npmReleaseTarget";
 
   releaseTarget =
     pname: targets: targets.${system} or (throw "Unsupported system for ${pname}: ${system}");

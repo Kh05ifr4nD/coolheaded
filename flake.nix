@@ -52,6 +52,10 @@
       wrapBuddy,
       ...
     }:
+    let
+      systemConfig = builtins.fromJSON (builtins.readFile ./lib/ts/systems.json);
+      supportedSystems = map (target: target.system) systemConfig.targets;
+    in
     flakeParts.lib.mkFlake { inherit inputs; } {
       imports = [
         gitHooksNix.flakeModule
@@ -112,10 +116,6 @@
           treefmt = import ./flake/treefmt.nix { inherit config pkgs; };
         };
 
-      systems = [
-        "aarch64-darwin"
-        "aarch64-linux"
-        "x86_64-linux"
-      ];
+      systems = supportedSystems;
     };
 }

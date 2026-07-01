@@ -3,7 +3,6 @@ import { Effect } from "effect";
 import type { InvalidNpmMetadataError } from "./npmRegistryErrors.ts";
 import type { NpmPackageMetadata } from "./npmRegistryTypes.ts";
 import type { PackageHashConfig } from "./packageConfigTypes.ts";
-import type { SupportedSystem } from "./system.ts";
 import { parsePackageHashConfig } from "./packageConfig.ts";
 
 type NpmPlatformSuffixes<System extends string = string> = Readonly<Record<System, string>>;
@@ -59,7 +58,7 @@ function npmHashesForSystems(
 function npmHashConfigForSystems(
   metadata: NpmPackageMetadata,
   version: string,
-  suffixes: NpmPlatformSuffixes<SupportedSystem>,
+  suffixes: NpmPlatformSuffixes,
 ): Effect.Effect<PackageHashConfig, InvalidNpmMetadataError> {
   return Effect.map(
     npmHashesForSystems(metadata, version, suffixes),

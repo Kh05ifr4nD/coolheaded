@@ -1,5 +1,5 @@
 import {
-  SYSTEMS,
+  SYSTEM_TARGETS,
   buildMatrix,
   changedDerivationPackages,
   changedDerivationTargets,
@@ -12,7 +12,10 @@ import { assertEquals } from "@jsr/std__assert";
 
 describe("CI package build discovery", (): void => {
   it("keeps CI runner targets aligned with supported systems", (): void => {
-    assertEquals(SYSTEMS.map(({ system }) => system).toSorted(), [...SUPPORTED_SYSTEMS].toSorted());
+    assertEquals(
+      SYSTEM_TARGETS.map(({ system }) => system).toSorted(),
+      [...SUPPORTED_SYSTEMS].toSorted(),
+    );
   });
 
   it("parses explicit package inputs", (): void => {
@@ -96,18 +99,14 @@ describe("CI package build discovery", (): void => {
         "x86_64-linux": ["linuxOnly", "shared"],
       }),
       [
+        { package: "shared", runner: "macos-26", system: "aarch64-darwin" },
+        { package: "shared", runner: "ubuntu-24.04-arm", system: "aarch64-linux" },
         {
           package: "linuxOnly",
           runner: "ubuntu-24.04",
           system: "x86_64-linux",
         },
         { package: "shared", runner: "ubuntu-24.04", system: "x86_64-linux" },
-        {
-          package: "shared",
-          runner: "ubuntu-24.04-arm",
-          system: "aarch64-linux",
-        },
-        { package: "shared", runner: "macos-26", system: "aarch64-darwin" },
       ],
     );
   });
