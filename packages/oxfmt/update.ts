@@ -1,17 +1,18 @@
 import { gitHubRelease, latestGitHubVersion } from "coolheaded/latestVersion.ts";
+import { releaseHashConfig, releaseUrlsFromTargets } from "coolheaded/releaseUpdater.ts";
 import { runUpdateScript, scriptPath, updateNewerPinVersion } from "coolheaded/updateScript.ts";
 import { Effect } from "effect";
 import type { PackageHashConfig } from "coolheaded/packageConfigTypes.ts";
-import type { SupportedSystem } from "coolheaded/system.ts";
-import { releaseHashConfig } from "coolheaded/releaseUpdater.ts";
 import { writePackageHashConfig } from "coolheaded/pinJson.ts";
 
 const PIN_FILE_PATH = scriptPath("pin.json", import.meta.url);
+type ReleaseTargets = Parameters<typeof releaseUrlsFromTargets>[0];
+
 const OXFMT_RELEASE_TARGETS = {
   "aarch64-darwin": "aarch64-apple-darwin",
   "aarch64-linux": "aarch64-unknown-linux-gnu",
   "x86_64-linux": "x86_64-unknown-linux-gnu",
-} as const satisfies Readonly<Record<SupportedSystem, string>>;
+} as const satisfies ReleaseTargets;
 
 function latestVersion(): Effect.Effect<string, Error> {
   return latestGitHubVersion({
@@ -24,14 +25,6 @@ function latestVersion(): Effect.Effect<string, Error> {
 
 function releaseAssetUrl(version: string, target: string): string {
   return `https://github.com/oxc-project/oxc/releases/download/apps_v${version}/oxfmt-${target}.tar.gz`;
-}
-
-function releaseAssetUrls(version: string): Readonly<Record<SupportedSystem, string>> {
-  return {
-    "aarch64-darwin": releaseAssetUrl(version, OXFMT_RELEASE_TARGETS["aarch64-darwin"]),
-    "aarch64-linux": releaseAssetUrl(version, OXFMT_RELEASE_TARGETS["aarch64-linux"]),
-    "x86_64-linux": releaseAssetUrl(version, OXFMT_RELEASE_TARGETS["x86_64-linux"]),
-  };
 }
 
 function binaryVersionFromReleaseTitle(title: string): Effect.Effect<string, Error> {
@@ -51,7 +44,9 @@ function oxfmtBinaryVersion(version: string): Effect.Effect<string, Error> {
 }
 
 function packageHashConfig(version: string): Effect.Effect<PackageHashConfig, Error> {
-  const urls = releaseAssetUrls(version);
+  const urls = releaseUrlsFromTargets(OXFMT_RELEASE_TARGETS, (target: string): string =>
+    releaseAssetUrl(version, target),
+  );
   const hashConfig = releaseHashConfig(version, urls, "sha256Digest");
 
   return Effect.map(

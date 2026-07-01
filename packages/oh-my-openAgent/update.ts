@@ -1,12 +1,13 @@
 import { runUpdateScript, scriptPath, updateNewerPinVersion } from "coolheaded/updateScript.ts";
 import { Effect } from "effect";
-import type { SupportedSystem } from "coolheaded/system.ts";
 import { latestNpmVersion } from "coolheaded/latestVersion.ts";
-import { npmPackageHashConfig } from "coolheaded/npmPackageUpdater.ts";
+import { npmPackageHash } from "coolheaded/npmPackageUpdater.ts";
+import { systemRecord } from "coolheaded/system.ts";
 import { writePinJson } from "coolheaded/pinJson.ts";
 
 const NPM_PACKAGE_NAME = "oh-my-openagent";
 const PIN_FILE_PATH = scriptPath("pin.json", import.meta.url);
+type SupportedSystem = Parameters<Parameters<typeof systemRecord>[0]>[0];
 
 interface OhMyOpenagentPin {
   readonly packageHash: string;
@@ -25,20 +26,18 @@ function latestVersion(): Effect.Effect<string, Error> {
 }
 
 function packageHash(packageName: string, version: string): Effect.Effect<string, Error> {
-  return Effect.map(
-    npmPackageHashConfig(packageName, version),
-    (config): string => config.platformPackageHashes["aarch64-darwin"],
-  );
+  return npmPackageHash(packageName, version);
 }
 
 function platformHashes(
   version: string,
 ): Effect.Effect<Readonly<Record<SupportedSystem, string>>, Error> {
-  return Effect.all({
-    "aarch64-darwin": packageHash(PLATFORM_PACKAGES["aarch64-darwin"], version),
-    "aarch64-linux": packageHash(PLATFORM_PACKAGES["aarch64-linux"], version),
-    "x86_64-linux": packageHash(PLATFORM_PACKAGES["x86_64-linux"], version),
-  });
+  return Effect.all(
+    systemRecord(
+      (system: SupportedSystem): Effect.Effect<string, Error> =>
+        packageHash(PLATFORM_PACKAGES[system], version),
+    ),
+  );
 }
 
 function packagePin(version: string): Effect.Effect<OhMyOpenagentPin, Error> {

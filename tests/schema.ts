@@ -1,5 +1,6 @@
 import { assertEquals, assertRejects, assertThrows } from "@jsr/std__assert";
 import { describe, it } from "@jsr/std__testing/bdd";
+import { hexSha256ToSRI, releaseUrlsFromTargets } from "coolheaded/releaseUpdater.ts";
 import { npmHashConfigForSystems, npmHashesForSystems } from "coolheaded/npmUpdater.ts";
 import {
   npmPlatformPackageVersion,
@@ -202,5 +203,32 @@ describe("npmHashConfigForSystems", (): void => {
       },
       version: "0.137.0",
     });
+  });
+});
+
+describe("release helpers", (): void => {
+  it("maps release targets through supported systems", (): void => {
+    assertEquals(
+      releaseUrlsFromTargets(
+        {
+          "aarch64-darwin": "darwin_arm64",
+          "aarch64-linux": "linux_arm64",
+          "x86_64-linux": "linux_amd64",
+        },
+        (target: string): string => `https://example.test/${target}.tar.gz`,
+      ),
+      {
+        "aarch64-darwin": "https://example.test/darwin_arm64.tar.gz",
+        "aarch64-linux": "https://example.test/linux_arm64.tar.gz",
+        "x86_64-linux": "https://example.test/linux_amd64.tar.gz",
+      },
+    );
+  });
+
+  it("converts hex sha256 values to SRI hashes", (): void => {
+    assertEquals(
+      hexSha256ToSRI("e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"),
+      "sha256-47DEQpj8HBSa+/TImW+5JCeuQeRkm5NMpJWZG3hSuFU=",
+    );
   });
 });

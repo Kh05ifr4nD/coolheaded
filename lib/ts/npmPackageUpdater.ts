@@ -56,22 +56,26 @@ function npmPlatformPackageHashConfig(
   );
 }
 
+function npmPackageHash(packageName: string, version: string): Effect.Effect<string, Error> {
+  return Effect.flatMap(
+    fetchNpmMetadata(packageName),
+    (metadata: NpmPackageMetadata): Effect.Effect<string, Error> =>
+      npmVersionIntegrity(metadata, version),
+  );
+}
+
 function npmPackageHashConfig(
   packageName: string,
   version: string,
 ): Effect.Effect<PackageHashConfig, Error> {
-  return Effect.flatMap(
-    fetchNpmMetadata(packageName),
-    (metadata: NpmPackageMetadata): Effect.Effect<PackageHashConfig, Error> =>
-      Effect.map(
-        npmVersionIntegrity(metadata, version),
-        (hash: string): PackageHashConfig =>
-          parsePackageHashConfig({
-            platformPackageHashes: systemRecord((_system: SupportedSystem): string => hash),
-            version,
-          }),
-      ),
+  return Effect.map(
+    npmPackageHash(packageName, version),
+    (hash: string): PackageHashConfig =>
+      parsePackageHashConfig({
+        platformPackageHashes: systemRecord((_system: SupportedSystem): string => hash),
+        version,
+      }),
   );
 }
 
-export { npmPackageHashConfig, npmPlatformPackageHashConfig };
+export { npmPackageHash, npmPackageHashConfig, npmPlatformPackageHashConfig };

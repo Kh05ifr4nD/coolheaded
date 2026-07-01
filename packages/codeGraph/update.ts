@@ -1,12 +1,13 @@
 import { runUpdateScript, scriptPath, updateNewerPinVersion } from "coolheaded/updateScript.ts";
 import { Effect } from "effect";
-import type { SupportedSystem } from "coolheaded/system.ts";
+import { hexSha256ToSRI } from "coolheaded/releaseUpdater.ts";
 import { latestGitHubVersion } from "coolheaded/latestVersion.ts";
+import { systemRecord } from "coolheaded/system.ts";
 import { writePackageHashConfig } from "coolheaded/pinJson.ts";
 
-const HEX_BYTE_WIDTH = 2;
-const HEX_RADIX = 16;
 const PIN_FILE_PATH = scriptPath("pin.json", import.meta.url);
+type SupportedSystem = Parameters<Parameters<typeof systemRecord>[0]>[0];
+
 function latestVersion(): Effect.Effect<string, Error> {
   return latestGitHubVersion({
     owner: "colbymchenry",
@@ -46,20 +47,6 @@ function fetchChecksums(version: string): Effect.Effect<string, Error> {
   });
 }
 
-function hexToBytes(hex: string): Uint8Array {
-  const bytes: number[] = [];
-
-  for (let offset = 0; offset < hex.length; offset += HEX_BYTE_WIDTH) {
-    bytes.push(Number.parseInt(hex.slice(offset, offset + HEX_BYTE_WIDTH), HEX_RADIX));
-  }
-
-  return Uint8Array.from(bytes);
-}
-
-function hexSha256ToSRI(hex: string): string {
-  return `sha256-${globalThis.btoa(String.fromCodePoint(...hexToBytes(hex)))}`;
-}
-
 function assetHash(checksums: string, asset: string): Effect.Effect<string, Error> {
   const line = checksums
     .split("\n")
@@ -80,11 +67,12 @@ function assetHash(checksums: string, asset: string): Effect.Effect<string, Erro
 function platformPackageHashes(
   checksums: string,
 ): Effect.Effect<Readonly<Record<SupportedSystem, string>>, Error> {
-  return Effect.all({
-    "aarch64-darwin": assetHash(checksums, RELEASE_ASSETS["aarch64-darwin"]),
-    "aarch64-linux": assetHash(checksums, RELEASE_ASSETS["aarch64-linux"]),
-    "x86_64-linux": assetHash(checksums, RELEASE_ASSETS["x86_64-linux"]),
-  });
+  return Effect.all(
+    systemRecord(
+      (system: SupportedSystem): Effect.Effect<string, Error> =>
+        assetHash(checksums, RELEASE_ASSETS[system]),
+    ),
+  );
 }
 
 function updateProgram(args: readonly string[]): Effect.Effect<void, Error> {

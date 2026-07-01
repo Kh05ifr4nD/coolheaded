@@ -1,11 +1,12 @@
+import { releaseHashConfig, releaseUrlsFromTargets } from "coolheaded/releaseUpdater.ts";
 import { runUpdateScript, scriptPath, updateNewerPinVersion } from "coolheaded/updateScript.ts";
 import { Effect } from "effect";
-import type { SupportedSystem } from "coolheaded/system.ts";
 import { latestGitHubVersion } from "coolheaded/latestVersion.ts";
-import { releaseHashConfig } from "coolheaded/releaseUpdater.ts";
 import { writePackageHashConfig } from "coolheaded/pinJson.ts";
 
 const PIN_FILE_PATH = scriptPath("pin.json", import.meta.url);
+type ReleaseTargets = Parameters<typeof releaseUrlsFromTargets>[0];
+
 function latestVersion(): Effect.Effect<string, Error> {
   return latestGitHubVersion({
     owner: "mvdan",
@@ -17,18 +18,10 @@ const SHFMT_RELEASE_TARGETS = {
   "aarch64-darwin": "darwin_arm64",
   "aarch64-linux": "linux_arm64",
   "x86_64-linux": "linux_amd64",
-} as const satisfies Readonly<Record<SupportedSystem, string>>;
+} as const satisfies ReleaseTargets;
 
 function releaseAssetUrl(version: string, target: string): string {
   return `https://github.com/mvdan/sh/releases/download/v${version}/shfmt_v${version}_${target}`;
-}
-
-function releaseAssetUrls(version: string): Readonly<Record<SupportedSystem, string>> {
-  return {
-    "aarch64-darwin": releaseAssetUrl(version, SHFMT_RELEASE_TARGETS["aarch64-darwin"]),
-    "aarch64-linux": releaseAssetUrl(version, SHFMT_RELEASE_TARGETS["aarch64-linux"]),
-    "x86_64-linux": releaseAssetUrl(version, SHFMT_RELEASE_TARGETS["x86_64-linux"]),
-  };
 }
 
 function updateProgram(args: readonly string[]): Effect.Effect<void, Error> {
@@ -38,7 +31,13 @@ function updateProgram(args: readonly string[]): Effect.Effect<void, Error> {
     PIN_FILE_PATH,
     (version: string): Effect.Effect<void, Error> =>
       Effect.flatMap(
-        releaseHashConfig(version, releaseAssetUrls(version), "sha256Digest"),
+        releaseHashConfig(
+          version,
+          releaseUrlsFromTargets(SHFMT_RELEASE_TARGETS, (target: string): string =>
+            releaseAssetUrl(version, target),
+          ),
+          "sha256Digest",
+        ),
         (config): Effect.Effect<void> => writePackageHashConfig(PIN_FILE_PATH, config),
       ),
   );

@@ -9,6 +9,7 @@ const HEX_RADIX = 16;
 
 type ReleaseHashSource = "sha256Digest" | "sha256Sum";
 type SupportedSystem = Parameters<Parameters<typeof systemRecord>[0]>[0];
+type ReleaseTargets = Readonly<Record<SupportedSystem, string>>;
 type ReleaseUrls = Readonly<Record<SupportedSystem, string>>;
 
 function fetchText(url: string): Effect.Effect<string, UpdateError> {
@@ -56,6 +57,13 @@ function bytesToSha256SRI(bytes: readonly number[]): string {
 
 function hexSha256ToSRI(hex: string): string {
   return bytesToSha256SRI([...hexToBytes(hex)]);
+}
+
+function releaseUrlsFromTargets(
+  targets: ReleaseTargets,
+  urlForTarget: (target: string) => string,
+): ReleaseUrls {
+  return systemRecord((system: SupportedSystem): string => urlForTarget(targets[system]));
 }
 
 function fetchSha256SumHash(url: string): Effect.Effect<string, UpdateError> {
@@ -125,5 +133,5 @@ function releaseHashConfig(
   );
 }
 
-export { releaseHashConfig };
-export type { ReleaseHashSource, ReleaseUrls };
+export { hexSha256ToSRI, releaseHashConfig, releaseUrlsFromTargets };
+export type { ReleaseHashSource, ReleaseTargets, ReleaseUrls };
