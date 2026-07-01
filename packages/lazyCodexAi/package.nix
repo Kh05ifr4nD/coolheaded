@@ -74,6 +74,7 @@ packageLib.mkNpmTarballPackage {
     keepOnlyMatchingChildren "$pluginNodeModules/@code-yeongyu/comment-checker/vendor" "" '${platform.commentChecker}'
     makeWrapper "${nodejs}/bin/node" "$out/bin/lazycodex-ai" \
       --add-flags "$packageRoot/packages/omo-codex/scripts/install-local.mjs" \
+      --set-default LAZYCODEX_AI_NIX_SKIP_CACHE_NPM 1 \
       --prefix PATH : "${nodePath}"
 
     runHook postInstall
@@ -96,43 +97,33 @@ packageLib.mkNpmTarballPackage {
     installCheckHome="$PWD/installCheckHome"
     installCheckCodexHome="$PWD/installCheckCodexHome"
     installCheckTmp="$PWD/installCheckTmp"
-    fakeBin="$PWD/installCheckFakeBin"
     installOutput="$PWD/lazycodex-install.log"
-    mkdir -p "$installCheckHome" "$installCheckCodexHome" "$installCheckTmp" "$fakeBin"
-
-    {
-      printf '%s\n' '#!${stdenv.shell}'
-      printf '%s\n' 'set -eu'
-      printf '\n'
-      printf '%s\n' 'case "$*" in'
-      printf '%s\n' '  "ci --omit=dev"|"run sync:skills")'
-      printf '%s\n' '    exit 0'
-      printf '%s\n' '    ;;'
-      printf '%s\n' 'esac'
-      printf '\n'
-      printf '%s\n' 'echo "unexpected npm invocation: $*" >&2'
-      printf '%s\n' 'exit 1'
-    } > "$fakeBin/npm"
-    chmod +x "$fakeBin/npm"
+    mkdir -p "$installCheckHome" "$installCheckCodexHome" "$installCheckTmp"
 
     chmod -R a-w "${packageRoot}/packages/omo-codex/plugin"
 
-    if ! HOME="$installCheckHome" \
-      CODEX_HOME="$installCheckCodexHome" \
-      TMPDIR="$installCheckTmp" \
-      OMO_CODEX_DISABLE_POSTHOG=1 \
-      PATH="$fakeBin:$PATH" \
-      "${nodejs}/bin/node" "${packageRoot}/packages/omo-codex/scripts/install-local.mjs" \
-        install --no-tui > "$installOutput" 2>&1; then
-      sed -n '1,160p' "$installOutput" >&2
-      failCheck "lazycodex-ai install against a read-only packaged plugin source failed"
-    fi
+    runLazyCodexInstallCheck() {
+      installAttempt="$1"
+      if ! HOME="$installCheckHome" \
+        CODEX_HOME="$installCheckCodexHome" \
+        TMPDIR="$installCheckTmp" \
+        OMO_CODEX_DISABLE_POSTHOG=1 \
+        "$out/bin/lazycodex-ai" install --no-tui > "$installOutput" 2>&1; then
+        sed -n '1,160p' "$installOutput" >&2
+        failCheck "lazycodex-ai install attempt $installAttempt against a read-only packaged plugin source failed"
+      fi
+    }
+
+    runLazyCodexInstallCheck 1
+    runLazyCodexInstallCheck 2
 
     pluginRoot="$installCheckCodexHome/plugins/cache/sisyphuslabs/omo/${pin.version}"
     assertFileExists "$pluginRoot/.codex-plugin/plugin.json"
     assertFileExists "$installCheckCodexHome/config.toml"
     test -w "$pluginRoot/.codex-plugin" \
       || failCheck "installed plugin manifest directory is not writable"
+    test -w "$pluginRoot/components/lsp-daemon/dist" \
+      || failCheck "installed runtime dist directory is not writable"
     staleTmp="$(find "$installCheckCodexHome/plugins/cache/sisyphuslabs/omo" \
       -mindepth 1 -maxdepth 1 -name '.tmp-*' -print -quit)"
     test -z "$staleTmp" || failCheck "left stale plugin temp directory: $staleTmp"

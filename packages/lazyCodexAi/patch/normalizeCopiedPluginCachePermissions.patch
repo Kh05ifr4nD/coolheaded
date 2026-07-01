@@ -1,33 +1,28 @@
-diff --git a/packages/omo-codex/scripts/install-dist/install-local.mjs b/packages/omo-codex/scripts/install-dist/install-local.mjs
-index 3b4b9b5..fcd4e7a 100755
 --- a/packages/omo-codex/scripts/install-dist/install-local.mjs
 +++ b/packages/omo-codex/scripts/install-dist/install-local.mjs
-@@ -6823,4 +6823,4 @@ function collectCommands(value, commands) {
- }
- // packages/omo-codex/src/install/codex-cache-install.ts
+@@ -6885 +6885 @@
 -import { cp as cp2, mkdir as mkdir3, readFile as readFile7, rename, rm as rm3 } from "node:fs/promises";
 +import { chmod as chmod2, cp as cp2, lstat as lstat9, mkdir as mkdir3, readFile as readFile7, readdir as readdir7, rename, rm as rm3 } from "node:fs/promises";
- import { basename as basename2, dirname as dirname3, join as join10, sep as sep5 } from "node:path";
-@@ -7199,6 +7199,7 @@ async function installCachedPlugin(input) {
-   await rm3(tempPath, { recursive: true, force: true });
-   try {
-     await copyDirectory(input.sourcePath, tempPath);
+@@ -7442,0 +7443 @@
 +    await normalizeCopiedPluginCachePermissions(tempPath);
-     await rewriteCachedPackageLocalFileDependencies(tempPath, input.sourcePath);
-     await copyBundledMcpRuntimeDists({ pluginRoot: tempPath, sourceRoot: input.sourcePath });
-     await maybeRunNpmInstall(tempPath, input.runCommand, ["ci", "--omit=dev"]);
-@@ -7210,6 +7211,7 @@ async function installCachedPlugin(input) {
-     await assertHookCommandTargets(tempPath);
-     await promoteDirectory(tempPath, targetPath, input.renameDirectory ?? rename);
-   } catch (error) {
+@@ -7451,0 +7453 @@
++    await normalizeCopiedPluginCachePermissions(tempPath);
+@@ -7453,0 +7456 @@
 +    await normalizeCopiedPluginCachePermissions(tempPath).catch(() => undefined);
-     await rm3(tempPath, { recursive: true, force: true });
-     throw error;
-   }
-@@ -7253,6 +7255,19 @@ async function copyDirectory(sourcePath, targetPath) {
-   await mkdir3(dirname3(targetPath), { recursive: true });
-   await cp2(sourcePath, targetPath, { recursive: true, filter: (source) => shouldCopyPluginPath(source, sourcePath) });
- }
+@@ -7461,0 +7465,2 @@
++  if (shouldSkipNixCacheNpmCommand(args))
++    return;
+@@ -7462,0 +7468,5 @@
++}
++function shouldSkipNixCacheNpmCommand(args) {
++  if (process.env.LAZYCODEX_AI_NIX_SKIP_CACHE_NPM !== "1")
++    return false;
++  return args.length === 2 && (args[0] === "ci" && args[1] === "--omit=dev" || args[0] === "run" && args[1] === "sync:skills");
+@@ -7477,0 +7488,2 @@
++  if (shouldSkipNixCacheNpmCommand(["run", "sync:skills"]))
++    return;
+@@ -7494,0 +7507,13 @@
++}
 +async function normalizeCopiedPluginCachePermissions(path) {
 +  const stats = await lstat9(path);
 +  if (stats.isSymbolicLink())
@@ -40,16 +35,14 @@ index 3b4b9b5..fcd4e7a 100755
 +    return;
 +  }
 +  await chmod2(path, stats.mode | 0o200);
-+}
- async function promoteDirectory(tempPath, targetPath, renameDirectory) {
-   const backupPath = createBackupSiblingPath(targetPath);
-   await rm3(backupPath, { recursive: true, force: true });
-@@ -8686,6 +8701,7 @@ async function writeSnapshotPlugin(marketplaceRoot, plugin) {
-   await cp3(plugin.sourcePath, tempPath, {
-     recursive: true,
-     filter: (source) => shouldCopyMarketplaceSourcePath(source, plugin.sourcePath)
-   });
+@@ -7511 +7536,2 @@
+-  if (backupMoved)
++  if (backupMoved) {
++    await normalizeCopiedPluginCachePermissions(backupPath).catch(() => undefined);
+@@ -7512,0 +7539 @@
++  }
+@@ -9165,0 +9193 @@
 +  await normalizeCopiedPluginCachePermissions(tempPath);
-   await copyBundledMcpRuntimeDists({ pluginRoot: tempPath, sourceRoot: plugin.sourcePath });
-   await rm7(targetPath, { recursive: true, force: true });
-   await rename3(tempPath, targetPath);
+@@ -9166,0 +9195,2 @@
++  await normalizeCopiedPluginCachePermissions(tempPath);
++  await normalizeCopiedPluginCachePermissions(targetPath).catch(() => undefined);
