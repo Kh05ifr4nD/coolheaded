@@ -1,8 +1,8 @@
 {
-  "version": "4.14.0",
+  "version": "4.15.1",
   "hashes": {
-    "aarch64-darwin": "sha512-c2gNqxJi1uvM5wkWgVvw79EN3gh9V5e5bqRq8RSp5b4Lhylb82c0i3f3s32hHtMaITEyilE3Wc2tAzdy+Szw3w==",
-    "aarch64-linux": "sha512-c2gNqxJi1uvM5wkWgVvw79EN3gh9V5e5bqRq8RSp5b4Lhylb82c0i3f3s32hHtMaITEyilE3Wc2tAzdy+Szw3w==",
-    "x86_64-linux": "sha512-c2gNqxJi1uvM5wkWgVvw79EN3gh9V5e5bqRq8RSp5b4Lhylb82c0i3f3s32hHtMaITEyilE3Wc2tAzdy+Szw3w=="
+    "aarch64-darwin": "sha512-T3EayC0BtNlY5tCz7DPqM4a3B/Z/VlRRNG8r4VXXn1/b0Orv9p4Js3lpx5oy2XFJLTeiiCFfSTSU+Es20MDm+A==",
+    "aarch64-linux": "sha512-T3EayC0BtNlY5tCz7DPqM4a3B/Z/VlRRNG8r4VXXn1/b0Orv9p4Js3lpx5oy2XFJLTeiiCFfSTSU+Es20MDm+A==",
+    "x86_64-linux": "sha512-T3EayC0BtNlY5tCz7DPqM4a3B/Z/VlRRNG8r4VXXn1/b0Orv9p4Js3lpx5oy2XFJLTeiiCFfSTSU+Es20MDm+A=="
   }
 }
