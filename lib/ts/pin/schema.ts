@@ -1,5 +1,5 @@
 import { Effect } from "effect";
-import { systemRecord } from "coolheaded/systems/supported.ts";
+import { systemRecord } from "coolheaded/system/target.ts";
 
 type SupportedSystem = keyof ReturnType<typeof systemRecord<string>>;
 interface PackageHashConfig {

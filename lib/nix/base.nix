@@ -10,7 +10,7 @@
 let
   inherit (stdenv.hostPlatform) system;
 
-  systemConfig = builtins.fromJSON (builtins.readFile ../ts/systems/config.json);
+  systemConfig = builtins.fromJSON (builtins.readFile ../ts/system/targets.json);
   systemTargetsConfig = systemConfig.targets;
 
   canExecute = stdenv.buildPlatform.canExecute stdenv.hostPlatform;

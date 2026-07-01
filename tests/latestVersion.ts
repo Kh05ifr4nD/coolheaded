@@ -4,7 +4,7 @@ import {
   latestGitHubVersion,
   latestNpmVersion,
   latestPyPiVersion,
-} from "coolheaded/sources/latestVersion.ts";
+} from "coolheaded/source/version.ts";
 import { Effect } from "effect";
 import { assertEquals } from "@jsr/std__assert";
 

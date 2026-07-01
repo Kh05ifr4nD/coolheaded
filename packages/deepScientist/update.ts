@@ -8,12 +8,12 @@ import {
 import {
   fetchGitHubSourceHash,
   prepareGitHubTagTarballWorkspace,
-} from "coolheaded/sources/github.ts";
+} from "coolheaded/source/github.ts";
 import { Effect } from "effect";
 import { generatedNpmPackageLock } from "coolheaded/npm/lock.ts";
-import { latestNpmVersion } from "coolheaded/sources/latestVersion.ts";
-import { npmPackageHashConfig } from "coolheaded/npm/packageHashes.ts";
-import { writePinJson } from "coolheaded/pins/json.ts";
+import { latestNpmVersion } from "coolheaded/source/version.ts";
+import { npmPackageHashConfig } from "coolheaded/npm/packageHash.ts";
+import { writePinJson } from "coolheaded/pin/json.ts";
 
 const NPM_PACKAGE_NAME = "@researai/deepscientist";
 const PACKAGE_LOCK_FILE_PATH = scriptPath("package-lock.json", import.meta.url);

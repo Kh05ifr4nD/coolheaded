@@ -5,7 +5,7 @@ import {
   buildDenoDependencyCheck,
   isDenoDependencyHashMismatch,
   updateDenoDependencyHash,
-} from "coolheaded/repository/denoDependencies.ts";
+} from "coolheaded/repo/denoDependency.ts";
 import {
   assertOnlyChangedFiles,
   changedFiles,

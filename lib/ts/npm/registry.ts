@@ -1,5 +1,5 @@
 import { Effect } from "effect";
-import { InvalidNpmMetadataError } from "coolheaded/npm/errors.ts";
+import { InvalidNpmMetadataError } from "coolheaded/npm/metadataError.ts";
 import type { NpmPackageMetadata } from "coolheaded/npm/metadata.ts";
 
 function npmRegistryPackageUrl(packageName: string): string {
@@ -36,5 +36,5 @@ export {
   npmScopedTarballUrl,
   npmVersionIntegrity,
 };
-export { InvalidNpmMetadataError } from "coolheaded/npm/errors.ts";
+export { InvalidNpmMetadataError } from "coolheaded/npm/metadataError.ts";
 export type { NpmPackageMetadata } from "coolheaded/npm/metadata.ts";

@@ -2,11 +2,11 @@ import { UpdateError, updateNewerPinVersion } from "coolheaded/core/updateScript
 import { npmRegistryPackageUrl, npmVersionIntegrity } from "coolheaded/npm/registry.ts";
 import { Effect } from "effect";
 import type { NpmPackageMetadata } from "coolheaded/npm/metadata.ts";
-import { latestNpmVersion } from "coolheaded/sources/latestVersion.ts";
-import { npmHashConfigForSystems } from "coolheaded/npm/hashes.ts";
-import { parsePackageHashConfig } from "coolheaded/pins/schema.ts";
-import { systemRecord } from "coolheaded/systems/supported.ts";
-import { writePackageHashConfig } from "coolheaded/pins/json.ts";
+import { latestNpmVersion } from "coolheaded/source/version.ts";
+import { npmHashConfigForSystems } from "coolheaded/npm/platformHash.ts";
+import { parsePackageHashConfig } from "coolheaded/pin/schema.ts";
+import { systemRecord } from "coolheaded/system/target.ts";
+import { writePackageHashConfig } from "coolheaded/pin/json.ts";
 
 type SupportedSystem = Parameters<Parameters<typeof systemRecord>[0]>[0];
 type PackageHashConfig = ReturnType<typeof parsePackageHashConfig>;

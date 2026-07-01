@@ -4,10 +4,10 @@ import {
   updateNewerPinVersion,
 } from "coolheaded/core/updateScript.ts";
 import { Effect } from "effect";
-import { latestNpmVersion } from "coolheaded/sources/latestVersion.ts";
-import { npmPackageHash } from "coolheaded/npm/packageHashes.ts";
-import { systemRecord } from "coolheaded/systems/supported.ts";
-import { writePinJson } from "coolheaded/pins/json.ts";
+import { latestNpmVersion } from "coolheaded/source/version.ts";
+import { npmPackageHash } from "coolheaded/npm/packageHash.ts";
+import { systemRecord } from "coolheaded/system/target.ts";
+import { writePinJson } from "coolheaded/pin/json.ts";
 
 const NPM_PACKAGE_NAME = "oh-my-openagent";
 const PIN_FILE_PATH = scriptPath("pin.json", import.meta.url);

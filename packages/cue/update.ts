@@ -1,7 +1,7 @@
-import { releaseHashUpdateProgram, releaseUrlsFromTargets } from "coolheaded/updates/release.ts";
+import { releaseHashUpdateProgram, releaseUrlsFromTargets } from "coolheaded/update/release.ts";
 import { runUpdateScript, scriptPath } from "coolheaded/core/updateScript.ts";
 import { Effect } from "effect";
-import { latestGitHubVersion } from "coolheaded/sources/latestVersion.ts";
+import { latestGitHubVersion } from "coolheaded/source/version.ts";
 
 const PIN_FILE_PATH = scriptPath("pin.json", import.meta.url);
 type ReleaseTargets = Parameters<typeof releaseUrlsFromTargets>[0];

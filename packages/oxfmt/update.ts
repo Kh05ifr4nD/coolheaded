@@ -1,13 +1,13 @@
-import { gitHubRelease, latestGitHubVersion } from "coolheaded/sources/latestVersion.ts";
-import { releaseHashConfig, releaseUrlsFromTargets } from "coolheaded/updates/release.ts";
+import { gitHubRelease, latestGitHubVersion } from "coolheaded/source/version.ts";
+import { releaseHashConfig, releaseUrlsFromTargets } from "coolheaded/update/release.ts";
 import {
   runUpdateScript,
   scriptPath,
   updateNewerPinVersion,
 } from "coolheaded/core/updateScript.ts";
 import { Effect } from "effect";
-import type { PackageHashConfig } from "coolheaded/pins/schema.ts";
-import { writePackageHashConfig } from "coolheaded/pins/json.ts";
+import type { PackageHashConfig } from "coolheaded/pin/schema.ts";
+import { writePackageHashConfig } from "coolheaded/pin/json.ts";
 
 const PIN_FILE_PATH = scriptPath("pin.json", import.meta.url);
 type ReleaseTargets = Parameters<typeof releaseUrlsFromTargets>[0];

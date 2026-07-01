@@ -6,7 +6,7 @@ import {
 } from "coolheaded/core/updateScript.ts";
 import { Effect } from "effect";
 import { withTemporaryDirectory } from "coolheaded/core/temporaryDirectory.ts";
-import { writePinJson } from "coolheaded/pins/json.ts";
+import { writePinJson } from "coolheaded/pin/json.ts";
 
 const ROOT_PROJECT_NAME = "coolheaded-lock-input";
 const ROOT_PROJECT_VERSION = "0";

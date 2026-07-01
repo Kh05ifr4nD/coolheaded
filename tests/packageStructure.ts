@@ -1,8 +1,8 @@
 import { describe, it } from "@jsr/std__testing/bdd";
 import { assertEquals } from "@jsr/std__assert";
-import { checkedFileSpec } from "coolheaded/repository/fileSpec.ts";
+import { checkedFileSpec } from "coolheaded/repo/fileSpec.ts";
 import { join } from "@jsr/std__path";
-import { serializePinJson } from "coolheaded/pins/json.ts";
+import { serializePinJson } from "coolheaded/pin/json.ts";
 
 type PinJsonConfig = Parameters<typeof serializePinJson>[0];
 

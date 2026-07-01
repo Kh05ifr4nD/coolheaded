@@ -1,7 +1,7 @@
 import { denoRuntime, updateNewerPinVersion } from "coolheaded/core/updateScript.ts";
 import { Effect } from "effect";
-import { fetchGitHubSourceHash } from "coolheaded/sources/github.ts";
-import { writePinJson } from "coolheaded/pins/json.ts";
+import { fetchGitHubSourceHash } from "coolheaded/source/github.ts";
+import { writePinJson } from "coolheaded/pin/json.ts";
 
 interface GitHubRustPackage {
   readonly owner: string;

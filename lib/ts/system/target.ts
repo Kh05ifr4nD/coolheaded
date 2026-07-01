@@ -1,4 +1,4 @@
-import systemConfig from "./config.json" with { type: "json" };
+import systemConfig from "./targets.json" with { type: "json" };
 
 const SUPPORTED_SYSTEMS = ["aarch64-darwin", "aarch64-linux", "x86_64-linux"] as const;
 

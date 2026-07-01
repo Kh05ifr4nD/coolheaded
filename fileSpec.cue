@@ -88,31 +88,31 @@ package fileSpec
 				"version.ts"!:            #RegularFile
 			}
 			npm!: {
-				"errors.ts"!:        #RegularFile
-				"hashes.ts"!:        #RegularFile
 				"lock.ts"!:          #RegularFile
 				"metadata.ts"!:      #RegularFile
-				"packageHashes.ts"!: #RegularFile
+				"metadataError.ts"!: #RegularFile
+				"packageHash.ts"!:   #RegularFile
+				"platformHash.ts"!:  #RegularFile
 				"registry.ts"!:      #RegularFile
 				"tarball.ts"!:       #RegularFile
 			}
-			pins!: {
+			pin!: {
 				"json.ts"!:   #RegularFile
 				"schema.ts"!: #RegularFile
 			}
-			repository!: {
-				"denoDependencies.ts"!: #RegularFile
-				"fileSpec.ts"!:         #RegularFile
+			repo!: {
+				"denoDependency.ts"!: #RegularFile
+				"fileSpec.ts"!:       #RegularFile
 			}
-			sources!: {
-				"github.ts"!:        #RegularFile
-				"latestVersion.ts"!: #RegularFile
+			source!: {
+				"github.ts"!:  #RegularFile
+				"version.ts"!: #RegularFile
 			}
-			systems!: {
-				"config.json"!:  #RegularFile
-				"supported.ts"!: #RegularFile
+			system!: {
+				"target.ts"!:    #RegularFile
+				"targets.json"!: #RegularFile
 			}
-			updates!: {
+			update!: {
 				"release.ts"!:     #RegularFile
 				"rustPackage.ts"!: #RegularFile
 				"uvLock.ts"!:      #RegularFile

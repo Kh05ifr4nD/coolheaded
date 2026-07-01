@@ -8,9 +8,9 @@ import {
 } from "coolheaded/core/updateScript.ts";
 import { generatedNpmPackageLock, prepareNpmTarballWorkspace } from "coolheaded/npm/lock.ts";
 import { Effect } from "effect";
-import { latestNpmVersion } from "coolheaded/sources/latestVersion.ts";
-import { npmPackageHashConfig } from "coolheaded/npm/packageHashes.ts";
-import { writePinJson } from "coolheaded/pins/json.ts";
+import { latestNpmVersion } from "coolheaded/source/version.ts";
+import { npmPackageHashConfig } from "coolheaded/npm/packageHash.ts";
+import { writePinJson } from "coolheaded/pin/json.ts";
 
 interface NpmTarballPackageUpdate {
   readonly args: readonly string[];

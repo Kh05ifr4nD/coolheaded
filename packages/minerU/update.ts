@@ -1,7 +1,7 @@
 import { runUpdateScript, scriptPath } from "coolheaded/core/updateScript.ts";
 import { Effect } from "effect";
-import { latestPyPiVersion } from "coolheaded/sources/latestVersion.ts";
-import { updateVersionedNixpkgsPythonUvLock } from "coolheaded/updates/uvLock.ts";
+import { latestPyPiVersion } from "coolheaded/source/version.ts";
+import { updateVersionedNixpkgsPythonUvLock } from "coolheaded/update/uvLock.ts";
 
 const PYPI_PACKAGE_NAME = "mineru";
 const PIN_FILE_PATH = scriptPath("pin.json", import.meta.url);

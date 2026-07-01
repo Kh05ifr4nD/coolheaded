@@ -1,6 +1,6 @@
 import { UpdateError, commandOutput, updateNewerPinVersion } from "coolheaded/core/updateScript.ts";
 import { Effect } from "effect";
-import { writePinJson } from "coolheaded/pins/json.ts";
+import { writePinJson } from "coolheaded/pin/json.ts";
 
 interface GitHubSource {
   readonly owner: string;

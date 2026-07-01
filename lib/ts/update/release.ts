@@ -1,8 +1,8 @@
 import { UpdateError, updateNewerPinVersion } from "coolheaded/core/updateScript.ts";
 import { Effect } from "effect";
-import { parsePackageHashConfig } from "coolheaded/pins/schema.ts";
-import { systemRecord } from "coolheaded/systems/supported.ts";
-import { writePackageHashConfig } from "coolheaded/pins/json.ts";
+import { parsePackageHashConfig } from "coolheaded/pin/schema.ts";
+import { systemRecord } from "coolheaded/system/target.ts";
+import { writePackageHashConfig } from "coolheaded/pin/json.ts";
 
 const HEX_BYTE_WIDTH = 2;
 const HEX_RADIX = 16;

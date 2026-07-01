@@ -1,7 +1,7 @@
 import { runUpdateScript, scriptPath } from "coolheaded/core/updateScript.ts";
 import { Effect } from "effect";
-import { latestGitHubVersion } from "coolheaded/sources/latestVersion.ts";
-import { updateGitHubRustPackagePin } from "coolheaded/updates/rustPackage.ts";
+import { latestGitHubVersion } from "coolheaded/source/version.ts";
+import { updateGitHubRustPackagePin } from "coolheaded/update/rustPackage.ts";
 
 const PIN_FILE_PATH = scriptPath("pin.json", import.meta.url);
 const REPOSITORY_ROOT_PATH = scriptPath("../../", import.meta.url);

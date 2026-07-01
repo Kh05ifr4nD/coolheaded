@@ -4,11 +4,11 @@ import {
   scriptPath,
   updateNewerPinVersion,
 } from "coolheaded/core/updateScript.ts";
-import { releaseHashConfig, releaseUrlsFromTargets } from "coolheaded/updates/release.ts";
+import { releaseHashConfig, releaseUrlsFromTargets } from "coolheaded/update/release.ts";
 import { Effect } from "effect";
-import { latestGitHubVersion } from "coolheaded/sources/latestVersion.ts";
-import { updateDenoDependencyHash } from "coolheaded/repository/denoDependencies.ts";
-import { writePackageHashConfig } from "coolheaded/pins/json.ts";
+import { latestGitHubVersion } from "coolheaded/source/version.ts";
+import { updateDenoDependencyHash } from "coolheaded/repo/denoDependency.ts";
+import { writePackageHashConfig } from "coolheaded/pin/json.ts";
 
 const DENO_RELEASE_VERSION_PREFIX = "v";
 const PIN_FILE_PATH = scriptPath("pin.json", import.meta.url);

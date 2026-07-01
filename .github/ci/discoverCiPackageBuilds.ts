@@ -1,7 +1,7 @@
 #!/usr/bin/env -S deno run --allow-env --allow-read --allow-run
 
 import { run, writeOutput } from "./lib.ts";
-import { SYSTEM_TARGETS } from "coolheaded/systems/supported.ts";
+import { SYSTEM_TARGETS } from "coolheaded/system/target.ts";
 import { toFileUrl } from "@jsr/std__path";
 
 const PACKAGE_CHECKS_EXPR =
@@ -198,4 +198,4 @@ export {
   packagesFromInput,
   requestedBuildTargets,
 };
-export { SYSTEM_TARGETS } from "coolheaded/systems/supported.ts";
+export { SYSTEM_TARGETS } from "coolheaded/system/target.ts";

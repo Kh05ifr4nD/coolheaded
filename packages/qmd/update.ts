@@ -9,11 +9,11 @@ import {
 import {
   fetchGitHubSourceHash,
   prepareGitHubTagTarballWorkspace,
-} from "coolheaded/sources/github.ts";
+} from "coolheaded/source/github.ts";
 import { Effect } from "effect";
-import { latestGitHubVersion } from "coolheaded/sources/latestVersion.ts";
+import { latestGitHubVersion } from "coolheaded/source/version.ts";
 import { withTemporaryDirectory } from "coolheaded/core/temporaryDirectory.ts";
-import { writePinJson } from "coolheaded/pins/json.ts";
+import { writePinJson } from "coolheaded/pin/json.ts";
 
 const GENERATED_PACKAGE_FILE_PATH = scriptPath("generatedPackage.nix", import.meta.url);
 const PIN_FILE_PATH = scriptPath("pin.json", import.meta.url);
