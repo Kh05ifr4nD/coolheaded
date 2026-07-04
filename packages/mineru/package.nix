@@ -57,6 +57,11 @@ let
       });
     in
     {
+      modelscope-hub = prev.modelscope-hub.overrideAttrs (oldAttrs: {
+        postInstall = (oldAttrs.postInstall or "") + ''
+          rm -f "$out/bin/modelscope" "$out/bin/ms"
+        '';
+      });
       opencv-python-headless = prev.opencv-python-headless.overrideAttrs (oldAttrs: {
         postFixup = (oldAttrs.postFixup or "") + ''
           rm -rf "$out/${sitePackages}/cv2"
