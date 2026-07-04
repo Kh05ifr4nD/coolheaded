@@ -21,9 +21,6 @@
     "useUnknownInCatchVariables": true,
     "verbatimModuleSyntax": true,
   },
-  "fmt": {
-    "exclude": ["AGENTS.md", "README.md"],
-  },
   "imports": {
     "@jsr/std__assert": "npm:@jsr/std__assert",
     "@jsr/std__cli": "npm:@jsr/std__cli",
@@ -38,6 +35,7 @@
     "fast-check": "npm:fast-check",
   },
   "lint": {
+    "exclude": ["packages/*/script/*.mjs"],
     "rules": {
       "exclude": [
         "jsx-boolean-value",

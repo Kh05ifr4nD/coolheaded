@@ -20,7 +20,7 @@ let
       wrapBuddy
       ;
   };
-  packageCheckPath = name: ../packages + "/${name}/checks.nix";
+  packageCheckPath = name: ../packages + "/${name}/check.nix";
   packageChecks = lib.concatMapAttrs (
     name: package:
     if builtins.pathExists (packageCheckPath name) then

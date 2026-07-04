@@ -7,14 +7,17 @@ package fileSpec
 }
 
 #PackageDirectory: {
-	"checks.nix"?:           #RegularFile
+	"check.nix"?:            #RegularFile
 	"generatedPackage.nix"?: #RegularFile
 	"package.nix"!:          #RegularFile
 	"package-lock.json"?:    #RegularFile
 	patch?:                  #PatchDirectory
 	"pin.json"?:             #RegularFile
-	"update.ts"!:            #RegularFile
-	"uv.lock"?:              #RegularFile
+	script?: {
+		[=~"^[a-z][A-Za-z0-9._-]*\\.mjs$"]: #RegularFile
+	}
+	"update.ts"!: #RegularFile
+	"uv.lock"?:   #RegularFile
 }
 
 #FileSpec: {
@@ -73,6 +76,7 @@ package fileSpec
 	}
 
 	lib!: {
+		".gitignore"!: #RegularFile
 		nix!: {
 			"base.nix"!:    #RegularFile
 			"default.nix"!: #RegularFile

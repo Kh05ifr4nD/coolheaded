@@ -2,6 +2,7 @@
   lib,
   stdenv,
   autoPatchelfHook,
+  coolheaded,
   makeWrapper,
   nodejs,
   packageLib,
@@ -34,6 +35,8 @@ let
 
   packageName = "lazycodex-ai";
   packageRoot = "${placeholder "out"}/libexec/lazycodex-ai";
+  codeGraphExecutable = "${coolheaded.codeGraph}/bin/codegraph";
+  nodeExecutable = "${nodejs}/bin/node";
   nodePath = lib.makeBinPath [ nodejs ];
 in
 packageLib.mkNpmTarballPackage {
@@ -67,6 +70,11 @@ packageLib.mkNpmTarballPackage {
     rm -f "$packageRoot/.attrs.json" "$packageRoot/.attrs.sh" "$packageRoot/env-vars"
     find "$packageRoot/packages/omo-codex/plugin" -type d -name .github -prune -exec rm -rf {} +
 
+    LAZYCODEX_PLUGIN_ROOT="$packageRoot/packages/omo-codex/plugin" \
+    LAZYCODEX_NODE_EXECUTABLE="${nodeExecutable}" \
+    LAZYCODEX_CODEGRAPH_EXECUTABLE="${codeGraphExecutable}" \
+      "${nodeExecutable}" ${./script/rewriteOmoPluginRuntimeJson.mjs}
+
     pluginNodeModules="$packageRoot/packages/omo-codex/plugin/node_modules"
     keepOnlyMatchingChildren "$pluginNodeModules/@biomejs" "cli-" '${platform.biome}'
     keepOnlyMatchingChildren "$pluginNodeModules/@rolldown" "binding-" '${platform.rolldown}'
@@ -90,7 +98,7 @@ packageLib.mkNpmTarballPackage {
 
     dryRunOutput="$("$out/bin/lazycodex-ai" --dry-run 2>&1)"
     case "$dryRunOutput" in
-      *"omo install"*) ;;
+      *"oh-my-openagent@latest install --platform=codex"*) ;;
       *) failCheck "unexpected lazycodex-ai --dry-run output" ;;
     esac
 
@@ -127,6 +135,16 @@ packageLib.mkNpmTarballPackage {
     staleTmp="$(find "$installCheckCodexHome/plugins/cache/sisyphuslabs/omo" \
       -mindepth 1 -maxdepth 1 -name '.tmp-*' -print -quit)"
     test -z "$staleTmp" || failCheck "left stale plugin temp directory: $staleTmp"
+
+    assertFileExists "${codeGraphExecutable}"
+    grep -F "\"command\": \"${nodeExecutable}\"" "$pluginRoot/.mcp.json" > /dev/null \
+      || failCheck "installed OMO MCP manifest does not use packaged node"
+    grep -F "\"OMO_CODEGRAPH_BIN\": \"${codeGraphExecutable}\"" "$pluginRoot/.mcp.json" > /dev/null \
+      || failCheck "installed OMO MCP manifest does not use packaged codegraph"
+    bareNodeCommand="$(grep -R '"command": "node' "$pluginRoot" --include '*.json' | head -1 || true)"
+    test -z "$bareNodeCommand" || failCheck "installed OMO plugin contains bare node command: $bareNodeCommand"
+    grep -F '[hooks.state.' "$installCheckCodexHome/config.toml" > /dev/null \
+      || failCheck "installed config contains no trusted hook state"
 
     test ! -e "$out/bin/lazycodex" || failCheck "unexpected lazycodex compatibility launcher"
     assertFileExists "${packageRoot}/packages/omo-codex/marketplace.json"

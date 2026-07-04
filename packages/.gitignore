@@ -1,10 +1,12 @@
 !/*/
-!/*/checks.nix
+!/*/check.nix
 !/*/generatedPackage.nix
 !/*/package-lock.json
 !/*/package.nix
 !/*/patch/
 !/*/patch/*.patch
 !/*/pin.json
+!/*/script/
+!/*/script/*.mjs
 !/*/update.ts
 !/*/uv.lock
