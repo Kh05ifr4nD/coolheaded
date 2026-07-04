@@ -21,3 +21,9 @@
 + 仅唯一单元或语义扁平多单元命名使用 camelCase，如 `shfmt`、`openCode` 和 `ohMyPi`（尊重官方表述，判定为 1/2/3 个单元）。
 + 双层语义多单元命名使用外层 Train-Case 内层 camelCase，如 `llvmPackages-22`、`oh-my-openAgents` 和 `zAi-codingHelper`。
 + 若语义层数过多，必须拆分，创建目录以承担前缀分类层次语义。
+
+## 格式化
+
+永远使用 `nix fmt`。
+
+特别地，对于 ts 文件，禁用 `deno fmt`；唯一标准为 treefmt-nix 提供的 oxfmt。

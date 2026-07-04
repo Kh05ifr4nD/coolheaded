@@ -4,7 +4,7 @@ import { Effect } from "effect";
 import type { NpmPackageMetadata } from "coolheaded/npm/metadata.ts";
 import { latestNpmVersion } from "coolheaded/source/version.ts";
 import { npmHashConfigForSystems } from "coolheaded/npm/platformHash.ts";
-import { parsePackageHashConfig } from "coolheaded/pin/schema.ts";
+import { parsePackageHashConfig } from "coolheaded/pin/packageHashConfig.ts";
 import { systemRecord } from "coolheaded/system/target.ts";
 import { writePackageHashConfig } from "coolheaded/pin/json.ts";
 

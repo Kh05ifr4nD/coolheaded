@@ -2,7 +2,7 @@ import type { IsAny, IsExact, IsUnknown } from "./testingTypes.ts";
 import type { npmHashConfigForSystems, npmHashesForSystems } from "coolheaded/npm/platformHash.ts";
 import type { Effect } from "effect";
 import type { InvalidNpmMetadataError } from "coolheaded/npm/registry.ts";
-import type { PackageHashConfig } from "coolheaded/pin/schema.ts";
+import type { PackageHashConfig } from "coolheaded/pin/packageHashConfig.ts";
 import type { SupportedSystem } from "coolheaded/system/target.ts";
 import { assertType } from "@jsr/std__testing/types";
 

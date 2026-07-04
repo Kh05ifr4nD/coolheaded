@@ -1,9 +1,6 @@
 #!/usr/bin/env -S deno run --allow-env --allow-read --allow-run --allow-write
 
-import {
-  DENO_DEPENDENCY_HASH_FILE_PATH,
-  updateDenoDependencyHash,
-} from "coolheaded/repo/denoDependency.ts";
+import { DENO_DEPS_HASH_FILE_PATH, updateDenoDepsHash } from "coolheaded/repo/denoDeps.ts";
 import {
   assertOnlyChangedFiles,
   changedFiles,
@@ -49,16 +46,16 @@ async function runDenoDepsUpdate(): Promise<void> {
   const before = directSpecifierVersions(await readJson("deno.lock"));
   await run(["deno", "install", "--frozen=false"], { capture: false });
   const lockChanged = await gitHasChanges(["deno.lock"]);
-  await updateDenoDependencyHash(await currentSystem());
+  await updateDenoDepsHash(await currentSystem());
 
-  if (!lockChanged && !(await gitHasChanges([DENO_DEPENDENCY_HASH_FILE_PATH]))) {
+  if (!lockChanged && !(await gitHasChanges([DENO_DEPS_HASH_FILE_PATH]))) {
     await writeOutput("updated", "false");
     return;
   }
 
   assertOnlyChangedFiles(
     await changedFiles(),
-    (file: string): boolean => file === "deno.lock" || file === DENO_DEPENDENCY_HASH_FILE_PATH,
+    (file: string): boolean => file === "deno.lock" || file === DENO_DEPS_HASH_FILE_PATH,
   );
   const after = directSpecifierVersions(await readJson("deno.lock"));
   await writeOutput("updated", "true");

@@ -1,5 +1,6 @@
+import { assertEquals, assertRejects } from "@jsr/std__assert";
 import { describe, it } from "@jsr/std__testing/bdd";
-import { assertEquals } from "@jsr/std__assert";
+import { checkFileSpec } from "coolheaded/repo/fileSpec/check.ts";
 import { checkedFileSpec } from "coolheaded/repo/fileSpec.ts";
 import { join } from "@jsr/std__path";
 import { serializePinJson } from "coolheaded/pin/json.ts";
@@ -27,6 +28,34 @@ async function fileExists(path: string): Promise<boolean> {
     }
 
     throw error;
+  }
+}
+
+async function runGit(repositoryRoot: string, args: readonly string[]): Promise<void> {
+  const output = await new Deno.Command("git", {
+    args: [...args],
+    cwd: repositoryRoot,
+    stderr: "piped",
+    stdout: "piped",
+  }).output();
+
+  if (!output.success) {
+    const stderr = new globalThis.TextDecoder().decode(output.stderr).trim();
+    throw new Error(`git ${args.join(" ")} failed: ${stderr}`);
+  }
+}
+
+async function withTemporaryDirectory<Success>(
+  useDirectory: (directoryPath: string) => Promise<Success>,
+): Promise<Success> {
+  const directoryPath = await Deno.makeTempDir({
+    prefix: "coolheaded-file-spec-test-",
+  });
+
+  try {
+    return await useDirectory(directoryPath);
+  } finally {
+    await Deno.remove(directoryPath, { recursive: true });
   }
 }
 
@@ -78,6 +107,37 @@ async function invalidPinOrder(name: string): Promise<string | undefined> {
 describe("package structure", (): void => {
   it("keeps git ls-files fully conformant to fileSpec.cue", async (): Promise<void> => {
     await checkedFileSpec();
+  });
+
+  it("rejects ignored directories hiding fileSpec-admitted files", async (): Promise<void> => {
+    await withTemporaryDirectory(async (repositoryRoot: string): Promise<void> => {
+      await runGit(repositoryRoot, ["init"]);
+      await Deno.mkdir(join(repositoryRoot, "hidden"));
+      await Deno.writeTextFile(join(repositoryRoot, ".gitignore"), "hidden/\n");
+      await Deno.writeTextFile(
+        join(repositoryRoot, "fileSpec.cue"),
+        `package fileSpec
+
+#RegularFile: true
+
+#FileSpec: {
+\t".gitignore"!:   #RegularFile
+\t"fileSpec.cue"!: #RegularFile
+\thidden?: {
+\t\t"allowed.ts"?: #RegularFile
+\t}
+}
+`,
+      );
+      await Deno.writeTextFile(join(repositoryRoot, "hidden/allowed.ts"), "export {};\n");
+      await runGit(repositoryRoot, ["add", ".gitignore", "fileSpec.cue"]);
+
+      await assertRejects(
+        (): Promise<void> => checkFileSpec(repositoryRoot),
+        Error,
+        "hidden/allowed.ts",
+      );
+    });
   });
 
   it("keeps pin.json fields in canonical order", async (): Promise<void> => {

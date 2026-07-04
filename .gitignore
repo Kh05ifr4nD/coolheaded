@@ -24,6 +24,8 @@
 !/lib/ts/pin/*.ts
 !/lib/ts/repo/
 !/lib/ts/repo/*.ts
+!/lib/ts/repo/fileSpec/
+!/lib/ts/repo/fileSpec/*.ts
 !/lib/ts/source/
 !/lib/ts/source/*.ts
 !/lib/ts/system/

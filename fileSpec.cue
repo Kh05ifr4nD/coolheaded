@@ -97,12 +97,17 @@ package fileSpec
 				"tarball.ts"!:       #RegularFile
 			}
 			pin!: {
-				"json.ts"!:   #RegularFile
-				"schema.ts"!: #RegularFile
+				"json.ts"!:              #RegularFile
+				"packageHashConfig.ts"!: #RegularFile
 			}
 			repo!: {
-				"denoDependency.ts"!: #RegularFile
-				"fileSpec.ts"!:       #RegularFile
+				"denoDeps.ts"!: #RegularFile
+				"fileSpec.ts"!: #RegularFile
+				fileSpec!: {
+					"check.ts"!: #RegularFile
+					"git.ts"!:   #RegularFile
+					"model.ts"!: #RegularFile
+				}
 			}
 			source!: {
 				"github.ts"!:  #RegularFile
@@ -126,14 +131,16 @@ package fileSpec
 	}
 
 	tests!: {
-		"ciPackageBuilds.ts"!:  #RegularFile
-		"denoDepsUpdate.ts"!:   #RegularFile
-		"latestVersion.ts"!:    #RegularFile
-		"packageStructure.ts"!: #RegularFile
-		"schema.ts"!:           #RegularFile
-		"systems.ts"!:          #RegularFile
-		"testingTypes.ts"!:     #RegularFile
-		"type.ts"!:             #RegularFile
-		"updatePr.ts"!:         #RegularFile
+		"ciPackageBuilds.ts"!:   #RegularFile
+		"denoDepsUpdate.ts"!:    #RegularFile
+		"latestVersion.ts"!:     #RegularFile
+		"npmPackageHash.ts"!:    #RegularFile
+		"packageHashConfig.ts"!: #RegularFile
+		"packageHashTypes.ts"!:  #RegularFile
+		"packageStructure.ts"!:  #RegularFile
+		"releaseHash.ts"!:       #RegularFile
+		"systems.ts"!:           #RegularFile
+		"testingTypes.ts"!:      #RegularFile
+		"updatePr.ts"!:          #RegularFile
 	}
 }

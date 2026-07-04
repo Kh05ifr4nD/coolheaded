@@ -1,5 +1,5 @@
 import type { Effect } from "effect";
-import type { PackageHashConfig } from "coolheaded/pin/schema.ts";
+import type { PackageHashConfig } from "coolheaded/pin/packageHashConfig.ts";
 import { SUPPORTED_SYSTEMS } from "coolheaded/system/target.ts";
 import { writeTextFile } from "coolheaded/core/updateScript.ts";
 

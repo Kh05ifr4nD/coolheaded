@@ -1,6 +1,6 @@
 import { UpdateError, updateNewerPinVersion } from "coolheaded/core/updateScript.ts";
 import { Effect } from "effect";
-import { parsePackageHashConfig } from "coolheaded/pin/schema.ts";
+import { parsePackageHashConfig } from "coolheaded/pin/packageHashConfig.ts";
 import { systemRecord } from "coolheaded/system/target.ts";
 import { writePackageHashConfig } from "coolheaded/pin/json.ts";
 

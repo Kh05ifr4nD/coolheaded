@@ -6,7 +6,7 @@ import {
   updateNewerPinVersion,
 } from "coolheaded/core/updateScript.ts";
 import { Effect } from "effect";
-import type { PackageHashConfig } from "coolheaded/pin/schema.ts";
+import type { PackageHashConfig } from "coolheaded/pin/packageHashConfig.ts";
 import { writePackageHashConfig } from "coolheaded/pin/json.ts";
 
 const PIN_FILE_PATH = scriptPath("pin.json", import.meta.url);

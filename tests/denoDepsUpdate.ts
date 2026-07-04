@@ -1,10 +1,10 @@
 import {
-  denoDependencyBuildCommand,
-  denoDependencyHash,
-  isDenoDependencyHashMismatch,
+  denoDepsBuildCommand,
+  denoDepsHash,
+  isDenoDepsHashMismatch,
   parsedNixHash,
-  replaceDenoDependencyHash,
-} from "coolheaded/repo/denoDependency.ts";
+  replaceDenoDepsHash,
+} from "coolheaded/repo/denoDeps.ts";
 import { describe, it } from "@jsr/std__testing/bdd";
 import { directSpecifierVersions, versionChanges } from "coolheadedCi/runDenoDepsUpdate.ts";
 import { assertEquals } from "@jsr/std__assert";
@@ -39,9 +39,9 @@ describe("Deno deps update helpers", (): void => {
     );
   });
 
-  it("extracts Deno dependency hashes from the Deno dependency module", (): void => {
+  it("extracts Deno deps hashes from the Deno deps module", (): void => {
     assertEquals(
-      denoDependencyHash(
+      denoDepsHash(
         `
         {
           hash = "sha256-denoDependencies=";
@@ -52,13 +52,13 @@ describe("Deno deps update helpers", (): void => {
     );
   });
 
-  it("replaces the Deno dependency hash", (): void => {
+  it("replaces the Deno deps hash", (): void => {
     const content = `
       hash = "sha256-old=";
     `;
 
     assertEquals(
-      replaceDenoDependencyHash(content, "sha256-new="),
+      replaceDenoDepsHash(content, "sha256-new="),
       `
       hash = "sha256-new=";
     `,
@@ -66,7 +66,7 @@ describe("Deno deps update helpers", (): void => {
   });
 
   it("builds the Deno dependency check directly", (): void => {
-    assertEquals(denoDependencyBuildCommand("x86_64-linux"), [
+    assertEquals(denoDepsBuildCommand("x86_64-linux"), [
       "nix",
       "build",
       ".#checks.x86_64-linux.denoDependencies",
@@ -83,7 +83,7 @@ describe("Deno deps update helpers", (): void => {
     `;
 
     assertEquals(parsedNixHash(output), "sha256-X6QHXER9IFm04+VKZpAO21iEOckyn9Rkg35knjjM+E8=");
-    assertEquals(isDenoDependencyHashMismatch(output), true);
-    assertEquals(isDenoDependencyHashMismatch("error: hash mismatch in another derivation"), false);
+    assertEquals(isDenoDepsHashMismatch(output), true);
+    assertEquals(isDenoDepsHashMismatch("error: hash mismatch in another derivation"), false);
   });
 });
