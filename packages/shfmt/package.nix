@@ -25,7 +25,7 @@ packageLib.mkGitHubReleaseBinaryPackage {
       diffStatus=$?
       set -e
       test "$diffStatus" -ne 0 || failCheck "expected shfmt diff status for unformatted input"
-      printf '%s\n' "$diffOutput" | grep -q '^--- ' \
+      grep -q '^--- ' <<<"$diffOutput" \
         || failCheck "expected shfmt diff for unformatted input"
       "$out/bin/shfmt" -w "$unformattedFile"
       "$out/bin/shfmt" -d "$unformattedFile" > "$formattedFile"
