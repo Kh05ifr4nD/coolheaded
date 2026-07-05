@@ -60,7 +60,7 @@ in
       stages = [ "prepare-commit-msg" ];
     };
 
-    denoCheck = denoTaskHook "check" [ ];
+    denoCheck = denoTaskHook "check" [ packages.cue ];
     denoTest = denoTaskHook "test" [ ];
 
     denolint = {
@@ -84,6 +84,7 @@ in
     oxlint = {
       enable = true;
       package = packages.oxlint;
+      pass_filenames = false;
       settings = {
         configPath = ".oxlintrc.jsonc";
         tsconfig = "tsconfig.json";
@@ -94,7 +95,7 @@ in
 
     shellcheck = {
       enable = true;
-      package = packages.shellcheck;
+      package = packages.shellCheck;
       files = "^lib/package\\.sh$";
     };
 

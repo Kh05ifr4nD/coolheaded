@@ -1,6 +1,6 @@
 {
   "version": "2.9.1",
-  "hashes": {
+  "platformPackageHashes": {
     "aarch64-darwin": "sha256-7jRzUCEY6rMB7Kk6prMdawtsFgLQ9Z5MuJ1KJisS9uc=",
     "aarch64-linux": "sha256-CmDQefp5Y1pZgDB027/obMw1dG3CxPjXPy5QM4syg6k=",
     "x86_64-linux": "sha256-cQxU1jR30RAIRO9IGPGVB84Nv0BRCQOx2IPxnjlERqI="

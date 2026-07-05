@@ -1,11 +1,11 @@
 #!/usr/bin/env -S deno run --allow-env --allow-read --allow-run --allow-write
 
 import {
-  DENO_DEPENDENCY_HASH_FILE_PATH,
-  buildDenoDependencyCheck,
-  isDenoDependencyHashMismatch,
-  updateDenoDependencyHash,
-} from "./runDenoDepsUpdate.ts";
+  DENO_DEPS_HASH_FILE_PATH,
+  buildDenoDepsCheck,
+  isDenoDepsHashMismatch,
+  updateDenoDepsHash,
+} from "coolheaded/repo/denoDeps.ts";
 import {
   assertOnlyChangedFiles,
   changedFiles,
@@ -33,19 +33,19 @@ async function lockedRevision(name: string): Promise<string> {
   return typeof rev === "string" ? rev.slice(0, 8) : "unknown";
 }
 
-async function repairDenoDependencyHashIfNeeded(system: string): Promise<void> {
-  const result = await buildDenoDependencyCheck(system);
+async function repairDenoDepsHashIfNeeded(system: string): Promise<void> {
+  const result = await buildDenoDepsCheck(system);
 
   if (result.code === 0) {
     return;
   }
 
   const output = `${result.stdout}\n${result.stderr}`;
-  if (!isDenoDependencyHashMismatch(output)) {
+  if (!isDenoDepsHashMismatch(output)) {
     throw new Error(output);
   }
 
-  await updateDenoDependencyHash(system);
+  await updateDenoDepsHash(system);
 }
 
 async function runFlakeInputUpdate(name: string): Promise<void> {
@@ -56,11 +56,11 @@ async function runFlakeInputUpdate(name: string): Promise<void> {
     return;
   }
 
-  await repairDenoDependencyHashIfNeeded(await currentSystem());
+  await repairDenoDepsHashIfNeeded(await currentSystem());
 
   assertOnlyChangedFiles(
     await changedFiles(),
-    (file: string): boolean => file === "flake.lock" || file === DENO_DEPENDENCY_HASH_FILE_PATH,
+    (file: string): boolean => file === "flake.lock" || file === DENO_DEPS_HASH_FILE_PATH,
   );
   await writeOutput("updated", "true");
   await writeOutput("newVersion", await lockedRevision(name));

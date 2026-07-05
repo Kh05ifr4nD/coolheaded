@@ -11,16 +11,55 @@
 let
   inherit (callPackages pyprojectNix.build.util { }) mkApplication;
 
+  lockInputProjectName = "coolheaded-lock-input";
+  lockInputProjectVersion = "0";
+
+  pythonRequirement =
+    python:
+    let
+      pythonMinorVersion = python.pythonVersion;
+      match = builtins.match "([0-9]+)\\.([0-9]+)" pythonMinorVersion;
+    in
+    if match == null then
+      throw "Invalid Python minor version: ${pythonMinorVersion}"
+    else
+      ">=${pythonMinorVersion}";
+
+  mkUvLockProject =
+    {
+      dependencies,
+      python,
+      extraBuildDependencies ? { },
+      name ? lockInputProjectName,
+      optionalDependencies ? { },
+      version ? lockInputProjectVersion,
+    }:
+    {
+      project = {
+        inherit dependencies name version;
+        requires-python = pythonRequirement python;
+      }
+      // lib.optionalAttrs (optionalDependencies != { }) {
+        optional-dependencies = optionalDependencies;
+      };
+    }
+    // lib.optionalAttrs (extraBuildDependencies != { }) {
+      tool.uv.extra-build-dependencies = extraBuildDependencies;
+    };
+
   mkUvPythonSet =
     {
       python,
       pyproject,
       packageOverrides ? (_final: _prev: { }),
       sourcePreference ? "wheel",
+      uvLock ? null,
       workspaceRoot ? base.packageDirectory,
     }:
     let
-      workspace = uv2nix.lib.workspace.loadWorkspace { inherit pyproject workspaceRoot; };
+      workspace = uv2nix.lib.workspace.loadWorkspace (
+        { inherit pyproject workspaceRoot; } // lib.optionalAttrs (uvLock != null) { inherit uvLock; }
+      );
       overlay = workspace.mkPyprojectOverlay { inherit sourcePreference; };
     in
     (callPackage pyprojectNix.build.packages { inherit python; }).overrideScope (
@@ -38,6 +77,7 @@ let
       pyproject,
       meta,
       doInstallCheck ? base.canExecute,
+      expectedExecutables ? [ ],
       extras ? [ ],
       installCheck ? "",
       nativeInstallCheckInputs ? [ ],
@@ -47,6 +87,7 @@ let
       postInstall ? "",
       preVersionCheck ? "",
       sourcePreference ? "wheel",
+      uvLock ? null,
       versionCheckKeepEnvironment ? [ ],
       versionCheckProgram ? "${placeholder "out"}/bin/${pname}",
       versionCheckProgramArg ? "--version",
@@ -60,6 +101,7 @@ let
           packageOverrides
           python
           sourcePreference
+          uvLock
           workspaceRoot
           ;
         pyproject = resolve pyproject;
@@ -97,6 +139,7 @@ let
             versionCheckProgramArg
             ;
           installCheckPhase = base.mkInstallCheckPhase {
+            inherit expectedExecutables;
             executable = versionCheckProgram;
             extra = installCheck;
           };
@@ -112,5 +155,10 @@ let
       );
 in
 {
-  inherit mkUvApplication mkUvPythonSet;
+  inherit
+    mkUvApplication
+    mkUvLockProject
+    mkUvPythonSet
+    pythonRequirement
+    ;
 }

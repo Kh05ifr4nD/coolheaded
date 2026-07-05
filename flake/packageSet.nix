@@ -33,7 +33,7 @@ let
     else
       package;
   packageLibArgs = name: {
-    packageLib = import ../lib/nix {
+    packageLib = import ../lib/nix/default.nix {
       inherit (pkgs)
         callPackage
         callPackages

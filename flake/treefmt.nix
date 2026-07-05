@@ -7,6 +7,7 @@ let
 in
 {
   programs = {
+    cue.enable = true;
     nixfmt = {
       enable = true;
       package = config.packages.nixfmt;

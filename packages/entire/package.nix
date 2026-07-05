@@ -45,6 +45,10 @@ packageLib.mkGitHubReleaseBinaryPackage {
   '';
 
   installCheck = {
+    expectedExecutables = [
+      "entire"
+      "git-remote-entire"
+    ];
     helpFlag = "help";
     helpContains = "Usage:";
     extra = ''
