@@ -63,7 +63,7 @@ let
     owner = "tobi";
     repo = "qmd";
     tag = "v${pin.version}";
-    inherit (pin) hash;
+    hash = pin.sourceHash;
   };
 
   bunDeps = bun2nix.fetchBunDeps {
@@ -175,6 +175,8 @@ stdenv.mkDerivation (finalAttrs: {
 
     installCheckHome="$PWD/installCheckHome"
     mkdir -p "$installCheckHome"
+
+    assertExecutableSet "$out/bin" qmd
 
     helpOutput="$(HOME="$installCheckHome" "$out/bin/qmd" --help 2>&1)"
     case "$helpOutput" in

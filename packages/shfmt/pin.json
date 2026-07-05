@@ -1,6 +1,6 @@
 {
   "version": "3.13.1",
-  "hashes": {
+  "platformPackageHashes": {
     "aarch64-darwin": "sha256-loBSa+SmbqH/6YjtCK9Y4UAP4eT0rvW9iLILubPaM/g=",
     "aarch64-linux": "sha256-MtkqyqXNirsp/EnawSPcQSRC1XE5Z4GdivLCnxs4V8c=",
     "x86_64-linux": "sha256-+wlsXRrGvqu9uqKHTQJbrbA+4Hkp8Mn/Z1Y86MdTmLE="

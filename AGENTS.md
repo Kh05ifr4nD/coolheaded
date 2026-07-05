@@ -1,96 +1,29 @@
 # 项目指示
 
-AGENTS.md 与 README.md 的全部表述均为强制规范，任何思考、计划与实现必须全方面全流程精确对齐，严禁弱化、添冗、替换、遗漏和扩展。
+`AGENTS.md` 与 `README.md` 的每一句表述均为强制规范，任何思考、计划与实现必须全方面全流程精确对齐！严禁擅自弱化、添冗、替换、遗漏和扩展。
 
-## 结构
+## 文件
 
-所有英文目录文件名称均使用 camelCase，上游既定/不便变更名称除外，如 `README.md`。
+所有英文目录或文件必须严格遵守既定设计和命名规则，观测到任何违规异常时，停止一切工作并上报或修复。
 
-任何目录文件结构改动必须始终遵守以下规划，若确实需要增删必须先修订本文件！
+### 设计
 
-```text
-.
-├── .agents/
-│   └── skills/
-│       └── follow-oxlint-imports/
-│           └── SKILL.md
-├── .github/
-│   ├── ci/
-│   │   ├── .gitignore
-│   │   ├── createUpdatePr.ts
-│   │   ├── discoverCiPackageBuilds.ts
-│   │   ├── discoverFlakeInputUpdates.ts
-│   │   ├── discoverPackageUpdates.ts
-│   │   ├── discoverUpdates.ts
-│   │   ├── lib.ts
-│   │   ├── prepareUpdateBranch.ts
-│   │   ├── runDenoDepsUpdate.ts
-│   │   ├── runFlakeInputUpdate.ts
-│   │   └── runPackageUpdate.ts
-│   ├── workflows/
-│   │   ├── ci.yml
-│   │   └── updateAll.yml
-│   ├── actionlint.yml
-│   └── .gitignore
-├── lib/
-│   ├── nix/
-│   │   ├── base.nix
-│   │   ├── default.nix
-│   │   ├── github.nix
-│   │   ├── npm.nix
-│   │   └── python.nix
-│   └── package.sh
-├── flake/
-│   ├── checks.nix
-│   ├── devShell.nix
-│   ├── gitHooks.nix
-│   ├── overlay.nix
-│   ├── packageSet.nix
-│   ├── packages.nix
-│   └── treefmt.nix
-├── packages/
-│   ├── .gitignore
-│   └── <package>/
-│       ├── patch/?
-│       │   └── <patch>.patch
-│       ├── generatedPackage.nix?
-│       ├── package.nix
-│       ├── pin.json?
-│       ├── update.ts?
-│       └── uv.lock?
-├── src/
-│   ├── latestVersion.ts
-│   ├── npmPackageUpdater.ts
-│   ├── npmRegistry.ts
-│   ├── npmRegistryErrors.ts
-│   ├── npmRegistryTypes.ts
-│   ├── npmUpdater.ts
-│   ├── packageConfig.ts
-│   ├── packageConfigTypes.ts
-│   ├── packageName.ts
-│   ├── pinJson.ts
-│   ├── releaseUpdater.ts
-│   ├── system.ts
-│   └── updateScript.ts
-├── tests/
-│   ├── denoDepsUpdate.test.ts
-│   ├── ciPackageBuilds.test.ts
-│   ├── latestVersion.test.ts
-│   ├── packageName.test.ts
-│   ├── packageStructure.test.ts
-│   ├── schema.test.ts
-│   ├── testingTypes.ts
-│   ├── updatePr.test.ts
-│   └── type.test.ts
-├── .gitignore
-├── .oxfmtrc.jsonc
-├── .oxlintrc.jsonc
-├── AGENTS.md
-├── deno.jsonc
-├── deno.lock
-├── flake.lock
-├── flake.nix
-├── README.md
-├── tsReset.d.ts
-└── tsconfig.json
-```
+目录文件结构始终以 git 为准且由 `fileSpec.cue` 唯一权威规范，务必保证 `git ls-files --cached` 在检查点与其同步。
+
+对于所有 git 索引的目录与文件，设计中要求的必须存在，可选的必须合规，未声明的一律非法。
+
+### 命名
+
+按以下顺序推导：
+
++ 若存在上游固定且无法修改或修改代价很大的名称，统一优先使用，如 `node_modules/`、`README.md`、`package-lock.json`。
++ 若名称中存在专有名词，先查找官方（如官网、仓库、包管理）表述以确认其单元数量和语义层数，而不是仅凭词根。
++ 仅唯一单元或语义扁平多单元命名使用 camelCase，如 `shfmt`、`openCode` 和 `ohMyPi`（尊重官方表述，判定为 1/2/3 个单元）。
++ 双层语义多单元命名使用外层 Train-Case 内层 camelCase，如 `llvmPackages-22`、`oh-my-openAgents` 和 `zAi-codingHelper`。
++ 若语义层数过多，必须拆分，创建目录以承担前缀分类层次语义。
+
+## 格式化
+
+永远使用 `nix fmt`。
+
+特别地，对于 ts 文件，禁用 `deno fmt`；唯一标准为 treefmt-nix 提供的 oxfmt。

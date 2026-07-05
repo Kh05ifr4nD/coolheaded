@@ -9,13 +9,13 @@ import {
   run,
   writeOutput,
 } from "./lib.ts";
-import { compareVersions } from "coolheaded/version.ts";
+import { compareVersions } from "coolheaded/core/version.ts";
 
 const PACKAGE_UPDATE_ALLOWED_FILES_EXPR = `
 let
   config = builtins.fromJSON (builtins.getEnv "PACKAGE_UPDATE_CONFIG");
   flake = builtins.getFlake (toString ./.);
-  package = flake.packages.\${config.system}.\${config.name};
+  package = builtins.getAttr config.name flake.packages.\${config.system};
 in
   package.passthru.updateAllowedFiles or []
 `;
@@ -98,7 +98,7 @@ async function runPackageUpdate(
     packageAllowedFile(name, extraAllowedFiles, file),
   );
 
-  const attr = `.#packages.${system}.${name}`;
+  const attr = `.#packages.${system}.${JSON.stringify(name)}`;
   const newVersion = await nixEvalRaw(`${attr}.version`);
   assertVersionAdvanced(name, currentVersion, newVersion);
 

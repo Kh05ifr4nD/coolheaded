@@ -21,9 +21,6 @@
     "useUnknownInCatchVariables": true,
     "verbatimModuleSyntax": true,
   },
-  "fmt": {
-    "exclude": ["AGENTS.md", "README.md"],
-  },
   "imports": {
     "@jsr/std__assert": "npm:@jsr/std__assert",
     "@jsr/std__cli": "npm:@jsr/std__cli",
@@ -32,12 +29,13 @@
     "@jsr/std__path": "npm:@jsr/std__path",
     "@jsr/std__testing": "npm:@jsr/std__testing",
     "@total-typescript/ts-reset": "npm:@total-typescript/ts-reset",
-    "coolheaded/": "./src/",
+    "coolheaded/": "./lib/ts/",
     "coolheadedCi/": "./.github/ci/",
     "effect": "npm:effect",
     "fast-check": "npm:fast-check",
   },
   "lint": {
+    "exclude": ["packages/*/script/*.mjs"],
     "rules": {
       "exclude": [
         "jsx-boolean-value",
@@ -88,7 +86,8 @@
   },
   "nodeModulesDir": "auto",
   "tasks": {
-    "check": "deno check .github/ci/**/*.ts packages/*/update.ts src/**/*.ts tests/**/*.ts",
+    "check": "deno check .github/ci/**/*.ts packages/*/update.ts lib/ts/**/*.ts tests/**/*.ts && deno task check:fileSpec",
+    "check:fileSpec": "deno run --allow-read --allow-run=cue,git --allow-write lib/ts/repo/fileSpec.ts",
     "install": "deno install",
     "lint": "deno lint && deno task lint:oxlint",
     "lint:oxlint": "oxlint",

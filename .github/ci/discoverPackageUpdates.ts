@@ -15,8 +15,11 @@ let
   isUpdatable = package:
     package ? version && ((package.passthru or { }) ? updateScript);
   getVersion = name:
-    if packages ? \${name} && isUpdatable packages.\${name}
-    then { inherit name; value = packages.\${name}.version; }
+    let
+      package = builtins.getAttr name packages;
+    in
+    if builtins.hasAttr name packages && isUpdatable package
+    then { inherit name; value = package.version; }
     else null;
 in
   if config.filter == null then

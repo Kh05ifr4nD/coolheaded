@@ -24,6 +24,22 @@
     "typeCheck": true,
   },
   "plugins": ["eslint", "import", "node", "oxc", "promise", "typescript", "unicorn"],
+  "overrides": [
+    {
+      "files": ["packages/*/script/*.mjs"],
+      "env": {
+        "node": true,
+      },
+      "rules": {
+        "import/no-nodejs-modules": "off",
+        "node/no-process-env": "off",
+        "node/no-sync": "off",
+        "typescript/no-unsafe-assignment": "off",
+        "typescript/no-unsafe-member-access": "off",
+        "typescript/prefer-readonly-parameter-types": "off",
+      },
+    },
+  ],
   "rules": {
     "eslint/complexity": [
       "error",

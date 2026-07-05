@@ -10,6 +10,9 @@
 let
   inherit (stdenv.hostPlatform) system;
 
+  systemConfig = builtins.fromJSON (builtins.readFile ../ts/system/targets.json);
+  systemTargetsConfig = systemConfig.targets;
+
   canExecute = stdenv.buildPlatform.canExecute stdenv.hostPlatform;
   isLinux = stdenv.hostPlatform.isLinux;
   packageShell = ../package.sh;
@@ -19,11 +22,16 @@ let
     else
       packageDirectory + "/pin.json";
 
-  supportedSystems = [
-    "aarch64-darwin"
-    "aarch64-linux"
-    "x86_64-linux"
-  ];
+  supportedSystems = map (target: target.system) systemTargetsConfig;
+
+  targetAttrs =
+    field:
+    lib.listToAttrs (
+      map (target: {
+        name = target.system;
+        value = target.${field};
+      }) systemTargetsConfig
+    );
 
   mkTargets =
     targets:
@@ -36,19 +44,11 @@ let
     else
       lib.listToAttrs (lib.zipListsWith (name: value: { inherit name value; }) supportedSystems targets);
 
-  systemTargets = mkTargets supportedSystems;
+  systemTargets = targetAttrs "system";
 
-  rustTargetTriples = mkTargets [
-    "aarch64-apple-darwin"
-    "aarch64-unknown-linux-gnu"
-    "x86_64-unknown-linux-gnu"
-  ];
+  rustTargetTriples = targetAttrs "rustTargetTriple";
 
-  npmReleaseTargets = mkTargets [
-    "darwin-arm64"
-    "linux-arm64"
-    "linux-x64"
-  ];
+  npmReleaseTargets = targetAttrs "npmReleaseTarget";
 
   releaseTarget =
     pname: targets: targets.${system} or (throw "Unsupported system for ${pname}: ${system}");
@@ -62,14 +62,22 @@ let
   mkInstallCheckPhase =
     {
       executable,
+      expectedExecutables ? [ ],
       extra ? "",
       helpContains ? null,
       helpFlag ? "--help",
     }:
+    let
+      expectedExecutableArguments = lib.escapeShellArgs expectedExecutables;
+    in
     ''
       runHook preInstallCheck
 
       . ${packageShell}
+
+      ${lib.optionalString (expectedExecutables != [ ]) ''
+        assertExecutableSet "$out/bin" ${expectedExecutableArguments}
+      ''}
 
       ${lib.optionalString (helpContains != null) ''
         helpOutput="$("${executable}" ${helpFlag} 2>&1)"
@@ -95,6 +103,7 @@ let
       doInstallCheck ? canExecute,
       dontUnpack ? false,
       executablePath ? if dontUnpack then "$src" else mainProgram,
+      expectedExecutables ? [ mainProgram ],
       installCheck ? { },
       installPhase ? ''
         runHook preInstall
@@ -150,7 +159,11 @@ let
           wrapBuddyExtraNeeded
           ;
         installCheckPhase = mkInstallCheckPhase (
-          { executable = "$out/bin/${mainProgram}"; } // installCheck
+          {
+            executable = "$out/bin/${mainProgram}";
+            inherit expectedExecutables;
+          }
+          // installCheck
         );
 
         meta = {
@@ -206,7 +219,9 @@ let
               version
               ;
           };
-          hash = pin.hashes.${system} or (throw "Missing ${pname} ${version} hash for ${system}");
+          hash =
+            pin.platformPackageHashes.${system}
+              or (throw "Missing ${pname} ${version} package hash for ${system}");
         };
 
         meta = {

@@ -5,29 +5,30 @@ import {
   scriptPath,
   updateNewerPinVersion,
   writeTextFile,
-} from "coolheaded/updateScript.ts";
+} from "coolheaded/core/updateScript.ts";
+import {
+  fetchGitHubSourceHash,
+  prepareGitHubTagTarballWorkspace,
+} from "coolheaded/source/github.ts";
 import { Effect } from "effect";
-import { fetchFromGitHubHash } from "coolheaded/sourceHash.ts";
-import { latestGitHubVersion } from "coolheaded/latestVersion.ts";
-import { withTemporaryDirectory } from "coolheaded/temporaryDirectory.ts";
+import { latestGitHubVersion } from "coolheaded/source/version.ts";
+import { withTemporaryDirectory } from "coolheaded/core/temporaryDirectory.ts";
+import { writePinJson } from "coolheaded/pin/json.ts";
 
 const GENERATED_PACKAGE_FILE_PATH = scriptPath("generatedPackage.nix", import.meta.url);
 const PIN_FILE_PATH = scriptPath("pin.json", import.meta.url);
 const REPOSITORY_ROOT_PATH = scriptPath("../../", import.meta.url);
+const GITHUB_SOURCE = {
+  owner: "tobi",
+  repo: "qmd",
+  tag: (version: string): string => `v${version}`,
+};
+
 function latestVersion(): Effect.Effect<string, Error> {
   return latestGitHubVersion({
-    owner: "tobi",
-    repo: "qmd",
+    owner: GITHUB_SOURCE.owner,
+    repo: GITHUB_SOURCE.repo,
   });
-}
-
-interface QmdPin {
-  readonly hash: string;
-  readonly version: string;
-}
-
-function sourceUrl(version: string): string {
-  return `https://github.com/tobi/qmd/archive/refs/tags/v${version}.tar.gz`;
 }
 
 function bun2nixOutPath(): Effect.Effect<string, Error> {
@@ -41,29 +42,13 @@ function bun2nixOutPath(): Effect.Effect<string, Error> {
   ]);
 }
 
-function downloadSourceArchive(
-  workspacePath: string,
-  version: string,
-): Effect.Effect<string, Error> {
-  return commandOutput("curl", ["-fsSL", sourceUrl(version), "-o", `${workspacePath}/source.tgz`]);
-}
-
-function extractSourceArchive(workspacePath: string): Effect.Effect<string, Error> {
-  return commandOutput(
-    "tar",
-    ["-xzf", `${workspacePath}/source.tgz`, "--strip-components=1"],
-    workspacePath,
-  );
-}
-
 function generatedBunNixFromWorkspace(
   bun2nixPath: string,
   workspacePath: string,
   version: string,
 ): Effect.Effect<string, Error> {
   return Effect.gen(function* generatedBunNixFromWorkspaceSteps(): Effect.fn.Return<string, Error> {
-    yield* downloadSourceArchive(workspacePath, version);
-    yield* extractSourceArchive(workspacePath);
+    yield* prepareGitHubTagTarballWorkspace(GITHUB_SOURCE, workspacePath, version);
     yield* commandOutput(
       bun2nixPath,
       ["-o", `${workspacePath}/generatedPackage.nix`],
@@ -85,29 +70,17 @@ function generatedBunNix(version: string): Effect.Effect<string, Error> {
   });
 }
 
-function serializePin(pin: QmdPin): string {
-  return `${JSON.stringify(pin, ["version", "hash"], 2)}\n`;
-}
-
 function writeUpdatedFiles(version: string): Effect.Effect<void, Error> {
   return Effect.gen(function* writeUpdatedFilesSteps(): Effect.fn.Return<void, Error> {
     const { bunNix, hash } = yield* Effect.all({
       bunNix: generatedBunNix(version),
-      hash: fetchFromGitHubHash(
-        {
-          owner: "tobi",
-          repo: "qmd",
-          tag: `v${version}`,
-        },
-        REPOSITORY_ROOT_PATH,
-      ),
-    });
-    const pin = serializePin({
-      hash: hash.trim(),
-      version,
+      hash: fetchGitHubSourceHash(GITHUB_SOURCE, version, REPOSITORY_ROOT_PATH),
     });
 
-    yield* writeTextFile(PIN_FILE_PATH, pin);
+    yield* writePinJson(PIN_FILE_PATH, {
+      sourceHash: hash.trim(),
+      version,
+    });
     yield* writeTextFile(GENERATED_PACKAGE_FILE_PATH, `${bunNix.trim()}\n`);
     yield* formatNixFile(GENERATED_PACKAGE_FILE_PATH);
   });
