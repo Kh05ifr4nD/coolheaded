@@ -11,30 +11,7 @@ import {
   npmScopedTarballUrl,
 } from "coolheaded/npm/registry.ts";
 import { Effect } from "effect";
-
-const OK_STATUS = 200;
-
-interface RequestLike {
-  readonly url: string;
-}
-
-interface UrlLike {
-  readonly href: string;
-}
-
-type FetchInput = RequestLike | string | UrlLike;
-
-function fetchInputUrl(input: FetchInput): string {
-  if (typeof input === "string") {
-    return input;
-  }
-
-  if ("href" in input) {
-    return input.href;
-  }
-
-  return input.url;
-}
+import { withMockedJsonFetch } from "./fetchMock.ts";
 
 describe("npm registry URL helpers", (): void => {
   it("builds scoped package tarball URLs", (): void => {
@@ -152,15 +129,12 @@ describe("npmHashConfigForSystems", (): void => {
 
 describe("npm package hash update programs", (): void => {
   it("writes same-hash npm package pins through the shared update program", async (): Promise<void> => {
-    const originalFetch = globalThis.fetch;
     const pinFilePath = await Deno.makeTempFile();
 
-    globalThis.fetch = ((input: FetchInput) => {
-      assertEquals(fetchInputUrl(input), "https://registry.npmjs.org/example");
-
-      return Promise.resolve(
-        globalThis.Response.json(
-          {
+    try {
+      await withMockedJsonFetch(
+        {
+          body: {
             versions: {
               "1.0.0": {
                 dist: {
@@ -169,18 +143,17 @@ describe("npm package hash update programs", (): void => {
               },
             },
           },
-          { status: OK_STATUS },
-        ),
-      );
-    }) as typeof globalThis.fetch;
-
-    try {
-      await Effect.runPromise(
-        npmPackageHashUpdateProgram({
-          args: ["1.0.0"],
-          packageName: "example",
-          pinFilePath,
-        }),
+          expectedUrl: "https://registry.npmjs.org/example",
+        },
+        async (): Promise<void> => {
+          await Effect.runPromise(
+            npmPackageHashUpdateProgram({
+              args: ["1.0.0"],
+              packageName: "example",
+              pinFilePath,
+            }),
+          );
+        },
       );
 
       assertEquals(JSON.parse(await Deno.readTextFile(pinFilePath)), {
@@ -192,21 +165,17 @@ describe("npm package hash update programs", (): void => {
         version: "1.0.0",
       });
     } finally {
-      globalThis.fetch = originalFetch;
       await Deno.remove(pinFilePath);
     }
   });
 
   it("writes platform npm package pins through the shared update program", async (): Promise<void> => {
-    const originalFetch = globalThis.fetch;
     const pinFilePath = await Deno.makeTempFile();
 
-    globalThis.fetch = ((input: FetchInput) => {
-      assertEquals(fetchInputUrl(input), "https://registry.npmjs.org/example");
-
-      return Promise.resolve(
-        globalThis.Response.json(
-          {
+    try {
+      await withMockedJsonFetch(
+        {
+          body: {
             versions: {
               "1.0.0-darwin-arm64": {
                 dist: {
@@ -225,23 +194,22 @@ describe("npm package hash update programs", (): void => {
               },
             },
           },
-          { status: OK_STATUS },
-        ),
-      );
-    }) as typeof globalThis.fetch;
-
-    try {
-      await Effect.runPromise(
-        npmPlatformPackageHashUpdateProgram({
-          args: ["1.0.0"],
-          packageName: "example",
-          pinFilePath,
-          suffixes: {
-            "aarch64-darwin": "darwin-arm64",
-            "aarch64-linux": "linux-arm64",
-            "x86_64-linux": "linux-x64",
-          },
-        }),
+          expectedUrl: "https://registry.npmjs.org/example",
+        },
+        async (): Promise<void> => {
+          await Effect.runPromise(
+            npmPlatformPackageHashUpdateProgram({
+              args: ["1.0.0"],
+              packageName: "example",
+              pinFilePath,
+              suffixes: {
+                "aarch64-darwin": "darwin-arm64",
+                "aarch64-linux": "linux-arm64",
+                "x86_64-linux": "linux-x64",
+              },
+            }),
+          );
+        },
       );
 
       assertEquals(JSON.parse(await Deno.readTextFile(pinFilePath)), {
@@ -253,7 +221,6 @@ describe("npm package hash update programs", (): void => {
         version: "1.0.0",
       });
     } finally {
-      globalThis.fetch = originalFetch;
       await Deno.remove(pinFilePath);
     }
   });

@@ -137,6 +137,7 @@ package fileSpec
 	tests!: {
 		"ciPackageBuilds.ts"!:   #RegularFile
 		"denoDepsUpdate.ts"!:    #RegularFile
+		"fetchMock.ts"!:         #RegularFile
 		"latestVersion.ts"!:     #RegularFile
 		"npmPackageHash.ts"!:    #RegularFile
 		"packageHashConfig.ts"!: #RegularFile
