@@ -7,30 +7,7 @@ import {
 } from "coolheaded/source/version.ts";
 import { Effect } from "effect";
 import { assertEquals } from "@jsr/std__assert";
-
-const OK_STATUS = 200;
-
-interface RequestLike {
-  readonly url: string;
-}
-
-interface UrlLike {
-  readonly href: string;
-}
-
-type FetchInput = RequestLike | string | UrlLike;
-
-function fetchInputUrl(input: FetchInput): string {
-  if (typeof input === "string") {
-    return input;
-  }
-
-  if ("href" in input) {
-    return input.href;
-  }
-
-  return input.url;
-}
+import { withMockedJsonFetch } from "./fetchMock.ts";
 
 describe("latest version exports", (): void => {
   it("exposes latest query functions", (): void => {
@@ -47,35 +24,28 @@ describe("latest version exports", (): void => {
   });
 
   it("can read GitHub versions from releases", async (): Promise<void> => {
-    const originalFetch = globalThis.fetch;
-    globalThis.fetch = ((input: FetchInput) => {
-      assertEquals(
-        fetchInputUrl(input),
-        "https://api.github.com/repos/oxc-project/oxc/releases?per_page=100",
-      );
-
-      return Promise.resolve(
-        globalThis.Response.json(
-          [{ tag_name: "apps_v1.68.0" }, { tag_name: "apps_v1.69.0" }, { tag_name: "unrelated" }],
-          { status: OK_STATUS },
-        ),
-      );
-    }) as typeof globalThis.fetch;
-
-    try {
-      assertEquals(
-        await Effect.runPromise(
-          latestGitHubVersion({
-            owner: "oxc-project",
-            repo: "oxc",
-            source: "releases",
-            versionPattern: /^apps_v(?<version>\d+\.\d+\.\d+)$/u,
-          }),
-        ),
-        "1.69.0",
-      );
-    } finally {
-      globalThis.fetch = originalFetch;
-    }
+    await withMockedJsonFetch(
+      {
+        body: [
+          { tag_name: "apps_v1.68.0" },
+          { tag_name: "apps_v1.69.0" },
+          { tag_name: "unrelated" },
+        ],
+        expectedUrl: "https://api.github.com/repos/oxc-project/oxc/releases?per_page=100",
+      },
+      async (): Promise<void> => {
+        assertEquals(
+          await Effect.runPromise(
+            latestGitHubVersion({
+              owner: "oxc-project",
+              repo: "oxc",
+              source: "releases",
+              versionPattern: /^apps_v(?<version>\d+\.\d+\.\d+)$/u,
+            }),
+          ),
+          "1.69.0",
+        );
+      },
+    );
   });
 });
