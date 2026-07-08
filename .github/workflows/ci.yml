@@ -45,7 +45,7 @@ jobs:
           persist-credentials: false
       - uses: cachix/install-nix-action@v31
       - run: nix develop -c pre-commit run --all-files
-      - name: Realize bun2nix cache entry creator
+      - name: Prepare bun2nix evaluation input
         run: |
           system="$(nix eval --impure --raw --expr builtins.currentSystem)"
           nix build --no-link --inputs-from . "bun2nix#packages.$system.cacheEntryCreator" --print-build-logs
