@@ -40,10 +40,10 @@ jobs:
       hasUpdates: ${{ steps.discover.outputs.hasUpdates }}
       matrix: ${{ steps.discover.outputs.matrix }}
     steps:
-      - uses: actions/checkout@v6
+      - uses: actions/checkout@df4cb1c069e1874edd31b4311f1884172cec0e10 # v6
         with:
           persist-credentials: false
-      - uses: cachix/install-nix-action@v31
+      - uses: cachix/install-nix-action@b97f05dcb019ddea06450a50ef6203d2fdc19fee # v31
       - id: discover
         env:
           INPUTS: ${{ inputs.inputs }}
@@ -65,16 +65,16 @@ jobs:
       pull-requests: write
     steps:
       - id: app-token
-        uses: actions/create-github-app-token@v3
+        uses: actions/create-github-app-token@bcd2ba49218906704ab6c1aa796996da409d3eb1 # v3
         with:
           client-id: ${{ vars.APP_CLIENT_ID }}
           private-key: ${{ secrets.APP_PRIVATE_KEY }}
-      - uses: actions/checkout@v6
+      - uses: actions/checkout@df4cb1c069e1874edd31b4311f1884172cec0e10 # v6
         with:
           fetch-depth: 0
           persist-credentials: true
           token: ${{ steps.app-token.outputs.token }}
-      - uses: cachix/install-nix-action@v31
+      - uses: cachix/install-nix-action@b97f05dcb019ddea06450a50ef6203d2fdc19fee # v31
       - run: |
           git config user.name "kh05ifr4nd-coolheaded[bot]"
           git config user.email "292306314+kh05ifr4nd-coolheaded[bot]@users.noreply.github.com"
