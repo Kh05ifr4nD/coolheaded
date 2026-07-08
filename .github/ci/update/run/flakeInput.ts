@@ -1,11 +1,11 @@
 #!/usr/bin/env -S deno run --allow-env --allow-read --allow-run --allow-write
 
 import {
-  DENO_DEPS_HASH_FILE_PATH,
-  buildDenoDepsCheck,
-  isDenoDepsHashMismatch,
-  updateDenoDepsHash,
-} from "coolheaded/repo/denoDeps.ts";
+  DENO_SNAPSHOT_HASH_FILE_PATH,
+  buildDenoSnapshotCheck,
+  isDenoSnapshotHashMismatch,
+  updateDenoSnapshotHash,
+} from "coolheaded/repo/denoSnapshot.ts";
 import {
   assertOnlyChangedFiles,
   changedFiles,
@@ -15,7 +15,7 @@ import {
   readJson,
   run,
   writeOutput,
-} from "./lib.ts";
+} from "coolheadedCi/process.ts";
 
 async function lockedRevision(name: string): Promise<string> {
   const lock = await readJson("flake.lock");
@@ -33,22 +33,22 @@ async function lockedRevision(name: string): Promise<string> {
   return typeof rev === "string" ? rev.slice(0, 8) : "unknown";
 }
 
-async function repairDenoDepsHashIfNeeded(system: string): Promise<void> {
-  const result = await buildDenoDepsCheck(system);
+async function repairDenoSnapshotHashIfNeeded(system: string): Promise<void> {
+  const result = await buildDenoSnapshotCheck(system);
 
   if (result.code === 0) {
     return;
   }
 
   const output = `${result.stdout}\n${result.stderr}`;
-  if (!isDenoDepsHashMismatch(output)) {
+  if (!isDenoSnapshotHashMismatch(output)) {
     throw new Error(output);
   }
 
-  await updateDenoDepsHash(system);
+  await updateDenoSnapshotHash(system);
 }
 
-async function runFlakeInputUpdate(name: string): Promise<void> {
+async function runFlakeInput(name: string): Promise<void> {
   await run(["nix", "flake", "update", name], { capture: false });
 
   if (!(await gitHasChanges(["flake.lock"]))) {
@@ -56,11 +56,11 @@ async function runFlakeInputUpdate(name: string): Promise<void> {
     return;
   }
 
-  await repairDenoDepsHashIfNeeded(await currentSystem());
+  await repairDenoSnapshotHashIfNeeded(await currentSystem());
 
   assertOnlyChangedFiles(
     await changedFiles(),
-    (file: string): boolean => file === "flake.lock" || file === DENO_DEPS_HASH_FILE_PATH,
+    (file: string): boolean => file === "flake.lock" || file === DENO_SNAPSHOT_HASH_FILE_PATH,
   );
   await writeOutput("updated", "true");
   await writeOutput("newVersion", await lockedRevision(name));
@@ -70,14 +70,14 @@ async function runFlakeInputUpdate(name: string): Promise<void> {
 async function main(args: readonly string[]): Promise<void> {
   const [name] = args;
   if (name === undefined || name.length === 0) {
-    throw new Error("Usage: runFlakeInputUpdate.ts <name>");
+    throw new Error("Usage: flakeInput.ts <name>");
   }
 
-  await runFlakeInputUpdate(name);
+  await runFlakeInput(name);
 }
 
 if (import.meta.main) {
   void main(Deno.args);
 }
 
-export { runFlakeInputUpdate };
+export { runFlakeInput };

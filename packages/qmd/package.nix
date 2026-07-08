@@ -153,6 +153,14 @@ stdenv.mkDerivation (finalAttrs: {
     keepOnlyMatchingChildren "$packageRoot/node_modules/@node-llama-cpp" "" ${lib.escapeShellArgs nodeLlamaCppPrebuilds}
     find "$packageRoot/node_modules" -path '*/prebuilds/*' -mindepth 3 -maxdepth 3 -type d ! -name '${prebuild.treeSitter}' \
       -exec rm -rf {} +
+    rm -rf "$packageRoot/node_modules/better-sqlite3/deps"
+    find "$packageRoot/node_modules" -type f \( \
+      -name '*.map' \
+      -o -path '*/tree-sitter-*/src/parser.c' \
+      -o -path '*/tree-sitter-*/*/src/parser.c' \
+      -o -path '*/tree-sitter-*/src/scanner.c' \
+      -o -path '*/tree-sitter-*/*/src/scanner.c' \
+    \) -delete
     makeWrapper ${bun}/bin/bun "$out/bin/qmd" \
       --add-flags "$packageRoot/src/cli/qmd.ts" \
       --set DYLD_LIBRARY_PATH "${sqlite.out}/lib" \

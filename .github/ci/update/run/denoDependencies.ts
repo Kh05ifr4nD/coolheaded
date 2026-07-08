@@ -1,6 +1,9 @@
 #!/usr/bin/env -S deno run --allow-env --allow-read --allow-run --allow-write
 
-import { DENO_DEPS_HASH_FILE_PATH, updateDenoDepsHash } from "coolheaded/repo/denoDeps.ts";
+import {
+  DENO_SNAPSHOT_HASH_FILE_PATH,
+  updateDenoSnapshotHash,
+} from "coolheaded/repo/denoSnapshot.ts";
 import {
   assertOnlyChangedFiles,
   changedFiles,
@@ -10,7 +13,7 @@ import {
   readJson,
   run,
   writeOutput,
-} from "./lib.ts";
+} from "coolheadedCi/process.ts";
 
 function directSpecifierVersions(lock: unknown): Readonly<Record<string, string>> {
   if (!isRecord(lock) || !isRecord(lock["specifiers"])) {
@@ -42,33 +45,33 @@ function versionChanges(
   return changes.join("\n");
 }
 
-async function runDenoDepsUpdate(): Promise<void> {
+async function runDenoDependencyUpdate(): Promise<void> {
   const before = directSpecifierVersions(await readJson("deno.lock"));
   await run(["deno", "install", "--frozen=false"], { capture: false });
   const lockChanged = await gitHasChanges(["deno.lock"]);
-  await updateDenoDepsHash(await currentSystem());
+  await updateDenoSnapshotHash(await currentSystem());
 
-  if (!lockChanged && !(await gitHasChanges([DENO_DEPS_HASH_FILE_PATH]))) {
+  if (!lockChanged && !(await gitHasChanges([DENO_SNAPSHOT_HASH_FILE_PATH]))) {
     await writeOutput("updated", "false");
     return;
   }
 
   assertOnlyChangedFiles(
     await changedFiles(),
-    (file: string): boolean => file === "deno.lock" || file === DENO_DEPS_HASH_FILE_PATH,
+    (file: string): boolean => file === "deno.lock" || file === DENO_SNAPSHOT_HASH_FILE_PATH,
   );
   const after = directSpecifierVersions(await readJson("deno.lock"));
   await writeOutput("updated", "true");
-  await writeOutput("newVersion", "deno dependencies");
+  await writeOutput("newVersion", "Deno dependencies");
   await writeOutput("changelog", versionChanges(before, after));
 }
 
 async function main(): Promise<void> {
-  await runDenoDepsUpdate();
+  await runDenoDependencyUpdate();
 }
 
 if (import.meta.main) {
   void main();
 }
 
-export { directSpecifierVersions, runDenoDepsUpdate, versionChanges };
+export { directSpecifierVersions, runDenoDependencyUpdate, versionChanges };

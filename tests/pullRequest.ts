@@ -2,11 +2,11 @@ import {
   classicProtectionHasRequiredChecks,
   parseConfig,
   rulesetHasRequiredChecks,
-} from "coolheadedCi/createUpdatePr.ts";
+} from "coolheadedCi/update/pullRequest.ts";
 import { describe, it } from "@jsr/std__testing/bdd";
 import { assertEquals } from "@jsr/std__assert";
 
-describe("update PR config", (): void => {
+describe("update pull request config", (): void => {
   it("defaults to automated dependency labels and auto-merge", (): void => {
     assertEquals(
       parseConfig([
@@ -30,13 +30,13 @@ describe("update PR config", (): void => {
     assertEquals(
       parseConfig([
         "--branch",
-        "update/denoDeps",
+        "update/denoDependencies",
         "--title",
-        "deno.lock: update dependencies",
+        "deno.lock: update Deno dependencies",
         "--body",
         "effect: 1 -> 2",
         "--labels",
-        "dependencies,automated,deno-deps",
+        "dependencies,automated,denoDependencies",
         "--auto-merge",
         "false",
         "--dry-run",
@@ -44,16 +44,16 @@ describe("update PR config", (): void => {
       {
         autoMerge: false,
         body: "effect: 1 -> 2",
-        branch: "update/denoDeps",
+        branch: "update/denoDependencies",
         dryRun: true,
-        labels: ["dependencies", "automated", "deno-deps"],
-        title: "deno.lock: update dependencies",
+        labels: ["dependencies", "automated", "denoDependencies"],
+        title: "deno.lock: update Deno dependencies",
       },
     );
   });
 });
 
-describe("update PR auto-merge gates", (): void => {
+describe("update pull request auto-merge gates", (): void => {
   it("recognizes classic required status checks", (): void => {
     assertEquals(classicProtectionHasRequiredChecks({ contexts: ["CI / check"] }), true);
     assertEquals(classicProtectionHasRequiredChecks({ checks: [{ context: "CI / check" }] }), true);

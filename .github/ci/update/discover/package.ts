@@ -1,6 +1,6 @@
 #!/usr/bin/env -S deno run --allow-env --allow-run --allow-write
 
-import { currentSystem, isRecord, run, writeOutput } from "./lib.ts";
+import { currentSystem, isRecord, run, writeOutput } from "coolheadedCi/process.ts";
 
 interface MatrixItem {
   readonly currentVersion: string;
@@ -36,7 +36,7 @@ function filteredNames(): readonly string[] | null {
   return packages === undefined || packages.length === 0 ? null : packages.split(/\s+/u);
 }
 
-async function discoverPackageUpdates(): Promise<readonly MatrixItem[]> {
+async function discoverPackage(): Promise<readonly MatrixItem[]> {
   const config = JSON.stringify({
     filter: filteredNames(),
     system: await currentSystem(),
@@ -61,7 +61,7 @@ async function discoverPackageUpdates(): Promise<readonly MatrixItem[]> {
 }
 
 async function main(): Promise<void> {
-  const include = await discoverPackageUpdates();
+  const include = await discoverPackage();
   await writeOutput("matrix", JSON.stringify({ include }));
   await writeOutput("hasUpdates", String(include.length > 0));
 }
@@ -70,4 +70,4 @@ if (import.meta.main) {
   void main();
 }
 
-export { discoverPackageUpdates };
+export { discoverPackage };

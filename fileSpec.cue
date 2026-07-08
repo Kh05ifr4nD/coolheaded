@@ -33,21 +33,28 @@ package fileSpec
 		".gitignore"!:     #RegularFile
 		"actionlint.yml"!: #RegularFile
 		ci!: {
-			".gitignore"!:                   #RegularFile
-			"createUpdatePr.ts"!:            #RegularFile
-			"discoverCiPackageBuilds.ts"!:   #RegularFile
-			"discoverFlakeInputUpdates.ts"!: #RegularFile
-			"discoverPackageUpdates.ts"!:    #RegularFile
-			"discoverUpdates.ts"!:           #RegularFile
-			"lib.ts"!:                       #RegularFile
-			"prepareUpdateBranch.ts"!:       #RegularFile
-			"runDenoDepsUpdate.ts"!:         #RegularFile
-			"runFlakeInputUpdate.ts"!:       #RegularFile
-			"runPackageUpdate.ts"!:          #RegularFile
+			".gitignore"!: #RegularFile
+			"impact.ts"!:  #RegularFile
+			"model.ts"!:   #RegularFile
+			"process.ts"!: #RegularFile
+			update!: {
+				"branch.ts"!:      #RegularFile
+				"discover.ts"!:    #RegularFile
+				"pullRequest.ts"!: #RegularFile
+				discover!: {
+					"flakeInput.ts"!: #RegularFile
+					"package.ts"!:    #RegularFile
+				}
+				run!: {
+					"denoDependencies.ts"!: #RegularFile
+					"flakeInput.ts"!:       #RegularFile
+					"package.ts"!:          #RegularFile
+				}
+			}
 		}
 		workflows!: {
-			"ci.yml"!:        #RegularFile
-			"updateAll.yml"!: #RegularFile
+			"ci.yml"!:     #RegularFile
+			"update.yml"!: #RegularFile
 		}
 	}
 
@@ -105,8 +112,8 @@ package fileSpec
 				"packageHashConfig.ts"!: #RegularFile
 			}
 			repo!: {
-				"denoDeps.ts"!: #RegularFile
-				"fileSpec.ts"!: #RegularFile
+				"denoSnapshot.ts"!: #RegularFile
+				"fileSpec.ts"!:     #RegularFile
 				fileSpec!: {
 					"check.ts"!: #RegularFile
 					"git.ts"!:   #RegularFile
@@ -135,8 +142,9 @@ package fileSpec
 	}
 
 	tests!: {
-		"ciPackageBuilds.ts"!:   #RegularFile
-		"denoDepsUpdate.ts"!:    #RegularFile
+		"changeImpact.ts"!:      #RegularFile
+		"denoDependencies.ts"!:  #RegularFile
+		"denoSnapshot.ts"!:      #RegularFile
 		"fetchMock.ts"!:         #RegularFile
 		"latestVersion.ts"!:     #RegularFile
 		"npmPackageHash.ts"!:    #RegularFile
@@ -144,8 +152,8 @@ package fileSpec
 		"packageHashTypes.ts"!:  #RegularFile
 		"packageStructure.ts"!:  #RegularFile
 		"releaseHash.ts"!:       #RegularFile
+		"pullRequest.ts"!:       #RegularFile
 		"systems.ts"!:           #RegularFile
 		"testingTypes.ts"!:      #RegularFile
-		"updatePr.ts"!:          #RegularFile
 	}
 }

@@ -1,10 +1,10 @@
 #!/usr/bin/env -S deno run --allow-env --allow-run
 
-import { isRecord, run, writeStdout } from "./lib.ts";
+import { isRecord, run, writeStdout } from "coolheadedCi/process.ts";
 
 const BASE_BRANCH = "main";
 
-interface UpdatePrConfig {
+interface PullRequestConfig {
   readonly autoMerge: boolean;
   readonly body: string;
   readonly branch: string;
@@ -26,12 +26,12 @@ function labelsFrom(value: string | undefined): readonly string[] {
     .filter((label: string): boolean => label.length > 0);
 }
 
-function parseConfig(args: readonly string[]): UpdatePrConfig {
+function parseConfig(args: readonly string[]): PullRequestConfig {
   const branch = valueAfter(args, "--branch");
   const title = valueAfter(args, "--title");
   const body = valueAfter(args, "--body") ?? "";
   if (branch === undefined || title === undefined) {
-    throw new Error("Usage: createUpdatePr.ts --branch <branch> --title <title> [--body <body>]");
+    throw new Error("Usage: pullRequest.ts --branch <branch> --title <title> [--body <body>]");
   }
 
   return {
@@ -62,13 +62,13 @@ function labelColor(label: string): string {
     case "automated": {
       return "ededed";
     }
-    case "deno-deps": {
+    case "denoDependencies": {
       return "3178c6";
     }
     case "dependencies": {
       return "0366d6";
     }
-    case "flake-input": {
+    case "flakeInput": {
       return "5319e7";
     }
     case "package": {
@@ -224,7 +224,7 @@ async function ensureLabels(labels: readonly string[]): Promise<void> {
   );
 }
 
-async function createOrUpdatePr(config: UpdatePrConfig): Promise<void> {
+async function createOrUpdatePullRequest(config: PullRequestConfig): Promise<void> {
   if (config.dryRun) {
     await writeStdout(JSON.stringify(config, null, 2));
     return;
@@ -274,7 +274,7 @@ async function createOrUpdatePr(config: UpdatePrConfig): Promise<void> {
 }
 
 async function main(args: readonly string[]): Promise<void> {
-  await createOrUpdatePr(parseConfig(args));
+  await createOrUpdatePullRequest(parseConfig(args));
 }
 
 if (import.meta.main) {
@@ -283,8 +283,8 @@ if (import.meta.main) {
 
 export {
   classicProtectionHasRequiredChecks,
-  createOrUpdatePr,
+  createOrUpdatePullRequest,
   parseConfig,
   rulesetHasRequiredChecks,
 };
-export type { UpdatePrConfig };
+export type { PullRequestConfig };

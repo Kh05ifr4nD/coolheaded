@@ -1,6 +1,6 @@
 #!/usr/bin/env -S deno run --allow-env --allow-read --allow-write
 
-import { isRecord, readJson, writeOutput } from "./lib.ts";
+import { isRecord, readJson, writeOutput } from "coolheadedCi/process.ts";
 
 interface MatrixItem {
   readonly currentVersion: string;
@@ -46,7 +46,7 @@ function filteredNames(): readonly string[] | null {
   return inputs === undefined || inputs.length === 0 ? null : inputs.split(/\s+/u);
 }
 
-async function discoverFlakeInputUpdates(): Promise<readonly MatrixItem[]> {
+async function discoverFlakeInput(): Promise<readonly MatrixItem[]> {
   const nodes = lockNodes(await readJson("flake.lock"));
   const inputs = rootInputs(nodes);
   const names = filteredNames() ?? Object.keys(inputs).toSorted();
@@ -68,7 +68,7 @@ async function discoverFlakeInputUpdates(): Promise<readonly MatrixItem[]> {
 }
 
 async function main(): Promise<void> {
-  const include = await discoverFlakeInputUpdates();
+  const include = await discoverFlakeInput();
   await writeOutput("matrix", JSON.stringify({ include }));
   await writeOutput("hasUpdates", String(include.length > 0));
 }
@@ -77,4 +77,4 @@ if (import.meta.main) {
   void main();
 }
 
-export { discoverFlakeInputUpdates };
+export { discoverFlakeInput };

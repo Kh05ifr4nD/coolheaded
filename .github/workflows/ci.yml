@@ -9,21 +9,21 @@ on:
   pull_request:
   workflow_dispatch:
     inputs:
-      packages:
-        description: "Space-separated check attrs to build across supported runners"
+      checks:
+        description: "Space-separated checks.<system> attr names to activate across supported runners"
         required: false
         default: ""
-      buildAllPackages:
-        description: "Build all check attrs on supported runners"
+      activateAllChecks:
+        description: "Activate all checks.<system> attrs across supported runners"
         required: false
         type: boolean
         default: false
 jobs:
-  discoverPackageBuilds:
-    if: github.event_name == 'pull_request' || github.event_name == 'merge_group' || (github.event_name == 'workflow_dispatch' && (inputs.buildAllPackages || inputs.packages != ''))
+  discoverChangeImpact:
+    if: github.event_name == 'pull_request' || github.event_name == 'merge_group' || (github.event_name == 'workflow_dispatch' && (inputs.activateAllChecks || inputs.checks != ''))
     runs-on: ubuntu-24.04
     outputs:
-      hasPackages: ${{ steps.discover.outputs.hasPackages }}
+      hasActivatedChecks: ${{ steps.discover.outputs.hasActivatedChecks }}
       matrix: ${{ steps.discover.outputs.matrix }}
     steps:
       - uses: actions/checkout@v6
@@ -33,10 +33,10 @@ jobs:
       - uses: cachix/install-nix-action@v31
       - id: discover
         env:
-          BUILD_ALL_PACKAGES: ${{ github.event_name == 'workflow_dispatch' && inputs.buildAllPackages }}
+          ACTIVATE_ALL_CHECKS: ${{ github.event_name == 'workflow_dispatch' && inputs.activateAllChecks }}
+          CHECKS: ${{ inputs.checks }}
           GITHUB_EVENT_NAME: ${{ github.event_name }}
-          PACKAGES: ${{ inputs.packages }}
-        run: nix develop -c deno run --allow-env --allow-read --allow-run --allow-write="$GITHUB_OUTPUT" .github/ci/discoverCiPackageBuilds.ts
+        run: nix develop -c deno run --allow-env --allow-read --allow-run --allow-write="$GITHUB_OUTPUT" .github/ci/impact.ts
   check:
     runs-on: ubuntu-24.04
     steps:
@@ -50,37 +50,38 @@ jobs:
           system="$(nix eval --impure --raw --expr builtins.currentSystem)"
           nix build --no-link --inputs-from . "bun2nix#packages.$system.cacheEntryCreator" --print-build-logs
       - run: nix flake check --no-build
-  buildPackage:
-    needs: discoverPackageBuilds
-    if: needs.discoverPackageBuilds.outputs.hasPackages == 'true'
+  buildActivatedCheck:
+    needs: discoverChangeImpact
+    if: needs.discoverChangeImpact.outputs.hasActivatedChecks == 'true'
+    name: "buildActivatedCheck (${{ matrix.kind }}: ${{ matrix.name }}, ${{ matrix.runner }}, ${{ matrix.system }})"
     runs-on: ${{ matrix.runner }}
     strategy:
       fail-fast: false
-      matrix: ${{ fromJson(needs.discoverPackageBuilds.outputs.matrix) }}
+      matrix: ${{ fromJson(needs.discoverChangeImpact.outputs.matrix) }}
     steps:
       - uses: actions/checkout@v6
         with:
           persist-credentials: false
       - uses: cachix/install-nix-action@v31
-      - run: nix build ".#checks.${{ matrix.system }}.${{ matrix.package }}" --print-build-logs
-  packageBuildGate:
+      - run: nix build ".#checks.${{ matrix.system }}.${{ matrix.name }}" --print-build-logs
+  activatedCheckGate:
     needs:
-      - discoverPackageBuilds
-      - buildPackage
-    if: always() && (github.event_name == 'pull_request' || github.event_name == 'merge_group' || (github.event_name == 'workflow_dispatch' && (inputs.buildAllPackages || inputs.packages != '')))
+      - discoverChangeImpact
+      - buildActivatedCheck
+    if: always() && (github.event_name == 'pull_request' || github.event_name == 'merge_group' || (github.event_name == 'workflow_dispatch' && (inputs.activateAllChecks || inputs.checks != '')))
     runs-on: ubuntu-24.04
     steps:
       - run: |
-          if [ "${{ needs.discoverPackageBuilds.result }}" != success ]; then
-            echo "Package discovery failed"
+          if [ "${{ needs.discoverChangeImpact.result }}" != success ]; then
+            echo "Change impact discovery failed"
             exit 1
           fi
 
-          if [ "${{ needs.discoverPackageBuilds.outputs.hasPackages }}" = true ]; then
-            if [ "${{ needs.buildPackage.result }}" != success ]; then
-              echo "Package builds failed"
+          if [ "${{ needs.discoverChangeImpact.outputs.hasActivatedChecks }}" = true ]; then
+            if [ "${{ needs.buildActivatedCheck.result }}" != success ]; then
+              echo "Activated check builds failed"
               exit 1
             fi
           else
-            echo "No package builds required"
+            echo "No activated checks required"
           fi
