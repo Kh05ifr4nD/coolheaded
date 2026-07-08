@@ -19,11 +19,12 @@ description: Use when editing TypeScript imports/exports, fixing oxlint import/s
 - 非类型依赖每个文件最多 48 个。若超过则拆分文件或下沉辅助逻辑。
 - 避免值依赖环。只含 `import type` 的循环默认会被 `import/no-cycle` 忽略；修复方法为调整依赖方向或抽象共享模块。
 - 严禁使用注释绕过规则。
+- 禁止复制代码以规避导入规则，这种补丁丑陋且难以维护！
 
 ## 排序规则
 
 - `sort-imports` 先按 import 语法形态排序，再按第一个成员或别名做大小写敏感排序，而不是按路径分组优先。
-- 默认语法形态顺序是 `none`、`all`、`multiple`、`single`。由于同时禁用副作用导入和命名空间导入，所以正常只需处理 `multiple` 与 `single`。
+- 默认语法形态顺序是 `none`、`all`、`multiple`、`single`。由于同时禁用副作用导入和**命名空间导入**（休想用此法偷懒），所以正常只需处理 `multiple` 与 `single`。
 - 花括号内成员也要排序。
 - 大小写敏感意味着全大写标识符需排在小写标识符前面。
 
