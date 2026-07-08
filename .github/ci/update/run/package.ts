@@ -8,7 +8,7 @@ import {
   nixEvalRaw,
   run,
   writeOutput,
-} from "./lib.ts";
+} from "coolheadedCi/process.ts";
 import { compareVersions } from "coolheaded/core/version.ts";
 
 const PACKAGE_UPDATE_ALLOWED_FILES_EXPR = `
@@ -66,7 +66,7 @@ function assertVersionAdvanced(
   }
 }
 
-async function runPackageUpdate(
+async function runPackage(
   name: string,
   version?: string,
   currentVersion = Deno.env.get("CURRENT_VERSION"),
@@ -114,14 +114,14 @@ async function runPackageUpdate(
 async function main(args: readonly string[]): Promise<void> {
   const [name, version] = args;
   if (name === undefined || name.length === 0) {
-    throw new Error("Usage: runPackageUpdate.ts <name> [version]");
+    throw new Error("Usage: package.ts <name> [version]");
   }
 
-  await runPackageUpdate(name, version);
+  await runPackage(name, version);
 }
 
 if (import.meta.main) {
   void main(Deno.args);
 }
 
-export { runPackageUpdate };
+export { runPackage };

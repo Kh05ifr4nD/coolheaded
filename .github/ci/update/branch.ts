@@ -1,8 +1,8 @@
 #!/usr/bin/env -S deno run --allow-run
 
-import { run } from "./lib.ts";
+import { run } from "coolheadedCi/process.ts";
 
-async function prepareUpdateBranch(branch: string): Promise<void> {
+async function prepareBranch(branch: string): Promise<void> {
   await run(["git", "fetch", "origin", "main"], { capture: false });
   const existingBranch = await run(["git", "fetch", "origin", branch], {
     capture: false,
@@ -34,14 +34,14 @@ async function prepareUpdateBranch(branch: string): Promise<void> {
 async function main(args: readonly string[]): Promise<void> {
   const [branch] = args;
   if (branch === undefined || branch.length === 0) {
-    throw new Error("Usage: prepareUpdateBranch.ts <branch>");
+    throw new Error("Usage: branch.ts <branch>");
   }
 
-  await prepareUpdateBranch(branch);
+  await prepareBranch(branch);
 }
 
 if (import.meta.main) {
   void main(Deno.args);
 }
 
-export { prepareUpdateBranch };
+export { prepareBranch };

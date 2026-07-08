@@ -1,16 +1,17 @@
 import {
   SYSTEM_TARGETS,
   buildMatrix,
-  changedDerivationPackages,
-  changedDerivationTargets,
+  changedActivatedChecks,
+  changedDerivationChecks,
+  checksFromInput,
   comparesCheckedOutBase,
-  packagesFromInput,
-} from "coolheadedCi/discoverCiPackageBuilds.ts";
+} from "coolheadedCi/impact.ts";
 import { describe, it } from "@jsr/std__testing/bdd";
 import { SUPPORTED_SYSTEMS } from "coolheaded/system/target.ts";
+import { activatedCheckKind } from "coolheadedCi/model.ts";
 import { assertEquals } from "@jsr/std__assert";
 
-describe("CI package build discovery", (): void => {
+describe("CI change impact discovery", (): void => {
   it("keeps CI runner targets aligned with supported systems", (): void => {
     assertEquals(
       SYSTEM_TARGETS.map(({ system }) => system).toSorted(),
@@ -18,12 +19,12 @@ describe("CI package build discovery", (): void => {
     );
   });
 
-  it("parses explicit package inputs", (): void => {
-    assertEquals(packagesFromInput("betaPackage alphaPackage betaPackage"), [
+  it("parses explicit check inputs", (): void => {
+    assertEquals(checksFromInput("betaPackage alphaPackage betaPackage"), [
       "alphaPackage",
       "betaPackage",
     ]);
-    assertEquals(packagesFromInput(""), []);
+    assertEquals(checksFromInput(""), []);
   });
 
   it("compares checked-out merge bases for protected queue events", (): void => {
@@ -33,9 +34,15 @@ describe("CI package build discovery", (): void => {
     assertEquals(comparesCheckedOutBase(), false);
   });
 
-  it("selects package checks whose derivation identity changed", (): void => {
+  it("classifies denoDependencies as a Deno snapshot", (): void => {
+    assertEquals(activatedCheckKind("denoDependencies"), "denoSnapshot");
+    assertEquals(activatedCheckKind("deno"), "package");
+    assertEquals(activatedCheckKind("minerUWithAll"), "package");
+  });
+
+  it("selects checks whose derivation identity changed", (): void => {
     assertEquals(
-      changedDerivationPackages(
+      changedDerivationChecks(
         {
           changed: "/nix/store/source-changed.drv",
           removed: "/nix/store/source-removed.drv",
@@ -53,9 +60,10 @@ describe("CI package build discovery", (): void => {
 
   it("keeps derivation changes scoped to the affected system", (): void => {
     assertEquals(
-      changedDerivationTargets(
+      changedActivatedChecks(
         {
           "aarch64-darwin": {
+            denoDependencies: "/nix/store/darwin-deno-snapshot-old.drv",
             shared: "/nix/store/darwin-shared.drv",
           },
           "aarch64-linux": {
@@ -69,6 +77,7 @@ describe("CI package build discovery", (): void => {
         },
         {
           "aarch64-darwin": {
+            denoDependencies: "/nix/store/darwin-deno-snapshot-new.drv",
             shared: "/nix/store/darwin-shared.drv",
           },
           "aarch64-linux": {
@@ -83,7 +92,14 @@ describe("CI package build discovery", (): void => {
       ),
       [
         {
-          package: "linuxOnly",
+          kind: "denoSnapshot",
+          name: "denoDependencies",
+          runner: "macos-26",
+          system: "aarch64-darwin",
+        },
+        {
+          kind: "package",
+          name: "linuxOnly",
           runner: "ubuntu-24.04-arm",
           system: "aarch64-linux",
         },
@@ -91,22 +107,29 @@ describe("CI package build discovery", (): void => {
     );
   });
 
-  it("builds only packages available on each system", (): void => {
+  it("builds only activated checks available on each system", (): void => {
     assertEquals(
-      buildMatrix(["linuxOnly", "shared"], {
+      buildMatrix(["denoDependencies", "linuxOnly", "shared"], {
         "aarch64-darwin": ["shared"],
         "aarch64-linux": ["shared"],
-        "x86_64-linux": ["linuxOnly", "shared"],
+        "x86_64-linux": ["denoDependencies", "linuxOnly", "shared"],
       }),
       [
-        { package: "shared", runner: "macos-26", system: "aarch64-darwin" },
-        { package: "shared", runner: "ubuntu-24.04-arm", system: "aarch64-linux" },
+        { kind: "package", name: "shared", runner: "macos-26", system: "aarch64-darwin" },
+        { kind: "package", name: "shared", runner: "ubuntu-24.04-arm", system: "aarch64-linux" },
         {
-          package: "linuxOnly",
+          kind: "denoSnapshot",
+          name: "denoDependencies",
           runner: "ubuntu-24.04",
           system: "x86_64-linux",
         },
-        { package: "shared", runner: "ubuntu-24.04", system: "x86_64-linux" },
+        {
+          kind: "package",
+          name: "linuxOnly",
+          runner: "ubuntu-24.04",
+          system: "x86_64-linux",
+        },
+        { kind: "package", name: "shared", runner: "ubuntu-24.04", system: "x86_64-linux" },
       ],
     );
   });

@@ -92,7 +92,7 @@
     "lint": "deno lint && deno task lint:oxlint",
     "lint:oxlint": "oxlint",
     "test": "deno test --allow-env --allow-read --allow-run --allow-write",
-    "update:deno-deps": "deno run --allow-env --allow-read --allow-run --allow-write .github/ci/runDenoDepsUpdate.ts",
+    "update:denoDependencies": "deno run --allow-env --allow-read --allow-run --allow-write .github/ci/update/run/denoDependencies.ts",
   },
   "test": {
     "include": ["tests/**/*.ts"],

@@ -7,7 +7,7 @@ import {
 import { releaseHashConfig, releaseUrlsFromTargets } from "coolheaded/update/release.ts";
 import { Effect } from "effect";
 import { latestGitHubVersion } from "coolheaded/source/version.ts";
-import { updateDenoDepsHash } from "coolheaded/repo/denoDeps.ts";
+import { updateDenoSnapshotHash } from "coolheaded/repo/denoSnapshot.ts";
 import { writePackageHashConfig } from "coolheaded/pin/json.ts";
 
 const DENO_RELEASE_VERSION_PREFIX = "v";
@@ -59,7 +59,7 @@ function updateProgram(args: readonly string[]): Effect.Effect<void, Error> {
                   catch(error: unknown): Error {
                     return error instanceof Error ? error : new Error(String(error));
                   },
-                  try: (): Promise<void> => updateDenoDepsHash(system),
+                  try: (): Promise<void> => updateDenoSnapshotHash(system),
                 }),
             ),
           ),

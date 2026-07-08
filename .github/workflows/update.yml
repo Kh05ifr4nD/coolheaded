@@ -1,8 +1,8 @@
-name: Update Dependencies
+name: Update
 permissions:
   contents: read
 concurrency:
-  group: update-dependencies
+  group: update
   cancel-in-progress: false
 on:
   workflow_dispatch:
@@ -23,7 +23,7 @@ on:
         required: false
         type: boolean
         default: true
-      updateDenoDeps:
+      updateDenoDependencies:
         required: false
         type: boolean
         default: true
@@ -48,10 +48,10 @@ jobs:
         env:
           INPUTS: ${{ inputs.inputs }}
           PACKAGES: ${{ inputs.packages }}
-          UPDATE_DENO_DEPS: ${{ github.event_name != 'workflow_dispatch' || inputs.updateDenoDeps != false }}
+          UPDATE_DENO_DEPENDENCIES: ${{ github.event_name != 'workflow_dispatch' || inputs.updateDenoDependencies != false }}
           UPDATE_FLAKE_INPUTS: ${{ github.event_name != 'workflow_dispatch' || inputs.updateFlakeInputs != false }}
           UPDATE_PACKAGES: ${{ github.event_name != 'workflow_dispatch' || inputs.updatePackages != false }}
-        run: nix develop -c deno run --allow-env --allow-read --allow-run --allow-write .github/ci/discoverUpdates.ts
+        run: nix develop -c deno run --allow-env --allow-read --allow-run --allow-write .github/ci/update/discover.ts
   update:
     needs: discover
     if: needs.discover.outputs.hasUpdates == 'true'
@@ -80,40 +80,40 @@ jobs:
           git config user.email "292306314+kh05ifr4nd-coolheaded[bot]@users.noreply.github.com"
       - name: Prepare update branch
         env:
-          UPDATE_BRANCH: ${{ matrix.type == 'package' && format('update/package/{0}', matrix.name) || matrix.type == 'flake-input' && format('update/flakeInput/{0}', matrix.name) || 'update/denoDeps' }}
-        run: nix develop -c deno run --allow-run .github/ci/prepareUpdateBranch.ts "$UPDATE_BRANCH"
+          UPDATE_BRANCH: ${{ matrix.kind == 'package' && format('update/package/{0}', matrix.name) || matrix.kind == 'flakeInput' && format('update/flakeInput/{0}', matrix.name) || 'update/denoDependencies' }}
+        run: nix develop -c deno run --allow-run .github/ci/update/branch.ts "$UPDATE_BRANCH"
       - id: update
         name: Run update
         env:
           CURRENT_VERSION: ${{ matrix.currentVersion }}
           GITHUB_TOKEN: ${{ steps.app-token.outputs.token }}
         run: |
-          case "${{ matrix.type }}" in
+          case "${{ matrix.kind }}" in
             package)
-              nix develop -c deno run --allow-env --allow-net --allow-read --allow-run --allow-write .github/ci/runPackageUpdate.ts "${{ matrix.name }}"
+              nix develop -c deno run --allow-env --allow-net --allow-read --allow-run --allow-write .github/ci/update/run/package.ts "${{ matrix.name }}"
               ;;
-            flake-input)
-              nix develop -c deno run --allow-env --allow-read --allow-run --allow-write .github/ci/runFlakeInputUpdate.ts "${{ matrix.name }}"
+            flakeInput)
+              nix develop -c deno run --allow-env --allow-read --allow-run --allow-write .github/ci/update/run/flakeInput.ts "${{ matrix.name }}"
               ;;
-            deno-deps)
-              nix develop -c deno task update:deno-deps
+            denoDependencies)
+              nix develop -c deno task update:denoDependencies
               ;;
           esac
       - if: steps.update.outputs.updated == 'true'
         env:
           GH_TOKEN: ${{ steps.app-token.outputs.token }}
-          UPDATE_BRANCH: ${{ matrix.type == 'package' && format('update/package/{0}', matrix.name) || matrix.type == 'flake-input' && format('update/flakeInput/{0}', matrix.name) || 'update/denoDeps' }}
-          UPDATE_BODY: ${{ matrix.type == 'package' && format('Automated package update for {0} from {1} to {2}.', matrix.name, matrix.currentVersion, steps.update.outputs.newVersion) || matrix.type == 'flake-input' && format('Automated flake input update for {0} from {1} to {2}.', matrix.name, matrix.currentVersion, steps.update.outputs.newVersion) || steps.update.outputs.changelog }}
+          UPDATE_BRANCH: ${{ matrix.kind == 'package' && format('update/package/{0}', matrix.name) || matrix.kind == 'flakeInput' && format('update/flakeInput/{0}', matrix.name) || 'update/denoDependencies' }}
+          UPDATE_BODY: ${{ matrix.kind == 'package' && format('Automated package update for {0} from {1} to {2}.', matrix.name, matrix.currentVersion, steps.update.outputs.newVersion) || matrix.kind == 'flakeInput' && format('Automated flake input update for {0} from {1} to {2}.', matrix.name, matrix.currentVersion, steps.update.outputs.newVersion) || steps.update.outputs.changelog }}
           UPDATE_CHANGELOG: ${{ steps.update.outputs.changelog }}
-          UPDATE_LABELS: ${{ matrix.type == 'package' && 'dependencies,automated,package' || matrix.type == 'flake-input' && 'dependencies,automated,flake-input' || 'dependencies,automated,deno-deps' }}
+          UPDATE_LABELS: ${{ matrix.kind == 'package' && 'dependencies,automated,package' || matrix.kind == 'flakeInput' && 'dependencies,automated,flakeInput' || 'dependencies,automated,denoDependencies' }}
           UPDATE_TITLE: >-
-            ${{ matrix.type == 'package' && format('{0}: {1} -> {2}', matrix.name, matrix.currentVersion, steps.update.outputs.newVersion) || matrix.type == 'flake-input' && format('flake.lock: update {0}', matrix.name) || 'deno.lock: update dependencies' }}
+            ${{ matrix.kind == 'package' && format('{0}: {1} -> {2}', matrix.name, matrix.currentVersion, steps.update.outputs.newVersion) || matrix.kind == 'flakeInput' && format('flake.lock: update {0}', matrix.name) || 'deno.lock: update Deno dependencies' }}
         run: |
           body="$UPDATE_BODY"
-          if [ -n "$UPDATE_CHANGELOG" ] && [ "${{ matrix.type }}" = package ]; then
+          if [ -n "$UPDATE_CHANGELOG" ] && [ "${{ matrix.kind }}" = package ]; then
             body="$body"$'\n\n'"$UPDATE_CHANGELOG"
           fi
-          nix develop -c deno run --allow-env --allow-run .github/ci/createUpdatePr.ts \
+          nix develop -c deno run --allow-env --allow-run .github/ci/update/pullRequest.ts \
             --branch "$UPDATE_BRANCH" \
             --title "$UPDATE_TITLE" \
             --body "$body" \
