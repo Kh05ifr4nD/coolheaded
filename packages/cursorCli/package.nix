@@ -54,18 +54,13 @@ packageLib.mkReleaseBinaryPackage {
       --replace-fail '#!/usr/bin/env bash' '#!${bashInteractive}/bin/bash'
     chmod +x "$packageRoot/cursor-agent" "$packageRoot/node" "$packageRoot/rg"
 
-    for name in cursor-agent agent; do
-      makeWrapper "$packageRoot/cursor-agent" "$out/bin/$name" \
-        --prefix PATH : "$packageRoot:${runtimePath}"
-    done
+    makeWrapper "$packageRoot/cursor-agent" "$out/bin/cursor-agent" \
+      --prefix PATH : "$packageRoot:${runtimePath}"
 
     runHook postInstall
   '';
 
-  expectedExecutables = [
-    "agent"
-    "cursor-agent"
-  ];
+  expectedExecutables = [ "cursor-agent" ];
   preVersionCheck = ''
     export HOME="$PWD/versionCheckHome"
     export TMPDIR="$PWD/versionCheckTmp"
@@ -79,10 +74,7 @@ packageLib.mkReleaseBinaryPackage {
   installCheck = {
     helpContains = "Usage:";
     extra = ''
-      "$out/bin/agent" --version | grep -q "$version"
-      "$out/bin/agent" --help | grep -q "Usage:"
       test ! -L "$out/bin/cursor-agent" || failCheck "expected wrapped cursor-agent launcher"
-      test ! -L "$out/bin/agent" || failCheck "expected wrapped agent launcher"
       assertExecutableExists "$out/libexec/cursor-cli/cursor-agent"
       assertExecutableExists "$out/libexec/cursor-cli/node"
       assertExecutableExists "$out/libexec/cursor-cli/rg"
