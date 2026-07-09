@@ -50,6 +50,8 @@ packageLib.mkReleaseBinaryPackage {
     packageRoot="$out/libexec/cursor-cli"
     mkdir -p "$packageRoot" "$out/bin"
     cp -R dist-package/. "$packageRoot/"
+    substituteInPlace "$packageRoot/cursor-agent" \
+      --replace-fail '#!/usr/bin/env bash' '#!${bashInteractive}/bin/bash'
     chmod +x "$packageRoot/cursor-agent" "$packageRoot/node" "$packageRoot/rg"
 
     for name in cursor-agent agent; do

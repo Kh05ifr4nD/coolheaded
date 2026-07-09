@@ -74,7 +74,10 @@ packageLib.mkReleaseBinaryPackage {
     "grok"
   ];
 
+  versionCheckProgram = "${placeholder "out"}/libexec/grok/bin/grok-launcher";
+
   installCheck = {
+    executable = "$out/libexec/grok/bin/grok-launcher";
     helpContains = "Usage:";
     extra =
       lib.optionalString stdenv.hostPlatform.isLinux ''
@@ -86,6 +89,7 @@ packageLib.mkReleaseBinaryPackage {
           || failCheck "grok wrapper must disable upstream update checks"
         grep -F -- '--no-auto-update' "$out/libexec/grok/bin/agent-launcher" > /dev/null \
           || failCheck "agent wrapper must disable upstream update checks"
+        "$out/libexec/grok/bin/agent-launcher" --help | grep -q "Usage:"
       '';
   };
 
