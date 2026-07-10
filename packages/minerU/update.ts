@@ -5,7 +5,7 @@ import { updateVersionedNixpkgsPythonUvLock } from "coolheaded/update/uvLock.ts"
 
 const PYPI_PACKAGE_NAME = "mineru";
 const PIN_FILE_PATH = scriptPath("pin.json", import.meta.url);
-const PYTHON_PACKAGE = "python3";
+const PYTHON_PACKAGE = "python313";
 const REPOSITORY_ROOT_PATH = scriptPath("../../", import.meta.url);
 const UV_LOCK_FILE_PATH = scriptPath("uv.lock", import.meta.url);
 type UvProject = ReturnType<Parameters<typeof updateVersionedNixpkgsPythonUvLock>[0]["project"]>;

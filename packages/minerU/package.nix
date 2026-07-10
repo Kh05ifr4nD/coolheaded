@@ -7,8 +7,8 @@
   ffmpeg_4,
   ffmpeg_6,
   libsndfile,
-  python3,
-  python3Packages,
+  python313,
+  python313Packages,
   rdma-core,
   sox,
   tbb,
@@ -27,13 +27,13 @@ let
         pylatexenc = [ "setuptools" ];
         xgrammar = [ "scikit_build_core" ];
       };
-      python = python3;
+      python = python313;
     };
 
   packageOverrides =
     final: prev:
     let
-      sitePackages = "lib/python${python3.pythonVersion}/site-packages";
+      sitePackages = "lib/python${python313.pythonVersion}/site-packages";
       enableCudaPackageOverrides = exposeGpuServerEntrypoints;
       enableNvidiaWheelOverrides = withAll && packageLib.system == "x86_64-linux";
       torchLibraryPath = "${final.torch}/${sitePackages}/torch/lib";
@@ -48,7 +48,7 @@ let
         "libc10_cuda.so"
         "libtorch_cuda.so"
       ];
-      nanobind_2_5 = python3Packages.nanobind.overridePythonAttrs (_oldAttrs: rec {
+      nanobind_2_5 = python313Packages.nanobind.overridePythonAttrs (_oldAttrs: rec {
         version = "2.5.0";
         src = fetchPypi {
           pname = "nanobind";
@@ -228,7 +228,7 @@ in
 packageLib.mkUvApplication {
   inherit packageOverrides pname pyproject;
 
-  python = python3;
+  python = python313;
   extras = lib.optionals withAll [ "all" ];
   expectedExecutables = [
     "mineru"
