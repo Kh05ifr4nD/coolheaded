@@ -47,6 +47,7 @@
       nixpkgs,
       pyprojectBuildSystems,
       pyprojectNix,
+      self,
       treefmtNix,
       uv2nix,
       wrapBuddy,
@@ -71,6 +72,16 @@
           wrapBuddy
           ;
       };
+
+      flake.homeModules =
+        let
+          codex = import ./homeModules/codex.nix { inherit self; };
+          ohMyPi = import ./homeModules/ohMyPi.nix { inherit self; };
+        in
+        {
+          inherit codex ohMyPi;
+          default = import ./homeModules/default.nix { inherit codex ohMyPi; };
+        };
 
       perSystem =
         {

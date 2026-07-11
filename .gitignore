@@ -11,6 +11,8 @@
 
 !/flake/
 !/flake/*.nix
+!/homeModules/
+!/homeModules/*.nix
 !/lib/
 !/packages/
 !/tests/
