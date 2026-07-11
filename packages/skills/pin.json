@@ -1,9 +1,9 @@
 {
-  "version": "1.5.15",
+  "version": "1.5.16",
   "platformPackageHashes": {
-    "aarch64-darwin": "sha512-qOjkxQ+Bbua6UWx71XSbkEpAFQpBLvOFc26PDMHkT7BSnwud1/CyyyWyF2HElHyt51GN32GQ1ZDPrGhsNG47GA==",
-    "aarch64-linux": "sha512-qOjkxQ+Bbua6UWx71XSbkEpAFQpBLvOFc26PDMHkT7BSnwud1/CyyyWyF2HElHyt51GN32GQ1ZDPrGhsNG47GA==",
-    "x86_64-linux": "sha512-qOjkxQ+Bbua6UWx71XSbkEpAFQpBLvOFc26PDMHkT7BSnwud1/CyyyWyF2HElHyt51GN32GQ1ZDPrGhsNG47GA=="
+    "aarch64-darwin": "sha512-O+pjcrnm5WkSSBD3WJxjdDssE+oynm7k1LnKMjXvsVeQdmKmY/a+gi6WUOhyGVIYptkFmBBEho/zyf22UtN6cw==",
+    "aarch64-linux": "sha512-O+pjcrnm5WkSSBD3WJxjdDssE+oynm7k1LnKMjXvsVeQdmKmY/a+gi6WUOhyGVIYptkFmBBEho/zyf22UtN6cw==",
+    "x86_64-linux": "sha512-O+pjcrnm5WkSSBD3WJxjdDssE+oynm7k1LnKMjXvsVeQdmKmY/a+gi6WUOhyGVIYptkFmBBEho/zyf22UtN6cw=="
   },
-  "npmVendorHash": "sha256-dziCclv3tSUrhUZYRdReNneDqsBt5DdwPSd90dOtay0="
+  "npmVendorHash": "sha256-sx5Rc5xVTpp4rnBiQfVnozX9RtPoi+EV3IQboKdkyq4="
 }
