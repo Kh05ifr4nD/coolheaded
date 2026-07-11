@@ -4,7 +4,7 @@
   fetchFromGitHub,
   maturin,
   packageLib,
-  python3,
+  python313,
   rustc,
   rustPlatform,
   runtimeShell,
@@ -89,10 +89,13 @@ packageLib.mkUvApplication {
   inherit pname pyproject uvLock;
 
   extras = lib.optionals withBot [ "bot" ];
-  python = python3;
+  python = python313;
   workspaceRoot = workspaceSrc;
 
   packageOverrides = _final: prev: {
+    fusepy = prev.fusepy.overrideAttrs (oldAttrs: {
+      nativeBuildInputs = (oldAttrs.nativeBuildInputs or [ ]) ++ [ prev.setuptools ];
+    });
     "openviking-sdk" = prev."openviking-sdk".overrideAttrs (oldAttrs: {
       env = (oldAttrs.env or { }) // {
         SETUPTOOLS_SCM_PRETEND_VERSION_FOR_OPENVIKING_SDK = "0.1.2";
