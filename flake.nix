@@ -75,13 +75,19 @@
 
       flake.homeModules =
         let
-          codex = import ./homeModules/codex.nix { inherit self; };
-          ohMyPi = import ./homeModules/ohMyPi.nix { inherit self; };
+          modules = nixpkgs.lib.pipe (builtins.readDir ./homeModules) [
+            (nixpkgs.lib.filterAttrs (
+              name: type: name != "default.nix" && type == "regular" && nixpkgs.lib.hasSuffix ".nix" name
+            ))
+            (nixpkgs.lib.mapAttrs' (
+              file: _:
+              nixpkgs.lib.nameValuePair (nixpkgs.lib.removeSuffix ".nix" file) (
+                import (./homeModules + "/${file}") { inherit self; }
+              )
+            ))
+          ];
         in
-        {
-          inherit codex ohMyPi;
-          default = import ./homeModules/default.nix { inherit codex ohMyPi; };
-        };
+        modules // { default = import ./homeModules/default.nix { inherit self; }; };
 
       perSystem =
         {
