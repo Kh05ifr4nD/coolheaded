@@ -82,6 +82,12 @@ package fileSpec
 		"treefmt.nix"!:          #RegularFile
 	}
 
+	homeModules!: {
+		"codex.nix"!:   #RegularFile
+		"default.nix"!: #RegularFile
+		"ohMyPi.nix"!:  #RegularFile
+	}
+
 	lib!: {
 		".gitignore"!: #RegularFile
 		nix!: {

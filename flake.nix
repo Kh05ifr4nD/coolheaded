@@ -47,6 +47,7 @@
       nixpkgs,
       pyprojectBuildSystems,
       pyprojectNix,
+      self,
       treefmtNix,
       uv2nix,
       wrapBuddy,
@@ -71,6 +72,22 @@
           wrapBuddy
           ;
       };
+
+      flake.homeModules =
+        let
+          modules = nixpkgs.lib.pipe (builtins.readDir ./homeModules) [
+            (nixpkgs.lib.filterAttrs (
+              name: type: name != "default.nix" && type == "regular" && nixpkgs.lib.hasSuffix ".nix" name
+            ))
+            (nixpkgs.lib.mapAttrs' (
+              file: _:
+              nixpkgs.lib.nameValuePair (nixpkgs.lib.removeSuffix ".nix" file) (
+                import (./homeModules + "/${file}") { inherit self; }
+              )
+            ))
+          ];
+        in
+        modules // { default = import ./homeModules/default.nix { inherit self; }; };
 
       perSystem =
         {
