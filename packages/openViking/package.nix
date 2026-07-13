@@ -15,18 +15,23 @@ let
   pname = "openviking";
 
   pin = builtins.fromJSON (builtins.readFile ./pin.json);
+  sourceRef =
+    if pin.version == "0.4.9" then
+      # Upstream deleted and recreated v0.4.9; retain its original release head.
+      "cbfb387dc78a73c63121ca926eded6ae92760c09"
+    else
+      "refs/tags/v${pin.version}";
 
-  workspaceSrc = packageLib.fetchGitHubTagTarball {
-    owner = "volcengine";
-    repo = "OpenViking";
-    tag = "v${pin.version}";
-    hash = pin.sourceHash;
+  workspaceSrc = builtins.fetchTree {
+    type = "tarball";
+    url = "https://github.com/volcengine/OpenViking/archive/${sourceRef}.tar.gz";
+    narHash = pin.sourceHash;
   };
 
   src = fetchFromGitHub {
     owner = "volcengine";
     repo = "OpenViking";
-    tag = "v${pin.version}";
+    rev = sourceRef;
     hash = pin.sourceHash;
   };
 
