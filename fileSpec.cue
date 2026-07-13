@@ -86,6 +86,7 @@ package fileSpec
 		"codex.nix"!:   #RegularFile
 		"default.nix"!: #RegularFile
 		"ohMyPi.nix"!:  #RegularFile
+		"paseo.nix"!:   #RegularFile
 	}
 
 	lib!: {
