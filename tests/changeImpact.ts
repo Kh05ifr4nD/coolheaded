@@ -3,6 +3,7 @@ import {
   buildMatrix,
   changedActivatedChecks,
   changedDerivationChecks,
+  checksFromChangedFiles,
   checksFromInput,
   comparesCheckedOutBase,
 } from "coolheadedCi/impact.ts";
@@ -132,5 +133,57 @@ describe("CI change impact discovery", (): void => {
         { kind: "package", name: "shared", runner: "ubuntu-24.04", system: "x86_64-linux" },
       ],
     );
+  });
+
+  it("falls back to checks owned by changed packages and home modules", (): void => {
+    const available = {
+      "aarch64-darwin": [
+        "codex",
+        "codexHomeModule",
+        "openViking",
+        "openVikingBot",
+        "paseo",
+        "paseoHomeModule",
+        "unrelated",
+      ],
+      "aarch64-linux": ["codex", "codexMinimal", "paseo", "unrelated"],
+    };
+
+    assertEquals(
+      checksFromChangedFiles(
+        [
+          ".github/ci/impact.ts",
+          "fileSpec.cue",
+          "homeModules/codex.nix",
+          "packages/openViking/package.nix",
+          "packages/paseo/check.nix",
+          "tests/changeImpact.ts",
+        ],
+        available,
+      ),
+      [
+        "codex",
+        "codexHomeModule",
+        "codexMinimal",
+        "openViking",
+        "openVikingBot",
+        "paseo",
+        "paseoHomeModule",
+      ],
+    );
+  });
+
+  it("falls back to all checks for shared or unmapped changes", (): void => {
+    const available = {
+      "aarch64-darwin": ["codex", "paseo"],
+      "aarch64-linux": ["codex", "paseo"],
+    };
+
+    assertEquals(checksFromChangedFiles(["lib/nix/github.nix"], available), ["codex", "paseo"]);
+    assertEquals(checksFromChangedFiles(["packages/missing/package.nix"], available), [
+      "codex",
+      "paseo",
+    ]);
+    assertEquals(checksFromChangedFiles([".github/ci/impact.ts"], available), []);
   });
 });
