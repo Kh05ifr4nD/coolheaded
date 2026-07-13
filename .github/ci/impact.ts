@@ -1,6 +1,6 @@
 #!/usr/bin/env -S deno run --allow-env --allow-read --allow-run
 
-import { run, writeOutput } from "./process.ts";
+import { run, writeOutput, writeStderr } from "./process.ts";
 import { SYSTEM_TARGETS } from "coolheaded/system/target.ts";
 import { activatedCheck } from "./model.ts";
 import { toFileUrl } from "@jsr/std__path";
@@ -114,6 +114,79 @@ function buildMatrix(
   });
 }
 
+function changedFileCheckPrefix(file: string): string | null | undefined {
+  const packageMatch = /^packages\/(?<prefix>[^/]+)\//u.exec(file);
+  if (packageMatch?.groups?.["prefix"] !== undefined) {
+    return packageMatch.groups["prefix"];
+  }
+
+  const homeModuleMatch = /^homeModules\/(?<prefix>[^/]+)\.nix$/u.exec(file);
+  if (homeModuleMatch?.groups?.["prefix"] !== undefined) {
+    return homeModuleMatch.groups["prefix"];
+  }
+
+  if (file === "fileSpec.cue" || file.startsWith(".github/") || file.startsWith("tests/")) {
+    return null;
+  }
+
+  return undefined;
+}
+
+function checkBelongsToPrefix(name: string, prefix: string): boolean {
+  return name === prefix || (name.startsWith(prefix) && /^[A-Z]/u.test(name.slice(prefix.length)));
+}
+
+function checksFromChangedFiles(
+  files: readonly string[],
+  availableBySystem: Readonly<Record<string, readonly string[]>>,
+): readonly string[] {
+  const available = [...new Set(Object.values(availableBySystem).flat())].toSorted();
+  const prefixes = new Set<string>();
+
+  for (const file of files) {
+    const prefix = changedFileCheckPrefix(file);
+    if (prefix === undefined) {
+      return available;
+    }
+    if (prefix !== null) {
+      prefixes.add(prefix);
+    }
+  }
+
+  const requested = available.filter((name: string): boolean =>
+    [...prefixes].some((prefix: string): boolean => checkBelongsToPrefix(name, prefix)),
+  );
+  const everyPrefixMatched = [...prefixes].every((prefix: string): boolean =>
+    requested.some((name: string): boolean => checkBelongsToPrefix(name, prefix)),
+  );
+  return everyPrefixMatched ? requested : available;
+}
+
+async function checkedOutBaseChangedChecks(
+  currentDrvPathsBySystem: CheckDrvPathsBySystem,
+  availableBySystem: Readonly<Record<string, readonly string[]>>,
+): Promise<readonly ActivatedCheck[]> {
+  try {
+    return changedActivatedChecks(
+      await checkDrvPathsBySystem(await checkedOutBaseFlakeRef()),
+      currentDrvPathsBySystem,
+    );
+  } catch (error: unknown) {
+    const errorMessage = error instanceof Error ? error.message : String(error);
+    const errorSummary = errorMessage.trim().split("\n").at(-1) ?? errorMessage;
+    await writeStderr(
+      `Base check evaluation failed; falling back to changed-path impact: ${errorSummary}`,
+    );
+    const result = await run(["git", "diff", "--name-only", "HEAD^1", "HEAD", "--"], {
+      capture: true,
+    });
+    const changedFiles = result.stdout
+      .split("\n")
+      .filter((file: string): boolean => file.length > 0);
+    return buildMatrix(checksFromChangedFiles(changedFiles, availableBySystem), availableBySystem);
+  }
+}
+
 function comparesCheckedOutBase(eventName?: string): boolean {
   return eventName === "merge_group" || eventName === "pull_request";
 }
@@ -142,10 +215,7 @@ async function requestedActivatedChecks(
   }
 
   if (comparesCheckedOutBase(eventName)) {
-    return changedActivatedChecks(
-      await checkDrvPathsBySystem(await checkedOutBaseFlakeRef()),
-      currentDrvPathsBySystem,
-    );
+    return await checkedOutBaseChangedChecks(currentDrvPathsBySystem, availableBySystem);
   }
 
   return [];
@@ -175,6 +245,7 @@ export {
   buildMatrix,
   changedActivatedChecks,
   changedDerivationChecks,
+  checksFromChangedFiles,
   comparesCheckedOutBase,
   checksFromInput,
   requestedActivatedChecks,
