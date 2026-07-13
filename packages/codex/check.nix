@@ -64,6 +64,10 @@ let
               type = lib.types.attrsOf lib.types.raw;
               default = { };
             };
+            sessionVariables = lib.mkOption {
+              type = lib.types.attrsOf lib.types.str;
+              default = { };
+            };
             extraBuilderCommands = lib.mkOption {
               type = lib.types.lines;
               default = "";
@@ -73,9 +77,16 @@ let
           xdg.configHome = lib.mkOption { type = lib.types.str; };
         };
       })
+      (
+        { config, lib, ... }:
+        lib.mkIf (config.programs.codex.enable && config.home.preferXdgDirectories) {
+          home.sessionVariables.CODEX_HOME = "${config.xdg.configHome}/codex";
+        }
+      )
       codexModule
       {
         home.homeDirectory = testHome;
+        home.preferXdgDirectories = true;
         xdg.configHome = "${testHome}/.config";
 
         programs.codex = {
@@ -100,8 +111,12 @@ let
       "$@"
     }
 
-    oldGenPath="$1"
-    newGenPath="$2"
+    if (( $# >= 1 )); then
+      oldGenPath="$1"
+    fi
+    if (( $# >= 2 )); then
+      newGenPath="$2"
+    fi
     ${moduleEvaluation.config.home.activation.codexConfig.data}
   '';
 
@@ -182,6 +197,7 @@ let
   codexHomeModule = pkgs.runCommand "codex-home-module-check" { } ''
     derivationOutput="$out"
     target="${testHome}/.codex/config.toml"
+    test ${lib.escapeShellArg moduleEvaluation.config.home.sessionVariables.CODEX_HOME} = ${lib.escapeShellArg "${testHome}/.codex"}
     rm -rf ${testHome}
     mkdir -p "$(dirname "$target")" "$TMPDIR/old-generation/state" "$TMPDIR/new-generation"
     install -m 600 ${initialConfig} "$target"
@@ -202,10 +218,10 @@ let
     test "$(stat -c %i "$target")" = "$inode"
 
     rm -rf ${testHome}
-    mkdir -p "$TMPDIR/fresh-old-generation"
-    ${activationScript} "$TMPDIR/fresh-old-generation" "$TMPDIR/new-generation"
+    ${activationScript}
     diff -u ${freshExpectedConfig} "$target"
     test "$(stat -c %a "$target")" = 600
+    test ! -e "${testHome}/.config/codex/config.toml"
 
     rm -rf ${testHome}
     touch "$out"
