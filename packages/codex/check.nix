@@ -196,8 +196,8 @@ let
 
   codexHomeModule = pkgs.runCommand "codex-home-module-check" { } ''
     derivationOutput="$out"
-    target="${testHome}/.codex/config.toml"
-    test ${lib.escapeShellArg moduleEvaluation.config.home.sessionVariables.CODEX_HOME} = ${lib.escapeShellArg "${testHome}/.codex"}
+    target="${testHome}/.config/codex/config.toml"
+    test ${lib.escapeShellArg moduleEvaluation.config.home.sessionVariables.CODEX_HOME} = ${lib.escapeShellArg "${testHome}/.config/codex"}
     rm -rf ${testHome}
     mkdir -p "$(dirname "$target")" "$TMPDIR/old-generation/state" "$TMPDIR/new-generation"
     install -m 600 ${initialConfig} "$target"
@@ -221,7 +221,7 @@ let
     ${activationScript}
     diff -u ${freshExpectedConfig} "$target"
     test "$(stat -c %a "$target")" = 600
-    test ! -e "${testHome}/.config/codex/config.toml"
+    test ! -e "${testHome}/.codex/config.toml"
 
     rm -rf ${testHome}
     touch "$out"

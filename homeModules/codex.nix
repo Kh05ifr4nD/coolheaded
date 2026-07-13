@@ -49,7 +49,11 @@ let
   managedPathsFile = pkgs.writeText "codex-managed-paths.json" (builtins.toJSON managedPaths);
   stateFile = "state/codex-managed-paths.json";
 
-  configDirectory = "${config.home.homeDirectory}/.codex";
+  configDirectory =
+    if config.home.preferXdgDirectories then
+      "${config.xdg.configHome}/codex"
+    else
+      "${config.home.homeDirectory}/.codex";
   configFile = "${configDirectory}/config.toml";
 
   reconcileConfig = pkgs.writeShellApplication {
@@ -321,10 +325,8 @@ in
       declared leaf values through Codex app-server, deletes formerly managed
       leaves that are no longer declared, preserves all other app-owned values,
       and canonically sorts the complete writable {file}`config.toml`. A null
-      value deletes that exact leaf. The module keeps {env}`CODEX_HOME` at
-      {file}`~/.codex` so the CLI and Codex App share one writable state root.
-      Do not put secrets here because Nix stores option values in the
-      world-readable store.
+      value deletes that exact leaf. Do not put secrets here because Nix stores
+      option values in the world-readable store.
     '';
     example = lib.literalExpression ''
       {
@@ -357,8 +359,6 @@ in
     ];
 
     programs.codex.package = lib.mkDefault self.packages.${pkgs.stdenv.hostPlatform.system}.codex;
-
-    home.sessionVariables.CODEX_HOME = lib.mkForce configDirectory;
 
     home.extraBuilderCommands = lib.mkAfter ''
       mkdir -p "$out/state"
