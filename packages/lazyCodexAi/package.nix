@@ -71,6 +71,19 @@ packageLib.mkNpmTarballPackage {
     rm -f "$packageRoot/.attrs.json" "$packageRoot/.attrs.sh" "$packageRoot/env-vars"
     find "$packageRoot/packages/omo-codex/plugin" -type d -name .github -prune -exec rm -rf {} +
 
+    LAZYCODEX_PACKAGE_ROOT="$packageRoot" \
+      "${nodeExecutable}" ${./script/pruneOmoGitBash.mjs}
+
+    pluginRoot="$packageRoot/packages/omo-codex/plugin"
+    rm -rf \
+      "$packageRoot/packages/git-bash-mcp" \
+      "$packageRoot/dist/cli/install-codex/git-bash.d.ts" \
+      "$pluginRoot/components/git-bash" \
+      "$pluginRoot/components/rules/bundled-rules/windows-git-bash.md" \
+      "$pluginRoot/components/rules/test/windows-git-bash-bundled-rule.test.ts" \
+      "$pluginRoot/hooks/post-compact-resetting-git-bash-mcp-reminder.json" \
+      "$pluginRoot/hooks/pre-tool-use-recommending-git-bash-mcp.json"
+
     LAZYCODEX_PLUGIN_ROOT="$packageRoot/packages/omo-codex/plugin" \
     LAZYCODEX_NODE_EXECUTABLE="${nodeExecutable}" \
     LAZYCODEX_CODEGRAPH_EXECUTABLE="${codeGraphExecutable}" \
@@ -112,6 +125,23 @@ packageLib.mkNpmTarballPackage {
       *) failCheck "lazycodex-ai uninstall does not use its bundled same-version cleanup CLI" ;;
     esac
 
+    test ! -e "$packageRoot/packages/git-bash-mcp" \
+      || failCheck "packaged LazyCodex contains the Windows-only Git Bash MCP"
+    test ! -e "$packageRoot/packages/omo-codex/plugin/components/git-bash" \
+      || failCheck "packaged OMO plugin contains the Windows-only Git Bash component"
+    test ! -e "$packageRoot/packages/omo-codex/plugin/components/rules/bundled-rules/windows-git-bash.md" \
+      || failCheck "packaged OMO plugin contains the Windows-only Git Bash rule"
+    for gitBashMetadata in \
+      "$packageRoot/package.json" \
+      "$packageRoot/packages/omo-codex/plugin/package.json" \
+      "$packageRoot/packages/omo-codex/plugin/package-lock.json" \
+      "$packageRoot/packages/omo-codex/plugin/.mcp.json" \
+      "$packageRoot/packages/omo-codex/plugin/.codex-plugin/plugin.json"; do
+      if grep -Eiq 'git[-_]bash|Git Bash' "$gitBashMetadata"; then
+        failCheck "packaged metadata still references Git Bash: $gitBashMetadata"
+      fi
+    done
+
     installCheckHome="$PWD/installCheckHome"
     installCheckCodexHome="$PWD/installCheckCodexHome"
     installCheckTmp="$PWD/installCheckTmp"
@@ -139,6 +169,18 @@ packageLib.mkNpmTarballPackage {
     assertFileExists "$pluginRoot/.codex-plugin/plugin.json"
     assertFileExists "$pluginRoot/components/codegraph/dist/cli.js"
     assertFileExists "$installCheckCodexHome/config.toml"
+    test ! -e "$pluginRoot/components/git-bash" \
+      || failCheck "installed OMO plugin contains the Windows-only Git Bash component"
+    test ! -e "$pluginRoot/components/git-bash-mcp" \
+      || failCheck "installed OMO plugin contains the Windows-only Git Bash MCP"
+    test ! -e "$installCheckCodexHome/bin/omo-git-bash-hook" \
+      || failCheck "installed Codex bin directory contains the Windows-only Git Bash hook"
+    if grep -Eiq 'git[-_]bash|Git Bash' "$pluginRoot/.mcp.json"; then
+      failCheck "installed OMO MCP manifest still references Git Bash"
+    fi
+    if grep -Eiq 'git[-_]bash|Git Bash' "$pluginRoot/.codex-plugin/plugin.json"; then
+      failCheck "installed OMO plugin manifest still references Git Bash"
+    fi
     test -w "$pluginRoot/.codex-plugin" \
       || failCheck "installed plugin manifest directory is not writable"
     test -w "$pluginRoot/components/lsp-daemon/dist" \
