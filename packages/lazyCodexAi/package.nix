@@ -68,7 +68,25 @@ packageLib.mkNpmTarballPackage {
     packageRoot="$out/libexec/lazycodex-ai"
     mkdir -p "$packageRoot" "$out/bin"
     cp -R . "$packageRoot/"
-    rm -f "$packageRoot/.attrs.json" "$packageRoot/.attrs.sh" "$packageRoot/env-vars"
+    rm -f \
+      "$packageRoot/.attrs.json" \
+      "$packageRoot/.attrs.sh" \
+      "$packageRoot/env-vars" \
+      "$packageRoot/packages/omo-codex/scripts/install-dist/install-local.mjs.orig"
+
+    for gitBashConfigWriter in \
+      "$packageRoot/dist/cli-node/index.js" \
+      "$packageRoot/dist/cli/index.js" \
+      "$packageRoot/packages/omo-codex/scripts/install-dist/install-local.mjs" \
+      "$packageRoot/packages/omo-codex/plugin/components/bootstrap/dist/cli.js"; do
+      substituteInPlace "$gitBashConfigWriter" \
+        --replace-fail \
+          '  const gitBashEnabled = (input.platform ?? process.platform) === "win32" && input.gitBashEnabled === true;' \
+          "" \
+        --replace-fail \
+          '  nextConfig = ensurePluginMcpEnabled(nextConfig, "omo@sisyphuslabs", "git_bash", gitBashEnabled);' \
+          '  nextConfig = removeTomlSections(nextConfig, (header) => header === `plugins."omo@sisyphuslabs".mcp_servers.git_bash`);'
+    done
     find "$packageRoot/packages/omo-codex/plugin" -type d -name .github -prune -exec rm -rf {} +
 
     LAZYCODEX_PACKAGE_ROOT="$packageRoot" \
@@ -141,6 +159,18 @@ packageLib.mkNpmTarballPackage {
         failCheck "packaged metadata still references Git Bash: $gitBashMetadata"
       fi
     done
+    for gitBashConfigWriter in \
+      "$packageRoot/dist/cli-node/index.js" \
+      "$packageRoot/dist/cli/index.js" \
+      "$packageRoot/packages/omo-codex/scripts/install-dist/install-local.mjs" \
+      "$packageRoot/packages/omo-codex/plugin/components/bootstrap/dist/cli.js"; do
+      if grep -Eq 'ensurePluginMcpEnabled\([^)]*"git_bash"' "$gitBashConfigWriter"; then
+        failCheck "packaged runtime still exposes Git Bash config: $gitBashConfigWriter"
+      fi
+      grep -F 'removeTomlSections(nextConfig, (header) => header === `plugins."omo@sisyphuslabs".mcp_servers.git_bash`);' \
+        "$gitBashConfigWriter" > /dev/null \
+        || failCheck "packaged runtime does not clean stale Git Bash config: $gitBashConfigWriter"
+    done
 
     installCheckHome="$PWD/installCheckHome"
     installCheckCodexHome="$PWD/installCheckCodexHome"
@@ -163,12 +193,17 @@ packageLib.mkNpmTarballPackage {
     }
 
     runLazyCodexInstallCheck 1
+    printf '\n[plugins."omo@sisyphuslabs".mcp_servers.git_bash]\nenabled = true\n' \
+      >> "$installCheckCodexHome/config.toml"
     runLazyCodexInstallCheck 2
 
     pluginRoot="$installCheckCodexHome/plugins/cache/sisyphuslabs/omo/${pin.version}"
     assertFileExists "$pluginRoot/.codex-plugin/plugin.json"
     assertFileExists "$pluginRoot/components/codegraph/dist/cli.js"
     assertFileExists "$installCheckCodexHome/config.toml"
+    if grep -Eiq 'git[-_]bash|Git Bash' "$installCheckCodexHome/config.toml"; then
+      failCheck "installed Codex config still exposes Git Bash"
+    fi
     test ! -e "$pluginRoot/components/git-bash" \
       || failCheck "installed OMO plugin contains the Windows-only Git Bash component"
     test ! -e "$pluginRoot/components/git-bash-mcp" \
