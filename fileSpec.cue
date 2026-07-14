@@ -83,10 +83,11 @@ package fileSpec
 	}
 
 	homeModules!: {
-		"codex.nix"!:   #RegularFile
-		"default.nix"!: #RegularFile
-		"ohMyPi.nix"!:  #RegularFile
-		"paseo.nix"!:   #RegularFile
+		"codex.nix"!:       #RegularFile
+		"default.nix"!:     #RegularFile
+		"lazyCodexAi.nix"!: #RegularFile
+		"ohMyPi.nix"!:      #RegularFile
+		"paseo.nix"!:       #RegularFile
 	}
 
 	lib!: {
