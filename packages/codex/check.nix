@@ -7,7 +7,8 @@
 
 let
   system = pkgs.stdenv.hostPlatform.system;
-  testHome = "/tmp/codex-home-module-${
+  testHomeBase = if pkgs.stdenv.hostPlatform.isLinux then "/build" else "/tmp";
+  testHome = "${testHomeBase}/codex-home-module-${
     builtins.substring 0 12 (builtins.hashString "sha256" package.outPath)
   }";
 
@@ -196,6 +197,38 @@ let
     ${migrationEvaluation.config.home.activation.codexHomeMigration.data}
   '';
 
+  barrierLsof = pkgs.writeShellScriptBin "lsof" ''
+    ${lib.getExe pkgs.lsof} "$@"
+    result="$?"
+    if (( result == 0 )) && [[ -n "''${CODEX_HOME_MIGRATION_TEST_BARRIER:-}" ]]; then
+      if ${pkgs.coreutils}/bin/mkdir "$CODEX_HOME_MIGRATION_TEST_BARRIER.claim" 2>/dev/null; then
+        ${pkgs.coreutils}/bin/touch "$CODEX_HOME_MIGRATION_TEST_BARRIER.ready"
+        for _ in {1..1000}; do
+          [[ -e "$CODEX_HOME_MIGRATION_TEST_BARRIER.release" ]] && break
+          ${pkgs.coreutils}/bin/sleep 0.01
+        done
+        if [[ ! -e "$CODEX_HOME_MIGRATION_TEST_BARRIER.release" ]]; then
+          echo "timed out waiting to release the Codex migration test barrier" >&2
+          exit 1
+        fi
+      fi
+    fi
+    exit "$result"
+  '';
+
+  barrierMigration = import ../../lib/nix/codexHomeMigrate.nix {
+    pkgs = pkgs // {
+      lsof = barrierLsof;
+    };
+  };
+
+  barrierMigrationScript = pkgs.writeShellScript "migrate-codex-home-with-barrier" ''
+    set -euo pipefail
+    legacy="$1"
+    migrated="$2"
+    ${lib.getExe barrierMigration} "$legacy" "$migrated"
+  '';
+
   initialConfig = pkgs.writeText "codex-initial-config.toml" ''
     # app-owned header
     model_verbosity = "low"
@@ -273,8 +306,17 @@ let
   codexHomeModule = pkgs.runCommand "codex-home-module-check" { } ''
     derivationOutput="$out"
     target="${testHome}/.config/codex/config.toml"
+    cleanupTestHome() {
+      ${lib.optionalString pkgs.stdenv.hostPlatform.isDarwin ''
+        if [[ -d ${testHome} ]]; then
+          ${pkgs.darwin.file_cmds}/bin/chmod -RN ${testHome} || true
+        fi
+      ''}
+      chmod -R u+rwX ${testHome} 2>/dev/null || true
+      rm -rf ${testHome}
+    }
     test ${lib.escapeShellArg moduleEvaluation.config.home.sessionVariables.CODEX_HOME} = ${lib.escapeShellArg "${testHome}/.config/codex"}
-    rm -rf ${testHome}
+    cleanupTestHome
     mkdir -p "$(dirname "$target")" "$TMPDIR/old-generation/state" "$TMPDIR/new-generation"
     install -m 600 ${initialConfig} "$target"
     install -m 444 ${oldManagedPaths} "$TMPDIR/old-generation/state/codex-managed-paths.json"
@@ -293,13 +335,13 @@ let
     diff -u ${expectedConfig} "$target"
     test "$(stat -c %i "$target")" = "$inode"
 
-    rm -rf ${testHome}
+    cleanupTestHome
     ${activationScript}
     diff -u ${freshExpectedConfig} "$target"
     test "$(stat -c %a "$target")" = 600
     test ! -e "${testHome}/.codex/config.toml"
 
-    rm -rf ${testHome}
+    cleanupTestHome
     legacy="${testHome}/.codex"
     migrated="${testHome}/.config/codex"
     mkdir -p "$legacy"
@@ -311,7 +353,7 @@ let
     exec 9>&-
     test -e "$legacy/open-session"
 
-    rm -rf ${testHome}
+    cleanupTestHome
     mkdir -p "$legacy/unreadable"
     chmod 000 "$legacy/unreadable"
     if ${migrationScript} >"$TMPDIR/lsof-failure.out" 2>"$TMPDIR/lsof-failure.err"; then
@@ -323,7 +365,121 @@ let
     test -d "$legacy"
     test ! -e "$migrated"
 
-    rm -rf ${testHome}
+    cleanupTestHome
+    mkdir -p "$legacy/state" "$(dirname "$migrated")"
+    chmod 0770 "$(dirname "$migrated")"
+    if ${migrationScript} >"$TMPDIR/unsafe-parent.out" 2>"$TMPDIR/unsafe-parent.err"; then
+      echo "migration accepted a group-writable target parent" >&2
+      exit 1
+    fi
+    grep -F "requires a user-owned target parent without group or other write access" "$TMPDIR/unsafe-parent.err"
+    test -d "$legacy"
+    test ! -e "$migrated"
+
+    ${lib.optionalString pkgs.stdenv.hostPlatform.isDarwin ''
+      chmod 0700 "$(dirname "$migrated")"
+      ${pkgs.darwin.file_cmds}/bin/chmod +a "everyone allow add_file" "$(dirname "$migrated")"
+      if ${migrationScript} >"$TMPDIR/acl-parent.out" 2>"$TMPDIR/acl-parent.err"; then
+        echo "migration accepted a target parent with an extended ACL" >&2
+        exit 1
+      fi
+      grep -F "refuses a writable extended ACL in the target path" "$TMPDIR/acl-parent.err"
+      test -d "$legacy"
+      test ! -e "$migrated"
+
+      ${pkgs.darwin.file_cmds}/bin/chmod -N "$(dirname "$migrated")"
+      ${pkgs.darwin.file_cmds}/bin/chmod +a "everyone allow writesecurity" "$(dirname "$migrated")"
+      if ${migrationScript} >"$TMPDIR/acl-security.out" 2>"$TMPDIR/acl-security.err"; then
+        echo "migration accepted an ACL that can grant new write permissions" >&2
+        exit 1
+      fi
+      grep -F "refuses a writable extended ACL in the target path" "$TMPDIR/acl-security.err"
+      test -d "$legacy"
+      test ! -e "$migrated"
+    ''}
+
+    ${lib.optionalString pkgs.stdenv.hostPlatform.isDarwin ''
+      cleanupTestHome
+      mkdir -p "$legacy/state" "$(dirname "$migrated")"
+      printf 'safe-deny-acl\n' > "$legacy/state/session"
+      ${pkgs.darwin.file_cmds}/bin/chmod +a "everyone deny delete" ${testHome}
+      ${migrationScript}
+      grep -Fx safe-deny-acl "$migrated/state/session"
+    ''}
+
+    cleanupTestHome
+    unsafeAncestor="${testHome}/unsafe-ancestor"
+    unsafeAncestorTarget="$unsafeAncestor/safe-parent/codex"
+    mkdir -p "$legacy/state" "$(dirname "$unsafeAncestorTarget")"
+    chmod 0777 "$unsafeAncestor"
+    if ${lib.getExe barrierMigration} "$legacy" "$unsafeAncestorTarget" >"$TMPDIR/unsafe-ancestor.out" 2>"$TMPDIR/unsafe-ancestor.err"; then
+      echo "migration accepted a target path below a writable non-sticky ancestor" >&2
+      exit 1
+    fi
+    grep -F "refuses a writable non-sticky target-path ancestor" "$TMPDIR/unsafe-ancestor.err"
+    test -d "$legacy"
+    test ! -e "$unsafeAncestorTarget"
+
+    cleanupTestHome
+    mkdir -p "$legacy/state"
+    printf 'before-scan\n' > "$legacy/state/session"
+    printf 'linked-before\n' > "$legacy/state/link-a"
+    ln "$legacy/state/link-a" "$legacy/state/link-b"
+    ${lib.optionalString pkgs.stdenv.hostPlatform.isDarwin ''
+      ${pkgs.darwin.file_cmds}/bin/chmod +a "everyone deny delete" "$legacy/state/session"
+      ${pkgs.darwin.file_cmds}/bin/xattr -w com.example.codex-migration keep-me "$legacy/state/session"
+      grep -F 'rsyncArgs+=(--filter "-x com.apple.provenance")' ${lib.getExe barrierMigration}
+    ''}
+    ${lib.optionalString pkgs.stdenv.hostPlatform.isLinux ''
+      linuxXattrError="$TMPDIR/codex-home-linux-xattr.err"
+      if ${pkgs.attr}/bin/setfattr -n user.codex-migration -v keep-me "$legacy/state/session" 2>"$linuxXattrError"; then
+        linuxXattrSupported=1
+      elif [[ "$(cat "$linuxXattrError")" == *"Operation not supported"* ]]; then
+        linuxXattrSupported=
+      else
+        cat "$linuxXattrError" >&2
+        exit 1
+      fi
+      rm -f "$linuxXattrError"
+      if grep -F 'com.apple.provenance' ${lib.getExe barrierMigration}; then
+        echo "Linux migration unexpectedly filters a Darwin xattr" >&2
+        exit 1
+      fi
+    ''}
+    barrier="$TMPDIR/codex-home-migration-barrier"
+    rm -rf "$barrier.claim" "$barrier.ready" "$barrier.release"
+    (
+      for _ in {1..1000}; do
+        [[ -e "$barrier.ready" ]] && break
+        sleep 0.01
+      done
+      if [[ ! -e "$barrier.ready" ]]; then
+        echo "timed out waiting for the Codex migration test barrier" >&2
+        exit 1
+      fi
+      printf 'after-scan\n' > "$legacy/state/session"
+      rm "$legacy/state/link-b"
+      printf 'linked-after\n' > "$legacy/state/link-b"
+      touch "$barrier.release"
+    ) &
+    mutator="$!"
+    CODEX_HOME_MIGRATION_TEST_BARRIER="$barrier" ${barrierMigrationScript} "$legacy" "$migrated"
+    wait "$mutator"
+    grep -Fx after-scan "$migrated/state/session"
+    grep -Fx linked-before "$migrated/state/link-a"
+    grep -Fx linked-after "$migrated/state/link-b"
+    test "$(stat -c %i "$migrated/state/link-a")" != "$(stat -c %i "$migrated/state/link-b")"
+    ${lib.optionalString pkgs.stdenv.hostPlatform.isDarwin ''
+      ${pkgs.darwin.file_cmds}/bin/ls -le "$migrated/state/session" | grep -F "everyone deny delete"
+      test "$(${pkgs.darwin.file_cmds}/bin/xattr -p com.example.codex-migration "$migrated/state/session")" = keep-me
+    ''}
+    ${lib.optionalString pkgs.stdenv.hostPlatform.isLinux ''
+      if [[ -n "$linuxXattrSupported" ]]; then
+        test "$(${pkgs.attr}/bin/getfattr --only-values -n user.codex-migration "$migrated/state/session")" = keep-me
+      fi
+    ''}
+
+    cleanupTestHome
     interruptedStage="${testHome}/.config/.codex-home-migration.interrupted"
     mkdir -p "$legacy/state" "$interruptedStage/state"
     printf 'source-data\n' > "$legacy/state/sentinel"
@@ -338,7 +494,7 @@ let
     grep -Fx staged-data "$interruptedStage/state/sentinel"
     test ! -e "$migrated"
 
-    rm -rf ${testHome}
+    cleanupTestHome
     interruptedBackup="$legacy.backup-interrupted"
     mkdir -p "$interruptedBackup/state"
     install -m 600 ${initialConfig} "$interruptedBackup/config.toml"
@@ -354,7 +510,7 @@ let
     test ! -e "$legacy"
     test ! -e "$migrated"
 
-    rm -rf ${testHome}
+    cleanupTestHome
     mkdir -p "$legacy/state"
     install -m 600 ${initialConfig} "$legacy/config.toml"
     printf 'session\n' > "$legacy/state/session"
@@ -385,7 +541,7 @@ let
     grep -Fx collision "$legacy/sentinel"
     test -d "$migrated"
 
-    rm -rf ${testHome}
+    cleanupTestHome
     renameSource="${testHome}/rename-source"
     renameTarget="${testHome}/rename-target"
     mkdir -p ${testHome}
@@ -398,7 +554,7 @@ let
     grep -Fx source "$renameSource"
     grep -Fx target "$renameTarget"
 
-    rm -rf ${testHome}
+    cleanupTestHome
     touch "$out"
   '';
 in
