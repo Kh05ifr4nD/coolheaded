@@ -44,9 +44,11 @@ let
     lib.sort builtins.lessThan (builtins.attrNames cfg.config)
   );
   managedPaths = map (edit: edit.keyPath) managedEdits;
+  releasedPaths = map renderKeyPath cfg.releasedConfigPaths;
 
   managedEditsFile = pkgs.writeText "codex-managed-edits.json" (builtins.toJSON managedEdits);
   managedPathsFile = pkgs.writeText "codex-managed-paths.json" (builtins.toJSON managedPaths);
+  releasedPathsFile = pkgs.writeText "codex-released-paths.json" (builtins.toJSON releasedPaths);
   stateFile = "state/codex-managed-paths.json";
 
   configDirectory =
@@ -68,6 +70,7 @@ let
       desired_edits_file="$2"
       current_paths_file="$3"
       old_paths_file="''${4:-}"
+      released_paths_file="$5"
 
       umask 077
       target_directory="$(dirname "$target")"
@@ -123,13 +126,16 @@ let
       jq -e 'type == "array"' "$desired_edits_file" >/dev/null
       jq -e 'type == "array" and all(.[]; type == "string")' "$current_paths_file" >/dev/null
       jq -e 'type == "array" and all(.[]; type == "string")' "$runtime_root/old-paths.json" >/dev/null
+      jq -e 'type == "array" and all(.[]; type == "string")' "$released_paths_file" >/dev/null
 
       jq -n \
         --slurpfile desired "$desired_edits_file" \
         --slurpfile current "$current_paths_file" \
         --slurpfile old "$runtime_root/old-paths.json" \
+        --slurpfile released "$released_paths_file" \
         '($current[0] | unique) as $currentPaths
-        | (($old[0] | unique) - $currentPaths) as $stalePaths
+        | ($released[0] | unique) as $releasedPaths
+        | ((($old[0] | unique) - $currentPaths) - $releasedPaths) as $stalePaths
         | ($desired[0] + ($stalePaths | map({
             keyPath: ., mergeStrategy: "replace", value: null
           })))
@@ -315,8 +321,113 @@ let
       fi
     '';
   };
+
+  migrateCodexHome = pkgs.writeShellApplication {
+    name = "codex-home-migrate";
+    runtimeInputs = [
+      pkgs.coreutils
+      pkgs.lsof
+      pkgs.rsync
+    ];
+    text = ''
+      legacy="$1"
+      target="$2"
+
+      umask 077
+
+      if [[ -L "$legacy" || -L "$target" ]]; then
+        echo "Codex home migration refuses symbolic-link roots: $legacy -> $target" >&2
+        exit 1
+      fi
+      if [[ -e "$target" ]]; then
+        if [[ -e "$legacy" ]]; then
+          echo "Codex home migration found both source and target; refusing to merge: $legacy, $target" >&2
+          exit 1
+        fi
+        exit 0
+      fi
+      if [[ ! -e "$legacy" ]]; then
+        exit 0
+      fi
+      if [[ ! -d "$legacy" ]]; then
+        echo "Legacy Codex home is not a directory: $legacy" >&2
+        exit 1
+      fi
+
+      assertUnused() {
+        path="$1"
+        openFiles="$(mktemp "''${TMPDIR:-/tmp}/codex-home-open-files.XXXXXX")"
+        lsof +D "$path" >"$openFiles" 2>/dev/null || true
+        if [[ -s "$openFiles" ]]; then
+          cat "$openFiles" >&2
+          rm -f "$openFiles"
+          echo "Close every process using the Codex home before migration: $path" >&2
+          return 1
+        fi
+        rm -f "$openFiles"
+      }
+
+      assertUnused "$legacy"
+
+      targetParent="$(dirname "$target")"
+      mkdir -p "$targetParent"
+      stage="$(mktemp -d "$targetParent/.codex-home-migration.XXXXXX")"
+      backup=""
+      legacyMoved=""
+
+      rollback() {
+        result="$?"
+        set +e
+        if [[ -n "$legacyMoved" && ! -e "$legacy" && -d "$backup" ]]; then
+          mv "$backup" "$legacy"
+        fi
+        if [[ -n "$stage" && -d "$stage" ]]; then
+          rm -rf "$stage"
+        fi
+        exit "$result"
+      }
+      trap rollback EXIT
+
+      rsync -aHAX --protect-args "$legacy/" "$stage/"
+      differences="$(rsync -aHAXnic --delete --protect-args "$legacy/" "$stage/")"
+      if [[ -n "$differences" ]]; then
+        printf '%s\n' "$differences" >&2
+        echo "Staged Codex home failed content or metadata verification" >&2
+        exit 1
+      fi
+
+      timestamp="$(date -u +%Y%m%dT%H%M%SZ)"
+      backup="$legacy.backup-$timestamp"
+      if [[ -e "$backup" || -L "$backup" ]]; then
+        echo "Codex home migration backup already exists: $backup" >&2
+        exit 1
+      fi
+
+      mv "$legacy" "$backup"
+      legacyMoved=1
+      assertUnused "$backup"
+      differences="$(rsync -aHAXnic --delete --protect-args "$backup/" "$stage/")"
+      if [[ -n "$differences" ]]; then
+        printf '%s\n' "$differences" >&2
+        echo "Legacy Codex home changed during migration; restoring its original path" >&2
+        exit 1
+      fi
+      if [[ -e "$legacy" || -L "$legacy" ]]; then
+        echo "Legacy Codex home reappeared during migration; refusing to activate the staged copy" >&2
+        exit 1
+      fi
+      mv "$stage" "$target"
+      stage=""
+      legacyMoved=""
+      trap - EXIT
+
+      printf 'Migrated Codex home to %s; preserved rollback copy at %s\n' "$target" "$backup"
+    '';
+  };
 in
 {
+  key = "coolheaded.homeModules.codex";
+
   options.programs.codex.config = lib.mkOption {
     type = lib.types.attrsOf configValueType;
     default = { };
@@ -338,6 +449,24 @@ in
     '';
   };
 
+  options.programs.codex.releasedConfigPaths = lib.mkOption {
+    type = lib.types.listOf (lib.types.listOf lib.types.str);
+    default = [ ];
+    internal = true;
+    description = "Formerly managed Codex leaves handed back without deleting their current values.";
+  };
+
+  options.programs.codex.migrateFromLegacyHome = lib.mkOption {
+    type = lib.types.bool;
+    default = false;
+    description = ''
+      Migrate the legacy ~/.codex directory to the XDG Codex home before
+      activation. The migration refuses collisions and open files, verifies a
+      same-filesystem staging copy, atomically installs it, and retains the
+      original directory under a timestamped backup name.
+    '';
+  };
+
   config = lib.mkIf cfg.enable {
     assertions = [
       {
@@ -355,6 +484,10 @@ in
       {
         assertion = cfg.plugins == [ ] && cfg.marketplaces == { };
         message = "Declare plugins and marketplaces in `programs.codex.config`";
+      }
+      {
+        assertion = !cfg.migrateFromLegacyHome || config.home.preferXdgDirectories;
+        message = "`programs.codex.migrateFromLegacyHome` requires `home.preferXdgDirectories = true`";
       }
     ];
 
@@ -378,7 +511,21 @@ in
           ${lib.escapeShellArg configFile} \
           ${managedEditsFile} \
           ${managedPathsFile} \
-          "$oldManagedPaths"
+          "$oldManagedPaths" \
+          ${releasedPathsFile}
+      '';
+    };
+
+    home.activation.codexHomeMigration = {
+      after = [ "linkGeneration" ];
+      before = [
+        "lazyCodexAi"
+        "codexConfig"
+      ];
+      data = lib.optionalString cfg.migrateFromLegacyHome ''
+        run ${migrateCodexHome}/bin/codex-home-migrate \
+          ${lib.escapeShellArg "${config.home.homeDirectory}/.codex"} \
+          ${lib.escapeShellArg configDirectory}
       '';
     };
   };

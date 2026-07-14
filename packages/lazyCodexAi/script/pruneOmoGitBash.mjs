@@ -111,6 +111,90 @@ function removeArrayValues(record, key, removedValues, file) {
   record[key] = values.filter((value) => !removed.has(value));
 }
 
+/**
+ * @param {string} file
+ * @param {string} source
+ * @param {string} before
+ * @param {string} after
+ * @returns {string}
+ */
+function replaceExactly(file, source, before, after) {
+  const first = source.indexOf(before);
+  if (first === -1) {
+    throw new Error(`${file}: expected runtime fragment is missing`);
+  }
+  if (source.includes(before, first + before.length)) {
+    throw new Error(`${file}: expected one runtime fragment, found multiple`);
+  }
+  return `${source.slice(0, first)}${after}${source.slice(first + before.length)}`;
+}
+
+/**
+ * @param {string} file
+ * @returns {void}
+ */
+function pruneRuntimeConfig(file) {
+  let source = nodeFs.readFileSync(file, "utf8");
+  source = replaceExactly(
+    file,
+    source,
+    '  const gitBashEnabled = (input.platform ?? process.platform) === "win32" && input.gitBashEnabled === true;\n',
+    "",
+  );
+  source = replaceExactly(
+    file,
+    source,
+    '  nextConfig = ensurePluginMcpEnabled(nextConfig, "omo@sisyphuslabs", "git_bash", gitBashEnabled);',
+    "  nextConfig = removeGitBashMcpConfig(nextConfig);",
+  );
+  source = replaceExactly(
+    file,
+    source,
+    "function ensureHookTrusted(config, state) {",
+    `function removeGitBashMcpConfig(config) {
+  const sectionPath = ["plugins", "omo@sisyphuslabs", "mcp_servers", "git_bash"];
+  const withoutSection = removeTomlSections(config, (header) => tomlPathEquals(header, sectionPath));
+  return removeTomlAssignment(withoutSection, [...sectionPath, "enabled"]);
+}
+function tomlPathEquals(input, expected) {
+  const parsed = parseTomlDottedKey(input);
+  return parsed !== null && parsed.length === expected.length && parsed.every((part, index) => part === expected[index]);
+}
+function removeTomlAssignment(config, expected) {
+  return (config.match(/[^\\n]*\\n?|$/g) ?? []).filter((line) => {
+    const key = tomlAssignmentKey(stripUnquotedInlineComment(line));
+    return key === null || !tomlPathEquals(key, expected);
+  }).join("");
+}
+function tomlAssignmentKey(line) {
+  let quote = null;
+  let escaped = false;
+  for (let index = 0;index < line.length; index += 1) {
+    const char = line[index];
+    if (quote !== null) {
+      if (quote === '"' && char === "\\\\" && !escaped) {
+        escaped = true;
+        continue;
+      }
+      if (char === quote && !escaped)
+        quote = null;
+      escaped = false;
+      continue;
+    }
+    if (char === '"' || char === "'") {
+      quote = char;
+      continue;
+    }
+    if (char === "=")
+      return line.slice(0, index).trim();
+  }
+  return null;
+}
+function ensureHookTrusted(config, state) {`,
+  );
+  nodeFs.writeFileSync(file, source);
+}
+
 /** @type {unknown} */
 const processCandidate = Reflect.get(globalThis, "process");
 if (!isNodeProcess(processCandidate)) {
@@ -122,6 +206,15 @@ if (packageRoot === undefined || packageRoot.length === 0) {
 }
 
 const pluginRoot = joinPath(packageRoot, "packages/omo-codex/plugin");
+
+for (const file of [
+  "dist/cli-node/index.js",
+  "dist/cli/index.js",
+  "packages/omo-codex/scripts/install-dist/install-local.mjs",
+  "packages/omo-codex/plugin/components/bootstrap/dist/cli.js",
+]) {
+  pruneRuntimeConfig(joinPath(packageRoot, file));
+}
 
 const rootPackageFile = joinPath(packageRoot, "package.json");
 const rootPackage = readJson(rootPackageFile);
