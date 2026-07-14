@@ -63,12 +63,26 @@ packageLib.mkNpmTarballPackage {
     . ${../../lib/package.sh}
 
     patch -p1 < ${./patch/normalizeCopiedPluginCachePermissions.patch}
+    patch -p1 < ${./patch/useBundledCleanupCli.patch}
 
     packageRoot="$out/libexec/lazycodex-ai"
     mkdir -p "$packageRoot" "$out/bin"
     cp -R . "$packageRoot/"
     rm -f "$packageRoot/.attrs.json" "$packageRoot/.attrs.sh" "$packageRoot/env-vars"
     find "$packageRoot/packages/omo-codex/plugin" -type d -name .github -prune -exec rm -rf {} +
+
+    LAZYCODEX_PACKAGE_ROOT="$packageRoot" \
+      "${nodeExecutable}" ${./script/pruneOmoGitBash.mjs}
+
+    pluginRoot="$packageRoot/packages/omo-codex/plugin"
+    rm -rf \
+      "$packageRoot/packages/git-bash-mcp" \
+      "$packageRoot/dist/cli/install-codex/git-bash.d.ts" \
+      "$pluginRoot/components/git-bash" \
+      "$pluginRoot/components/rules/bundled-rules/windows-git-bash.md" \
+      "$pluginRoot/components/rules/test/windows-git-bash-bundled-rule.test.ts" \
+      "$pluginRoot/hooks/post-compact-resetting-git-bash-mcp-reminder.json" \
+      "$pluginRoot/hooks/pre-tool-use-recommending-git-bash-mcp.json"
 
     LAZYCODEX_PLUGIN_ROOT="$packageRoot/packages/omo-codex/plugin" \
     LAZYCODEX_NODE_EXECUTABLE="${nodeExecutable}" \
@@ -85,6 +99,7 @@ packageLib.mkNpmTarballPackage {
     makeWrapper "${nodejs}/bin/node" "$out/bin/lazycodex-ai" \
       --add-flags "$packageRoot/packages/omo-codex/scripts/install-local.mjs" \
       --set-default LAZYCODEX_AI_NIX_SKIP_CACHE_NPM 1 \
+      --set LAZYCODEX_AI_NIX_OMO_CLI "$packageRoot/dist/cli-node/index.js" \
       --prefix PATH : "${nodePath}"
 
     runHook postInstall
@@ -103,6 +118,29 @@ packageLib.mkNpmTarballPackage {
       *"oh-my-openagent@latest install --platform=codex"*) ;;
       *) failCheck "unexpected lazycodex-ai --dry-run output" ;;
     esac
+
+    dryRunUninstallOutput="$("$out/bin/lazycodex-ai" --dry-run uninstall 2>&1)"
+    case "$dryRunUninstallOutput" in
+      *"${packageRoot}/dist/cli-node/index.js cleanup --platform=codex"*) ;;
+      *) failCheck "lazycodex-ai uninstall does not use its bundled same-version cleanup CLI" ;;
+    esac
+
+    test ! -e "$packageRoot/packages/git-bash-mcp" \
+      || failCheck "packaged LazyCodex contains the Windows-only Git Bash MCP"
+    test ! -e "$packageRoot/packages/omo-codex/plugin/components/git-bash" \
+      || failCheck "packaged OMO plugin contains the Windows-only Git Bash component"
+    test ! -e "$packageRoot/packages/omo-codex/plugin/components/rules/bundled-rules/windows-git-bash.md" \
+      || failCheck "packaged OMO plugin contains the Windows-only Git Bash rule"
+    for gitBashMetadata in \
+      "$packageRoot/package.json" \
+      "$packageRoot/packages/omo-codex/plugin/package.json" \
+      "$packageRoot/packages/omo-codex/plugin/package-lock.json" \
+      "$packageRoot/packages/omo-codex/plugin/.mcp.json" \
+      "$packageRoot/packages/omo-codex/plugin/.codex-plugin/plugin.json"; do
+      if grep -Eiq 'git[-_]bash|Git Bash' "$gitBashMetadata"; then
+        failCheck "packaged metadata still references Git Bash: $gitBashMetadata"
+      fi
+    done
 
     installCheckHome="$PWD/installCheckHome"
     installCheckCodexHome="$PWD/installCheckCodexHome"
@@ -131,6 +169,18 @@ packageLib.mkNpmTarballPackage {
     assertFileExists "$pluginRoot/.codex-plugin/plugin.json"
     assertFileExists "$pluginRoot/components/codegraph/dist/cli.js"
     assertFileExists "$installCheckCodexHome/config.toml"
+    test ! -e "$pluginRoot/components/git-bash" \
+      || failCheck "installed OMO plugin contains the Windows-only Git Bash component"
+    test ! -e "$pluginRoot/components/git-bash-mcp" \
+      || failCheck "installed OMO plugin contains the Windows-only Git Bash MCP"
+    test ! -e "$installCheckCodexHome/bin/omo-git-bash-hook" \
+      || failCheck "installed Codex bin directory contains the Windows-only Git Bash hook"
+    if grep -Eiq 'git[-_]bash|Git Bash' "$pluginRoot/.mcp.json"; then
+      failCheck "installed OMO MCP manifest still references Git Bash"
+    fi
+    if grep -Eiq 'git[-_]bash|Git Bash' "$pluginRoot/.codex-plugin/plugin.json"; then
+      failCheck "installed OMO plugin manifest still references Git Bash"
+    fi
     test -w "$pluginRoot/.codex-plugin" \
       || failCheck "installed plugin manifest directory is not writable"
     test -w "$pluginRoot/components/lsp-daemon/dist" \
@@ -152,6 +202,48 @@ packageLib.mkNpmTarballPackage {
     test -z "$bareNodeCommand" || failCheck "installed OMO plugin contains bare node command: $bareNodeCommand"
     grep -F '[hooks.state.' "$installCheckCodexHome/config.toml" > /dev/null \
       || failCheck "installed config contains no trusted hook state"
+
+    printf '\n[projects."/preserved-by-uninstall"]\ntrust_level = "trusted"\n' \
+      >> "$installCheckCodexHome/config.toml"
+    uninstallOutput="$PWD/lazycodex-uninstall.log"
+    npmOfflineCache="$PWD/npmOfflineCache"
+    mkdir -p "$npmOfflineCache"
+    if ! HOME="$installCheckHome" \
+      CODEX_HOME="$installCheckCodexHome" \
+      TMPDIR="$installCheckTmp" \
+      NPM_CONFIG_CACHE="$npmOfflineCache" \
+      NPM_CONFIG_OFFLINE=true \
+      NPM_CONFIG_REGISTRY=http://127.0.0.1:9 \
+      OMO_CODEX_DISABLE_POSTHOG=1 \
+      "$out/bin/lazycodex-ai" uninstall --json > "$uninstallOutput" 2>&1; then
+      sed -n '1,160p' "$uninstallOutput" >&2
+      failCheck "lazycodex-ai uninstall failed without npm registry access"
+    fi
+    grep -F '"configChanged": true' "$uninstallOutput" > /dev/null \
+      || failCheck "lazycodex-ai uninstall did not report a config change"
+    test ! -e "$installCheckCodexHome/plugins/cache/sisyphuslabs" \
+      || failCheck "lazycodex-ai uninstall left the managed plugin cache"
+    test ! -e "$installCheckCodexHome/.tmp/marketplaces/sisyphuslabs" \
+      || failCheck "lazycodex-ai uninstall left the managed marketplace cache"
+    test ! -e "$installCheckCodexHome/agents/explorer.toml" \
+      || failCheck "lazycodex-ai uninstall left a manifest-managed agent"
+    grep -F '[projects."/preserved-by-uninstall"]' "$installCheckCodexHome/config.toml" > /dev/null \
+      || failCheck "lazycodex-ai uninstall removed user-owned Codex config"
+    configBackups=("$installCheckCodexHome"/config.toml.backup-*)
+    test -e "''${configBackups[0]}" \
+      || failCheck "lazycodex-ai uninstall did not back up the Codex config"
+
+    cleanupOutput="$PWD/lazycodex-cleanup.log"
+    HOME="$installCheckHome" \
+      CODEX_HOME="$installCheckCodexHome" \
+      TMPDIR="$installCheckTmp" \
+      NPM_CONFIG_CACHE="$npmOfflineCache" \
+      NPM_CONFIG_OFFLINE=true \
+      NPM_CONFIG_REGISTRY=http://127.0.0.1:9 \
+      OMO_CODEX_DISABLE_POSTHOG=1 \
+      "$out/bin/lazycodex-ai" cleanup --json > "$cleanupOutput" 2>&1
+    grep -F '"configChanged": false' "$cleanupOutput" > /dev/null \
+      || failCheck "lazycodex-ai cleanup alias is not idempotent after uninstall"
 
     test ! -e "$out/bin/lazycodex" || failCheck "unexpected lazycodex compatibility launcher"
     assertFileExists "${packageRoot}/packages/omo-codex/marketplace.json"
