@@ -1,4 +1,7 @@
-{ self }:
+{
+  self,
+  codexHomeMigrationPackage ? null,
+}:
 
 {
   config,
@@ -322,7 +325,11 @@ let
     '';
   };
 
-  migrateCodexHome = import ../lib/nix/codexHomeMigrate.nix { inherit pkgs; };
+  migrateCodexHome =
+    if codexHomeMigrationPackage == null then
+      import ../lib/nix/codexHomeMigrate.nix { inherit pkgs; }
+    else
+      codexHomeMigrationPackage;
 in
 {
   key = "coolheaded.homeModules.codex";
