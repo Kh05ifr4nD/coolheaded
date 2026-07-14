@@ -1,8 +1,10 @@
-{ pkgs }:
+{
+  pkgs,
+  renameNoReplace ? import ./renameNoReplace.nix { inherit pkgs; },
+  trustUnmappedOwnersForTests ? false,
+}:
 
-let
-  renameNoReplace = import ./renameNoReplace.nix { inherit pkgs; };
-in
+assert !trustUnmappedOwnersForTests || pkgs.stdenv.hostPlatform.isLinux;
 pkgs.writeShellApplication {
   name = "codex-home-migrate";
   runtimeInputs = [
@@ -14,6 +16,19 @@ pkgs.writeShellApplication {
   ++ pkgs.lib.optionals pkgs.stdenv.hostPlatform.isDarwin [ pkgs.darwin.file_cmds ]
   ++ pkgs.lib.optionals pkgs.stdenv.hostPlatform.isLinux [ pkgs.acl ];
   text = ''
+    usage() {
+      printf 'Usage: codex-home-migrate LEGACY TARGET\n'
+    }
+
+    if (( $# == 1 )) && [[ "$1" == -h || "$1" == --help ]]; then
+      usage
+      exit 0
+    fi
+    if (( $# != 2 )); then
+      usage >&2
+      exit 64
+    fi
+
     legacy="$1"
     target="$2"
 
@@ -98,23 +113,21 @@ pkgs.writeShellApplication {
 
     mkdir -p "$targetParent"
     currentOwner="$(id -u)"
-    # stat reports an unmapped owner as overflowuid inside a user namespace.
-    # Trust that representation only for the filesystem root itself.
-    rootOwnerIsUnmapped=
-    ${pkgs.lib.optionalString pkgs.stdenv.hostPlatform.isLinux ''
+    ${pkgs.lib.optionalString trustUnmappedOwnersForTests ''
+      # Nix's Linux sandbox can hide host owners behind overflowuid. This branch
+      # is compiled only into test helpers; production must prove every owner.
+      testOnlyUnmappedOwner=
       if [[ -r /proc/self/uid_map && -r /proc/sys/kernel/overflowuid ]]; then
         overflowUid="$(cat /proc/sys/kernel/overflowuid)"
-        if [[ "$(stat -c %u /)" == "$overflowUid" ]]; then
-          overflowUidMapped=
-          while read -r insideUid _ rangeLength; do
-            if (( overflowUid >= insideUid && overflowUid - insideUid < rangeLength )); then
-              overflowUidMapped=1
-              break
-            fi
-          done < /proc/self/uid_map
-          if [[ -z "$overflowUidMapped" ]]; then
-            rootOwnerIsUnmapped=1
+        overflowUidMapped=
+        while read -r insideUid _ rangeLength; do
+          if (( overflowUid >= insideUid && overflowUid - insideUid < rangeLength )); then
+            overflowUidMapped=1
+            break
           fi
+        done < /proc/self/uid_map
+        if [[ -z "$overflowUidMapped" ]]; then
+          testOnlyUnmappedOwner="$overflowUid"
         fi
       fi
     ''}
@@ -183,8 +196,10 @@ pkgs.writeShellApplication {
       trustedAncestorOwner=
       if [[ "$ancestorOwner" == "$currentOwner" || "$ancestorOwner" == 0 ]]; then
         trustedAncestorOwner=1
-      elif [[ "$ancestor" == / && -n "$rootOwnerIsUnmapped" ]]; then
-        trustedAncestorOwner=1
+      ${pkgs.lib.optionalString trustUnmappedOwnersForTests ''
+        elif [[ -n "$testOnlyUnmappedOwner" && "$ancestorOwner" == "$testOnlyUnmappedOwner" ]]; then
+          trustedAncestorOwner=1
+      ''}
       fi
       if [[ -z "$trustedAncestorOwner" ]]; then
         echo "Codex home migration refuses a target-path ancestor owned by another user: $ancestor" >&2
@@ -200,13 +215,20 @@ pkgs.writeShellApplication {
     done
 
     stage="$(mktemp -d "$targetParent/.codex-home-migration.XXXXXX")"
+    stageIdentity="$(stat -c %d:%i -- "$stage")"
     backup=""
-    legacyMoved=""
+
+    isPublishedTarget() {
+      local targetIdentity
+      [[ -n "$stageIdentity" && ! -L "$target" && -d "$target" ]] || return 1
+      targetIdentity="$(stat -c %d:%i -- "$target")" || return 1
+      [[ "$targetIdentity" == "$stageIdentity" ]]
+    }
 
     rollback() {
       result="$?"
       set +e
-      if [[ -n "$legacyMoved" && ! -e "$legacy" && -d "$backup" ]]; then
+      if [[ -n "$backup" && ! -e "$legacy" && -d "$backup" ]] && ! isPublishedTarget; then
         rename-no-replace "$backup" "$legacy"
       fi
       if [[ -n "$stage" && -d "$stage" ]]; then
@@ -228,7 +250,6 @@ pkgs.writeShellApplication {
     fi
 
     rename-no-replace "$legacy" "$backup"
-    legacyMoved=1
     assertUnused "$backup"
     # Copy only after the source path is frozen. This includes every completed
     # pre-rename write and reconstructs exact hard-link topology in an empty
@@ -245,8 +266,6 @@ pkgs.writeShellApplication {
       exit 1
     fi
     rename-no-replace "$stage" "$target"
-    stage=""
-    legacyMoved=""
     trap - EXIT
 
     printf 'Migrated Codex home to %s; preserved rollback copy at %s\n' "$target" "$backup"

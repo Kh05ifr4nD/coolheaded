@@ -7,13 +7,44 @@
 
 let
   system = pkgs.stdenv.hostPlatform.system;
-  testHomeBase = if pkgs.stdenv.hostPlatform.isLinux then "/build" else "/tmp";
-  testHome = "${testHomeBase}/codex-home-module-${
+  testHomeName = "codex-home-module-${
     builtins.substring 0 12 (builtins.hashString "sha256" package.outPath)
   }";
+  testHome = "/__${testHomeName}__";
 
-  codexModule = import ../../homeModules/codex.nix { self.packages.${system}.codex = package; };
   renameNoReplace = import ../../lib/nix/renameNoReplace.nix { inherit pkgs; };
+  productionMigration = import ../../lib/nix/codexHomeMigrate.nix { inherit pkgs; };
+  testMigration = import ../../lib/nix/codexHomeMigrate.nix {
+    inherit pkgs;
+    trustUnmappedOwnersForTests = pkgs.stdenv.hostPlatform.isLinux;
+  };
+  codexModule = import ../../homeModules/codex.nix {
+    self.packages.${system}.codex = package;
+    codexHomeMigrationPackage = testMigration;
+  };
+
+  signalRenameNoReplace = pkgs.writeShellScriptBin "rename-no-replace" ''
+    set -euo pipefail
+
+    stateFile="''${CODEX_HOME_MIGRATION_TEST_SIGNAL_STATE:?}"
+    count=0
+    if [[ -s "$stateFile" ]]; then
+      read -r count < "$stateFile"
+    fi
+    count=$((count + 1))
+    printf '%s\n' "$count" > "$stateFile"
+
+    ${lib.getExe renameNoReplace} "$@"
+    if [[ "$count" == "''${CODEX_HOME_MIGRATION_TEST_SIGNAL_AFTER:?}" ]]; then
+      kill -TERM "$PPID"
+    fi
+  '';
+
+  signalMigration = import ../../lib/nix/codexHomeMigrate.nix {
+    inherit pkgs;
+    renameNoReplace = signalRenameNoReplace;
+    trustUnmappedOwnersForTests = pkgs.stdenv.hostPlatform.isLinux;
+  };
 
   moduleEvaluation = lib.evalModules {
     specialArgs = { inherit pkgs; };
@@ -220,6 +251,7 @@ let
     pkgs = pkgs // {
       lsof = barrierLsof;
     };
+    trustUnmappedOwnersForTests = pkgs.stdenv.hostPlatform.isLinux;
   };
 
   barrierMigrationScript = pkgs.writeShellScript "migrate-codex-home-with-barrier" ''
@@ -305,15 +337,46 @@ let
 
   codexHomeModule = pkgs.runCommand "codex-home-module-check" { } ''
     derivationOutput="$out"
-    target="${testHome}/.config/codex/config.toml"
+    testHome="$NIX_BUILD_TOP/${testHomeName}"
+    case "$testHome" in
+      "$NIX_BUILD_TOP"/*) ;;
+      *)
+        echo "Codex module test home is outside NIX_BUILD_TOP: $testHome" >&2
+        exit 1
+        ;;
+    esac
+    activationUnderTest="$TMPDIR/activate-codex-home-module"
+    migrationUnderTest="$TMPDIR/migrate-codex-home-module"
+    substitute ${activationScript} "$activationUnderTest" \
+      --replace-fail ${lib.escapeShellArg testHome} "$testHome"
+    substitute ${migrationScript} "$migrationUnderTest" \
+      --replace-fail ${lib.escapeShellArg testHome} "$testHome"
+    chmod +x "$activationUnderTest" "$migrationUnderTest"
+    if grep -F 'rootOwnerIsUnmapped' ${lib.getExe productionMigration}; then
+      echo "production migration trusts an unprovable overflow UID" >&2
+      exit 1
+    fi
+    ${lib.getExe productionMigration} --help >"$TMPDIR/migration-help.out"
+    grep -F "Usage: codex-home-migrate LEGACY TARGET" "$TMPDIR/migration-help.out"
+    if ${lib.getExe productionMigration} only-one-argument \
+      >"$TMPDIR/migration-invalid.out" 2>"$TMPDIR/migration-invalid.err"; then
+      echo "migration accepted an invalid argument count" >&2
+      exit 1
+    fi
+    grep -F "Usage: codex-home-migrate LEGACY TARGET" "$TMPDIR/migration-invalid.err"
+    ${lib.optionalString pkgs.stdenv.hostPlatform.isLinux ''
+      grep -F 'testOnlyUnmappedOwner=' ${lib.getExe testMigration}
+    ''}
+
+    target="$testHome/.config/codex/config.toml"
     cleanupTestHome() {
       ${lib.optionalString pkgs.stdenv.hostPlatform.isDarwin ''
-        if [[ -d ${testHome} ]]; then
-          ${pkgs.darwin.file_cmds}/bin/chmod -RN ${testHome} || true
+        if [[ -d "$testHome" ]]; then
+          ${pkgs.darwin.file_cmds}/bin/chmod -RN "$testHome" || true
         fi
       ''}
-      chmod -R u+rwX ${testHome} 2>/dev/null || true
-      rm -rf ${testHome}
+      chmod -R u+rwX "$testHome" 2>/dev/null || true
+      rm -rf "$testHome"
     }
     test ${lib.escapeShellArg moduleEvaluation.config.home.sessionVariables.CODEX_HOME} = ${lib.escapeShellArg "${testHome}/.config/codex"}
     cleanupTestHome
@@ -326,27 +389,42 @@ let
     diff -u ${expectedManagedPaths} "$out/state/codex-managed-paths.json"
     out="$derivationOutput"
 
-    ${activationScript} "$TMPDIR/old-generation" "$TMPDIR/new-generation"
+    "$activationUnderTest" "$TMPDIR/old-generation" "$TMPDIR/new-generation"
     diff -u ${expectedConfig} "$target"
     test "$(stat -c %a "$target")" = 600
 
     inode="$(stat -c %i "$target")"
-    ${activationScript} "$TMPDIR/old-generation" "$TMPDIR/new-generation"
+    "$activationUnderTest" "$TMPDIR/old-generation" "$TMPDIR/new-generation"
     diff -u ${expectedConfig} "$target"
     test "$(stat -c %i "$target")" = "$inode"
 
     cleanupTestHome
-    ${activationScript}
+    "$activationUnderTest"
     diff -u ${freshExpectedConfig} "$target"
     test "$(stat -c %a "$target")" = 600
-    test ! -e "${testHome}/.codex/config.toml"
+    test ! -e "$testHome/.codex/config.toml"
 
     cleanupTestHome
-    legacy="${testHome}/.codex"
-    migrated="${testHome}/.config/codex"
+    legacy="$testHome/.codex"
+    migrated="$testHome/.config/codex"
+    ${lib.optionalString pkgs.stdenv.hostPlatform.isLinux ''
+      if [[ "$(stat -c %u /)" != 0 ]]; then
+        mkdir -p "$legacy/state"
+        printf 'unmapped-root\n' > "$legacy/state/sentinel"
+        if ${lib.getExe productionMigration} "$legacy" "$migrated" \
+          >"$TMPDIR/unmapped-root.out" 2>"$TMPDIR/unmapped-root.err"; then
+          echo "production migration trusted an unmapped root owner" >&2
+          exit 1
+        fi
+        grep -F "refuses a target-path ancestor owned by another user: /" "$TMPDIR/unmapped-root.err"
+        grep -Fx unmapped-root "$legacy/state/sentinel"
+        test ! -e "$migrated"
+        cleanupTestHome
+      fi
+    ''}
     mkdir -p "$legacy"
     exec 9>"$legacy/open-session"
-    if ${migrationScript}; then
+    if "$migrationUnderTest"; then
       echo "migration accepted an in-use source directory" >&2
       exit 1
     fi
@@ -356,7 +434,7 @@ let
     cleanupTestHome
     mkdir -p "$legacy/unreadable"
     chmod 000 "$legacy/unreadable"
-    if ${migrationScript} >"$TMPDIR/lsof-failure.out" 2>"$TMPDIR/lsof-failure.err"; then
+    if "$migrationUnderTest" >"$TMPDIR/lsof-failure.out" 2>"$TMPDIR/lsof-failure.err"; then
       echo "migration accepted an incomplete open-file scan" >&2
       exit 1
     fi
@@ -368,7 +446,7 @@ let
     cleanupTestHome
     mkdir -p "$legacy/state" "$(dirname "$migrated")"
     chmod 0770 "$(dirname "$migrated")"
-    if ${migrationScript} >"$TMPDIR/unsafe-parent.out" 2>"$TMPDIR/unsafe-parent.err"; then
+    if "$migrationUnderTest" >"$TMPDIR/unsafe-parent.out" 2>"$TMPDIR/unsafe-parent.err"; then
       echo "migration accepted a group-writable target parent" >&2
       exit 1
     fi
@@ -379,7 +457,7 @@ let
     ${lib.optionalString pkgs.stdenv.hostPlatform.isDarwin ''
       chmod 0700 "$(dirname "$migrated")"
       ${pkgs.darwin.file_cmds}/bin/chmod +a "everyone allow add_file" "$(dirname "$migrated")"
-      if ${migrationScript} >"$TMPDIR/acl-parent.out" 2>"$TMPDIR/acl-parent.err"; then
+      if "$migrationUnderTest" >"$TMPDIR/acl-parent.out" 2>"$TMPDIR/acl-parent.err"; then
         echo "migration accepted a target parent with an extended ACL" >&2
         exit 1
       fi
@@ -389,7 +467,7 @@ let
 
       ${pkgs.darwin.file_cmds}/bin/chmod -N "$(dirname "$migrated")"
       ${pkgs.darwin.file_cmds}/bin/chmod +a "everyone allow writesecurity" "$(dirname "$migrated")"
-      if ${migrationScript} >"$TMPDIR/acl-security.out" 2>"$TMPDIR/acl-security.err"; then
+      if "$migrationUnderTest" >"$TMPDIR/acl-security.out" 2>"$TMPDIR/acl-security.err"; then
         echo "migration accepted an ACL that can grant new write permissions" >&2
         exit 1
       fi
@@ -402,13 +480,13 @@ let
       cleanupTestHome
       mkdir -p "$legacy/state" "$(dirname "$migrated")"
       printf 'safe-deny-acl\n' > "$legacy/state/session"
-      ${pkgs.darwin.file_cmds}/bin/chmod +a "everyone deny delete" ${testHome}
-      ${migrationScript}
+      ${pkgs.darwin.file_cmds}/bin/chmod +a "everyone deny delete" "$testHome"
+      "$migrationUnderTest"
       grep -Fx safe-deny-acl "$migrated/state/session"
     ''}
 
     cleanupTestHome
-    unsafeAncestor="${testHome}/unsafe-ancestor"
+    unsafeAncestor="$testHome/unsafe-ancestor"
     unsafeAncestorTarget="$unsafeAncestor/safe-parent/codex"
     mkdir -p "$legacy/state" "$(dirname "$unsafeAncestorTarget")"
     chmod 0777 "$unsafeAncestor"
@@ -480,11 +558,11 @@ let
     ''}
 
     cleanupTestHome
-    interruptedStage="${testHome}/.config/.codex-home-migration.interrupted"
+    interruptedStage="$testHome/.config/.codex-home-migration.interrupted"
     mkdir -p "$legacy/state" "$interruptedStage/state"
     printf 'source-data\n' > "$legacy/state/sentinel"
     printf 'staged-data\n' > "$interruptedStage/state/sentinel"
-    if ${migrationScript} >"$TMPDIR/interrupted-stage.out" 2>"$TMPDIR/interrupted-stage.err"; then
+    if "$migrationUnderTest" >"$TMPDIR/interrupted-stage.out" 2>"$TMPDIR/interrupted-stage.err"; then
       echo "migration ignored staged data from an interrupted run" >&2
       exit 1
     fi
@@ -499,7 +577,7 @@ let
     mkdir -p "$interruptedBackup/state"
     install -m 600 ${initialConfig} "$interruptedBackup/config.toml"
     printf 'rollback-data\n' > "$interruptedBackup/state/sentinel"
-    if ${migrationScript} >"$TMPDIR/interrupted-migration.out" 2>"$TMPDIR/interrupted-migration.err"; then
+    if "$migrationUnderTest" >"$TMPDIR/interrupted-migration.out" 2>"$TMPDIR/interrupted-migration.err"; then
       echo "migration ignored rollback data from an interrupted run" >&2
       exit 1
     fi
@@ -512,12 +590,44 @@ let
 
     cleanupTestHome
     mkdir -p "$legacy/state"
+    printf 'first-rename\n' > "$legacy/state/sentinel"
+    signalState="$TMPDIR/codex-home-signal-state"
+    rm -f "$signalState"
+    if CODEX_HOME_MIGRATION_TEST_SIGNAL_STATE="$signalState" \
+      CODEX_HOME_MIGRATION_TEST_SIGNAL_AFTER=1 \
+      ${lib.getExe signalMigration} "$legacy" "$migrated"; then
+      echo "migration ignored TERM immediately after the source rename" >&2
+      exit 1
+    fi
+    grep -Fx first-rename "$legacy/state/sentinel"
+    test ! -e "$migrated"
+    firstSignalBackups=("$legacy".backup-*)
+    test "''${#firstSignalBackups[@]}" = 0
+
+    cleanupTestHome
+    mkdir -p "$legacy/state"
+    printf 'second-rename\n' > "$legacy/state/sentinel"
+    rm -f "$signalState"
+    if CODEX_HOME_MIGRATION_TEST_SIGNAL_STATE="$signalState" \
+      CODEX_HOME_MIGRATION_TEST_SIGNAL_AFTER=2 \
+      ${lib.getExe signalMigration} "$legacy" "$migrated"; then
+      echo "migration ignored TERM immediately after the target rename" >&2
+      exit 1
+    fi
+    test ! -e "$legacy"
+    grep -Fx second-rename "$migrated/state/sentinel"
+    secondSignalBackups=("$legacy".backup-*)
+    test "''${#secondSignalBackups[@]}" = 1
+    grep -Fx second-rename "''${secondSignalBackups[0]}/state/sentinel"
+
+    cleanupTestHome
+    mkdir -p "$legacy/state"
     install -m 600 ${initialConfig} "$legacy/config.toml"
     printf 'session\n' > "$legacy/state/session"
     ln "$legacy/state/session" "$legacy/state/session-hardlink"
     ln -s session "$legacy/state/session-symlink"
 
-    ${migrationScript}
+    "$migrationUnderTest"
     test ! -e "$legacy"
     test -d "$migrated"
     diff -u ${initialConfig} "$migrated/config.toml"
@@ -528,13 +638,13 @@ let
     test "''${#backups[@]}" = 1
     test -d "''${backups[0]}"
 
-    ${migrationScript}
+    "$migrationUnderTest"
     repeatedBackups=("$legacy".backup-*)
     test "''${#repeatedBackups[@]}" = 1
 
     mkdir -p "$legacy"
     printf 'collision\n' > "$legacy/sentinel"
-    if ${migrationScript}; then
+    if "$migrationUnderTest"; then
       echo "migration accepted simultaneous source and target" >&2
       exit 1
     fi
@@ -542,9 +652,9 @@ let
     test -d "$migrated"
 
     cleanupTestHome
-    renameSource="${testHome}/rename-source"
-    renameTarget="${testHome}/rename-target"
-    mkdir -p ${testHome}
+    renameSource="$testHome/rename-source"
+    renameTarget="$testHome/rename-target"
+    mkdir -p "$testHome"
     printf 'source\n' > "$renameSource"
     printf 'target\n' > "$renameTarget"
     if ${lib.getExe renameNoReplace} "$renameSource" "$renameTarget"; then
