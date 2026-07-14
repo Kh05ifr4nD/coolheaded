@@ -22,6 +22,23 @@ let
   ]
   ++ lib.optional (cfg.codexAutonomous == true) "--codex-autonomous"
   ++ lib.optional (cfg.codexAutonomous == false) "--no-codex-autonomous";
+  codeGraphPath = [
+    "plugins"
+    "omo@sisyphuslabs"
+    "mcp_servers"
+    "codegraph"
+    "enabled"
+  ];
+  withIsolatedProject = command: ''
+    lazyCodexAiProject="$(mktemp -d "''${TMPDIR:-/tmp}/lazycodex-ai-project.XXXXXX")"
+    cleanupLazyCodexAiProject() {
+      rm -rf "$lazyCodexAiProject"
+    }
+    trap cleanupLazyCodexAiProject EXIT
+    ${command}
+    cleanupLazyCodexAiProject
+    trap - EXIT
+  '';
 in
 {
   imports = [ (import ./codex.nix { inherit self; }) ];
@@ -74,27 +91,29 @@ in
   config = lib.mkMerge [
     {
       home.activation.lazyCodexAi = {
-        after = [ "linkGeneration" ];
+        after = [ "codexHomeMigration" ];
         before = [ "codexConfig" ];
         data =
           if cfg.enable then
-            ''
+            withIsolatedProject ''
               run env \
                 CODEX_HOME=${lib.escapeShellArg codexHome} \
+                OMO_CODEX_PROJECT="$lazyCodexAiProject" \
                 OMO_CODEX_DISABLE_POSTHOG=1 \
                 ${lib.escapeShellArgs installArguments}
             ''
           else
-            lib.optionalString cfg.cleanupOnDisable ''
+            lib.optionalString cfg.cleanupOnDisable (withIsolatedProject ''
               previousGeneration="''${oldGenPath:-}"
               previousPackage="$previousGeneration/${statePackage}"
               if [[ -n "$previousGeneration" && -x "$previousPackage/bin/lazycodex-ai" ]]; then
                 run env \
                   CODEX_HOME=${lib.escapeShellArg codexHome} \
+                  OMO_CODEX_PROJECT="$lazyCodexAiProject" \
                   OMO_CODEX_DISABLE_POSTHOG=1 \
                   "$previousPackage/bin/lazycodex-ai" uninstall --json
               fi
-            '';
+            '');
       };
     }
 
@@ -111,6 +130,7 @@ in
         config = lib.mkIf (cfg.codeGraph != null) {
           plugins."omo@sisyphuslabs".mcp_servers.codegraph.enabled = lib.mkDefault cfg.codeGraph;
         };
+        releasedConfigPaths = lib.optional (cfg.codeGraph == null) codeGraphPath;
       };
 
       home = {

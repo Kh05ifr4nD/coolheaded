@@ -20,6 +20,9 @@ let
       lazyCodexAi = package;
     };
   };
+  codexModule = import ../../homeModules/codex.nix {
+    self.packages.${system}.codex = packages.codex;
+  };
 
   stubModule = { lib, ... }: {
     options = {
@@ -136,6 +139,22 @@ let
   };
   disabledEvaluation = mkEvaluation { programs.codex.enable = true; };
   retainedEvaluation = mkEvaluation { programs.lazyCodexAi.cleanupOnDisable = false; };
+  composedEvaluation = lib.evalModules {
+    specialArgs = { inherit pkgs; };
+    modules = [
+      stubModule
+      codexModule
+      lazyCodexAiModule
+      {
+        home = {
+          homeDirectory = testHome;
+          preferXdgDirectories = true;
+        };
+        xdg.configHome = "${testHome}/.config";
+        programs.lazyCodexAi.enable = true;
+      }
+    ];
+  };
 
   activeConfig = activeEvaluation.config;
   disabledConfig = disabledEvaluation.config;
@@ -168,7 +187,10 @@ let
     (!lib.hasInfix "--no-codex-autonomous" defaultLazyActivation.data)
     (lib.hasInfix "--codex-autonomous" autonomousLazyActivation.data)
     (!lib.hasInfix "uninstall" retainedLazyActivation.data)
+    (lib.hasInfix "OMO_CODEX_PROJECT=" activeLazyActivation.data)
+    (activeLazyActivation.after == [ "codexHomeMigration" ])
     (activeLazyActivation.before == [ "codexConfig" ])
+    (composedEvaluation.config.programs.codex.package == packages.codex)
     (!(activeEvaluation.options.programs.lazyCodexAi ? gitBash))
     (!(activeEvaluation.options.programs.lazyCodexAi ? gitBashEnabled))
   ];
@@ -193,6 +215,7 @@ let
 
   activeLazyScript = mkActivationScript "activate-lazycodex-ai" activeLazyActivation.data;
   activeCodexScript = mkActivationScript "activate-codex-after-lazycodex-ai" activeConfig.home.activation.codexConfig.data;
+  defaultCodexScript = mkActivationScript "activate-codex-after-lazycodex-ai-default" defaultEvaluation.config.home.activation.codexConfig.data;
   disabledLazyScript = mkActivationScript "deactivate-lazycodex-ai" disabledConfig.home.activation.lazyCodexAi.data;
   disabledCodexScript = mkActivationScript "activate-codex-after-lazycodex-ai-disable" disabledConfig.home.activation.codexConfig.data;
 in
@@ -202,12 +225,13 @@ in
     pkgs.runCommand "lazycodex-ai-home-module-check" { } ''
       derivationOutput="$out"
       activeGeneration="$TMPDIR/active-generation"
+      defaultGeneration="$TMPDIR/default-generation"
       disabledGeneration="$TMPDIR/disabled-generation"
       configFile="${codexHome}/config.toml"
-      pluginCache="${codexHome}/plugins/cache/sisyphuslabs"
+      pluginCache="${codexHome}/plugins/cache/sisyphuslabs/omo"
 
       rm -rf ${testHome}
-      mkdir -p "$activeGeneration" "$disabledGeneration" ${testHome}
+      mkdir -p "$activeGeneration" "$defaultGeneration" "$disabledGeneration" ${testHome}
 
       out="$activeGeneration"
       ${activeConfig.home.extraBuilderCommands}
@@ -223,6 +247,20 @@ in
       ${activeCodexScript} "$activeGeneration" "$activeGeneration"
       sed -n '/^\[plugins\."omo@sisyphuslabs"\.mcp_servers\.codegraph\]$/,/^\[/p' "$configFile" \
         | grep -Fx 'enabled = false'
+
+      out="$defaultGeneration"
+      ${defaultEvaluation.config.home.extraBuilderCommands}
+      HOME=${testHome} ${mkActivationScript "activate-lazycodex-ai-default" defaultLazyActivation.data} \
+        "$activeGeneration" "$defaultGeneration"
+      ${defaultCodexScript} "$activeGeneration" "$defaultGeneration"
+      sed -n '/^\[plugins\."omo@sisyphuslabs"\.mcp_servers\.codegraph\]$/,/^\[/p' "$configFile" \
+        | grep -Fx 'enabled = true'
+
+      HOME=${testHome} ${mkActivationScript "reactivate-lazycodex-ai-default" defaultLazyActivation.data} \
+        "$defaultGeneration" "$defaultGeneration"
+      ${defaultCodexScript} "$defaultGeneration" "$defaultGeneration"
+      sed -n '/^\[plugins\."omo@sisyphuslabs"\.mcp_servers\.codegraph\]$/,/^\[/p' "$configFile" \
+        | grep -Fx 'enabled = true'
 
       out="$disabledGeneration"
       ${disabledConfig.home.extraBuilderCommands}

@@ -104,6 +104,71 @@ let
     ];
   };
 
+  migrationEvaluation = lib.evalModules {
+    specialArgs = { inherit pkgs; };
+    modules = [
+      ({ lib, ... }: {
+        options = {
+          assertions = lib.mkOption {
+            type = lib.types.listOf lib.types.raw;
+            default = [ ];
+          };
+          programs.codex = {
+            enable = lib.mkEnableOption "Codex";
+            package = lib.mkOption {
+              type = lib.types.nullOr lib.types.package;
+              default = null;
+            };
+            settings = lib.mkOption {
+              type = lib.types.attrsOf lib.types.raw;
+              default = { };
+            };
+            enableMcpIntegration = lib.mkOption {
+              type = lib.types.bool;
+              default = false;
+            };
+            plugins = lib.mkOption {
+              type = lib.types.listOf lib.types.raw;
+              default = [ ];
+            };
+            marketplaces = lib.mkOption {
+              type = lib.types.attrsOf lib.types.raw;
+              default = { };
+            };
+          };
+          home = {
+            homeDirectory = lib.mkOption { type = lib.types.str; };
+            preferXdgDirectories = lib.mkOption {
+              type = lib.types.bool;
+              default = false;
+            };
+            activation = lib.mkOption {
+              type = lib.types.attrsOf lib.types.raw;
+              default = { };
+            };
+            extraBuilderCommands = lib.mkOption {
+              type = lib.types.lines;
+              default = "";
+            };
+          };
+          xdg.configHome = lib.mkOption { type = lib.types.str; };
+        };
+      })
+      codexModule
+      {
+        home = {
+          homeDirectory = testHome;
+          preferXdgDirectories = true;
+        };
+        xdg.configHome = "${testHome}/.config";
+        programs.codex = {
+          enable = true;
+          migrateFromLegacyHome = true;
+        };
+      }
+    ];
+  };
+
   activationScript = pkgs.writeShellScript "activate-codex-home-module" ''
     set -euo pipefail
 
@@ -118,6 +183,16 @@ let
       newGenPath="$2"
     fi
     ${moduleEvaluation.config.home.activation.codexConfig.data}
+  '';
+
+  migrationScript = pkgs.writeShellScript "migrate-codex-home-module" ''
+    set -euo pipefail
+
+    run() {
+      "$@"
+    }
+
+    ${migrationEvaluation.config.home.activation.codexHomeMigration.data}
   '';
 
   initialConfig = pkgs.writeText "codex-initial-config.toml" ''
@@ -222,6 +297,49 @@ let
     diff -u ${freshExpectedConfig} "$target"
     test "$(stat -c %a "$target")" = 600
     test ! -e "${testHome}/.codex/config.toml"
+
+    rm -rf ${testHome}
+    legacy="${testHome}/.codex"
+    migrated="${testHome}/.config/codex"
+    mkdir -p "$legacy"
+    exec 9>"$legacy/open-session"
+    if ${migrationScript}; then
+      echo "migration accepted an in-use source directory" >&2
+      exit 1
+    fi
+    exec 9>&-
+    test -e "$legacy/open-session"
+
+    rm -rf ${testHome}
+    mkdir -p "$legacy/state"
+    install -m 600 ${initialConfig} "$legacy/config.toml"
+    printf 'session\n' > "$legacy/state/session"
+    ln "$legacy/state/session" "$legacy/state/session-hardlink"
+    ln -s session "$legacy/state/session-symlink"
+
+    ${migrationScript}
+    test ! -e "$legacy"
+    test -d "$migrated"
+    diff -u ${initialConfig} "$migrated/config.toml"
+    test "$(stat -c %a "$migrated/config.toml")" = 600
+    test "$(stat -c %i "$migrated/state/session")" = "$(stat -c %i "$migrated/state/session-hardlink")"
+    test "$(readlink "$migrated/state/session-symlink")" = session
+    backups=("$legacy".backup-*)
+    test "''${#backups[@]}" = 1
+    test -d "''${backups[0]}"
+
+    ${migrationScript}
+    repeatedBackups=("$legacy".backup-*)
+    test "''${#repeatedBackups[@]}" = 1
+
+    mkdir -p "$legacy"
+    printf 'collision\n' > "$legacy/sentinel"
+    if ${migrationScript}; then
+      echo "migration accepted simultaneous source and target" >&2
+      exit 1
+    fi
+    grep -Fx collision "$legacy/sentinel"
+    test -d "$migrated"
 
     rm -rf ${testHome}
     touch "$out"
