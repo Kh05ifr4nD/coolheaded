@@ -12,6 +12,7 @@ let
   }";
 
   codexModule = import ../../homeModules/codex.nix { self.packages.${system}.codex = package; };
+  renameNoReplace = import ../../lib/nix/renameNoReplace.nix { inherit pkgs; };
 
   moduleEvaluation = lib.evalModules {
     specialArgs = { inherit pkgs; };
@@ -311,6 +312,49 @@ let
     test -e "$legacy/open-session"
 
     rm -rf ${testHome}
+    mkdir -p "$legacy/unreadable"
+    chmod 000 "$legacy/unreadable"
+    if ${migrationScript} >"$TMPDIR/lsof-failure.out" 2>"$TMPDIR/lsof-failure.err"; then
+      echo "migration accepted an incomplete open-file scan" >&2
+      exit 1
+    fi
+    chmod 700 "$legacy/unreadable"
+    grep -F "Unable to verify that the Codex home is unused" "$TMPDIR/lsof-failure.err"
+    test -d "$legacy"
+    test ! -e "$migrated"
+
+    rm -rf ${testHome}
+    interruptedStage="${testHome}/.config/.codex-home-migration.interrupted"
+    mkdir -p "$legacy/state" "$interruptedStage/state"
+    printf 'source-data\n' > "$legacy/state/sentinel"
+    printf 'staged-data\n' > "$interruptedStage/state/sentinel"
+    if ${migrationScript} >"$TMPDIR/interrupted-stage.out" 2>"$TMPDIR/interrupted-stage.err"; then
+      echo "migration ignored staged data from an interrupted run" >&2
+      exit 1
+    fi
+    grep -F "Codex home migration found staged data from an interrupted run" "$TMPDIR/interrupted-stage.err"
+    grep -F "$interruptedStage" "$TMPDIR/interrupted-stage.err"
+    grep -Fx source-data "$legacy/state/sentinel"
+    grep -Fx staged-data "$interruptedStage/state/sentinel"
+    test ! -e "$migrated"
+
+    rm -rf ${testHome}
+    interruptedBackup="$legacy.backup-interrupted"
+    mkdir -p "$interruptedBackup/state"
+    install -m 600 ${initialConfig} "$interruptedBackup/config.toml"
+    printf 'rollback-data\n' > "$interruptedBackup/state/sentinel"
+    if ${migrationScript} >"$TMPDIR/interrupted-migration.out" 2>"$TMPDIR/interrupted-migration.err"; then
+      echo "migration ignored rollback data from an interrupted run" >&2
+      exit 1
+    fi
+    grep -F "Codex home migration found rollback data without a source or target" "$TMPDIR/interrupted-migration.err"
+    grep -F "$interruptedBackup" "$TMPDIR/interrupted-migration.err"
+    diff -u ${initialConfig} "$interruptedBackup/config.toml"
+    grep -Fx rollback-data "$interruptedBackup/state/sentinel"
+    test ! -e "$legacy"
+    test ! -e "$migrated"
+
+    rm -rf ${testHome}
     mkdir -p "$legacy/state"
     install -m 600 ${initialConfig} "$legacy/config.toml"
     printf 'session\n' > "$legacy/state/session"
@@ -340,6 +384,19 @@ let
     fi
     grep -Fx collision "$legacy/sentinel"
     test -d "$migrated"
+
+    rm -rf ${testHome}
+    renameSource="${testHome}/rename-source"
+    renameTarget="${testHome}/rename-target"
+    mkdir -p ${testHome}
+    printf 'source\n' > "$renameSource"
+    printf 'target\n' > "$renameTarget"
+    if ${lib.getExe renameNoReplace} "$renameSource" "$renameTarget"; then
+      echo "rename-no-replace overwrote an existing target" >&2
+      exit 1
+    fi
+    grep -Fx source "$renameSource"
+    grep -Fx target "$renameTarget"
 
     rm -rf ${testHome}
     touch "$out"

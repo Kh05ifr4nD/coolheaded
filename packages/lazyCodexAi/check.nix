@@ -139,6 +139,16 @@ let
   };
   disabledEvaluation = mkEvaluation { programs.codex.enable = true; };
   retainedEvaluation = mkEvaluation { programs.lazyCodexAi.cleanupOnDisable = false; };
+  failingPackage = pkgs.writeShellApplication {
+    name = "lazycodex-ai";
+    text = "exit 23";
+  };
+  failingEvaluation = mkEvaluation {
+    programs.lazyCodexAi = {
+      enable = true;
+      package = failingPackage;
+    };
+  };
   composedEvaluation = lib.evalModules {
     specialArgs = { inherit pkgs; };
     modules = [
@@ -200,6 +210,10 @@ let
     pkgs.writeShellScript name ''
       set -euo pipefail
 
+      parentTrapSentinel="''${TMPDIR:-/tmp}/${name}-parent-trap"
+      trap 'touch "$parentTrapSentinel"' EXIT
+      parentExitTrap="$(trap -p EXIT)"
+
       run() {
         "$@"
       }
@@ -211,6 +225,9 @@ let
         newGenPath="$2"
       fi
       ${data}
+
+      test "$(trap -p EXIT)" = "$parentExitTrap"
+      trap - EXIT
     '';
 
   activeLazyScript = mkActivationScript "activate-lazycodex-ai" activeLazyActivation.data;
@@ -218,6 +235,7 @@ let
   defaultCodexScript = mkActivationScript "activate-codex-after-lazycodex-ai-default" defaultEvaluation.config.home.activation.codexConfig.data;
   disabledLazyScript = mkActivationScript "deactivate-lazycodex-ai" disabledConfig.home.activation.lazyCodexAi.data;
   disabledCodexScript = mkActivationScript "activate-codex-after-lazycodex-ai-disable" disabledConfig.home.activation.codexConfig.data;
+  failingLazyScript = mkActivationScript "activate-lazycodex-ai-failing" failingEvaluation.config.home.activation.lazyCodexAi.data;
 in
 {
   lazyCodexAiHomeModule =
@@ -238,6 +256,7 @@ in
       test -x "$activeGeneration/${statePackage}/bin/lazycodex-ai"
 
       HOME=${testHome} ${activeLazyScript}
+      test ! -e "$TMPDIR/activate-lazycodex-ai-parent-trap"
       test -d "$pluginCache"
       ${activeCodexScript} "" "$activeGeneration"
       sed -n '/^\[plugins\."omo@sisyphuslabs"\.mcp_servers\.codegraph\]$/,/^\[/p' "$configFile" \
@@ -270,6 +289,20 @@ in
       test ! -e "$pluginCache"
       ${disabledCodexScript} "$activeGeneration" "$disabledGeneration"
       ! grep -F 'mcp_servers.codegraph' "$configFile"
+
+      failureTmp="$TMPDIR/failing-activation"
+      mkdir -p "$failureTmp"
+      if HOME=${testHome} TMPDIR="$failureTmp" ${failingLazyScript}; then
+        echo "failing LazyCodex activation unexpectedly succeeded" >&2
+        exit 1
+      fi
+      test -e "$failureTmp/activate-lazycodex-ai-failing-parent-trap"
+      for candidate in "$failureTmp"/lazycodex-ai-project.*; do
+        if [[ -e "$candidate" ]]; then
+          echo "failing LazyCodex activation leaked its temporary project" >&2
+          exit 1
+        fi
+      done
 
       rm -rf ${testHome}
       touch "$derivationOutput"

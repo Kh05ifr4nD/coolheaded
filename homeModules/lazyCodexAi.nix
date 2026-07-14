@@ -30,14 +30,11 @@ let
     "enabled"
   ];
   withIsolatedProject = command: ''
-    lazyCodexAiProject="$(mktemp -d "''${TMPDIR:-/tmp}/lazycodex-ai-project.XXXXXX")"
-    cleanupLazyCodexAiProject() {
-      rm -rf "$lazyCodexAiProject"
-    }
-    trap cleanupLazyCodexAiProject EXIT
-    ${command}
-    cleanupLazyCodexAiProject
-    trap - EXIT
+    (
+      lazyCodexAiProject="$(mktemp -d "''${TMPDIR:-/tmp}/lazycodex-ai-project.XXXXXX")"
+      trap 'rm -rf "$lazyCodexAiProject"' EXIT
+      ${command}
+    )
   '';
 in
 {

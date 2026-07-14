@@ -58,6 +58,8 @@ let
       "${config.home.homeDirectory}/.codex";
   configFile = "${configDirectory}/config.toml";
 
+  renameNoReplace = import ../lib/nix/renameNoReplace.nix { inherit pkgs; };
+
   reconcileConfig = pkgs.writeShellApplication {
     name = "codex-config-reconcile";
     runtimeInputs = lib.optional (cfg.package != null) cfg.package ++ [
@@ -328,6 +330,7 @@ let
       pkgs.coreutils
       pkgs.lsof
       pkgs.rsync
+      renameNoReplace
     ];
     text = ''
       legacy="$1"
@@ -346,7 +349,26 @@ let
         fi
         exit 0
       fi
+      targetParent="$(dirname "$target")"
+      if [[ -d "$targetParent" ]]; then
+        shopt -s nullglob
+        interruptedStages=("$targetParent"/.codex-home-migration.*)
+        shopt -u nullglob
+        if (( ''${#interruptedStages[@]} > 0 )); then
+          echo "Codex home migration found staged data from an interrupted run; refusing to start another migration:" >&2
+          printf '  %s\n' "''${interruptedStages[@]}" >&2
+          exit 1
+        fi
+      fi
       if [[ ! -e "$legacy" ]]; then
+        shopt -s nullglob
+        interruptedBackups=("$legacy".backup-*)
+        shopt -u nullglob
+        if (( ''${#interruptedBackups[@]} > 0 )); then
+          echo "Codex home migration found rollback data without a source or target; refusing to initialize a new home:" >&2
+          printf '  %s\n' "''${interruptedBackups[@]}" >&2
+          exit 1
+        fi
         exit 0
       fi
       if [[ ! -d "$legacy" ]]; then
@@ -357,19 +379,30 @@ let
       assertUnused() {
         path="$1"
         openFiles="$(mktemp "''${TMPDIR:-/tmp}/codex-home-open-files.XXXXXX")"
-        lsof +D "$path" >"$openFiles" 2>/dev/null || true
+        diagnostics="$(mktemp "''${TMPDIR:-/tmp}/codex-home-lsof-diagnostics.XXXXXX")"
+        if ! lsof -Q +D "$path" >"$openFiles" 2>"$diagnostics"; then
+          cat "$diagnostics" >&2
+          rm -f "$openFiles" "$diagnostics"
+          echo "Unable to verify that the Codex home is unused: $path" >&2
+          return 1
+        fi
+        if [[ -s "$diagnostics" ]]; then
+          cat "$diagnostics" >&2
+          rm -f "$openFiles" "$diagnostics"
+          echo "Unable to verify that the Codex home is unused: $path" >&2
+          return 1
+        fi
         if [[ -s "$openFiles" ]]; then
           cat "$openFiles" >&2
-          rm -f "$openFiles"
+          rm -f "$openFiles" "$diagnostics"
           echo "Close every process using the Codex home before migration: $path" >&2
           return 1
         fi
-        rm -f "$openFiles"
+        rm -f "$openFiles" "$diagnostics"
       }
 
       assertUnused "$legacy"
 
-      targetParent="$(dirname "$target")"
       mkdir -p "$targetParent"
       stage="$(mktemp -d "$targetParent/.codex-home-migration.XXXXXX")"
       backup=""
@@ -379,7 +412,7 @@ let
         result="$?"
         set +e
         if [[ -n "$legacyMoved" && ! -e "$legacy" && -d "$backup" ]]; then
-          mv "$backup" "$legacy"
+          rename-no-replace "$backup" "$legacy"
         fi
         if [[ -n "$stage" && -d "$stage" ]]; then
           rm -rf "$stage"
@@ -403,7 +436,7 @@ let
         exit 1
       fi
 
-      mv "$legacy" "$backup"
+      rename-no-replace "$legacy" "$backup"
       legacyMoved=1
       assertUnused "$backup"
       differences="$(rsync -aHAXnic --delete --protect-args "$backup/" "$stage/")"
@@ -416,7 +449,7 @@ let
         echo "Legacy Codex home reappeared during migration; refusing to activate the staged copy" >&2
         exit 1
       fi
-      mv "$stage" "$target"
+      rename-no-replace "$stage" "$target"
       stage=""
       legacyMoved=""
       trap - EXIT
