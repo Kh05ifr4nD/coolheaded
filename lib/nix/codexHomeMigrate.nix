@@ -10,12 +10,26 @@ pkgs.writeShellApplication {
     pkgs.lsof
     pkgs.rsync
     renameNoReplace
-  ];
+  ]
+  ++ pkgs.lib.optionals pkgs.stdenv.hostPlatform.isDarwin [ pkgs.darwin.file_cmds ]
+  ++ pkgs.lib.optionals pkgs.stdenv.hostPlatform.isLinux [ pkgs.acl ];
   text = ''
     legacy="$1"
     target="$2"
 
     umask 077
+
+    # The destination is always a fresh empty stage. --inplace lets rsync
+    # finish a new file before applying a source ACL that may forbid renaming
+    # its temporary file (for example, "deny delete").
+    rsyncArgs=(-aHAX --protect-args --inplace)
+    ${pkgs.lib.optionalString pkgs.stdenv.hostPlatform.isDarwin ''
+      # macOS may attach this system-managed attribute to newly created files
+      # and directories even when the source does not have it. It cannot be
+      # made equal by rsync, so exclude only this attribute from copy and
+      # comparison while preserving every other xattr.
+      rsyncArgs+=(--filter "-x com.apple.provenance")
+    ''}
 
     if [[ -L "$legacy" || -L "$target" ]]; then
       echo "Codex home migration refuses symbolic-link roots: $legacy -> $target" >&2
@@ -83,6 +97,108 @@ pkgs.writeShellApplication {
     assertUnused "$legacy"
 
     mkdir -p "$targetParent"
+    currentOwner="$(id -u)"
+    # stat reports an unmapped owner as overflowuid inside a user namespace.
+    # Trust that representation only for the filesystem root itself.
+    rootOwnerIsUnmapped=
+    ${pkgs.lib.optionalString pkgs.stdenv.hostPlatform.isLinux ''
+      if [[ -r /proc/self/uid_map && -r /proc/sys/kernel/overflowuid ]]; then
+        overflowUid="$(cat /proc/sys/kernel/overflowuid)"
+        if [[ "$(stat -c %u /)" == "$overflowUid" ]]; then
+          overflowUidMapped=
+          while read -r insideUid _ rangeLength; do
+            if (( overflowUid >= insideUid && overflowUid - insideUid < rangeLength )); then
+              overflowUidMapped=1
+              break
+            fi
+          done < /proc/self/uid_map
+          if [[ -z "$overflowUidMapped" ]]; then
+            rootOwnerIsUnmapped=1
+          fi
+        fi
+      fi
+    ''}
+    targetName="$(basename "$target")"
+    targetParent="$(realpath "$targetParent")"
+    target="$targetParent/$targetName"
+
+    assertNoWritableExtendedAcl() {
+      directory="$1"
+      ${pkgs.lib.optionalString pkgs.stdenv.hostPlatform.isDarwin ''
+        currentUser="$(id -un)"
+        if ! aclListing="$(${pkgs.darwin.file_cmds}/bin/ls -lde "$directory")"; then
+          echo "Unable to inspect target-path ACLs: $directory" >&2
+          return 1
+        fi
+        read -r permissions _ <<< "$aclListing"
+        if [[ "$permissions" == *+ ]]; then
+          while IFS= read -r aclEntry; do
+            [[ "$aclEntry" == *" allow "* ]] || continue
+            aclSubject="''${aclEntry%% allow *}"
+            aclSubject="''${aclSubject#*: }"
+            aclPrincipal="''${aclSubject%% *}"
+            if [[ "$aclPrincipal" == "user:$currentUser" || "$aclPrincipal" == "user:root" ]]; then
+              continue
+            fi
+            aclPermissions="''${aclEntry#* allow }"
+            case ",$aclPermissions," in
+              *,add_file,* | *,add_subdirectory,* | *,delete_child,* | *,delete,* | *,write,* | *,append,* | *,writeattr,* | *,writeextattr,* | *,writesecurity,* | *,chown,*)
+                echo "Codex home migration refuses a writable extended ACL in the target path: $directory" >&2
+                return 1
+                ;;
+            esac
+          done <<< "$aclListing"
+        fi
+      ''}
+      ${pkgs.lib.optionalString pkgs.stdenv.hostPlatform.isLinux ''
+        if ! aclListing="$(getfacl -cpn "$directory")"; then
+          echo "Unable to inspect target-path ACLs: $directory" >&2
+          return 1
+        fi
+        while IFS= read -r aclEntry; do
+          case "$aclEntry" in
+            "" | user::[r-][w-][x-] | group::[r-][w-][x-] | other::[r-][w-][x-] | mask::[r-][w-][x-]) ;;
+            user:"$currentOwner":* | user:0:* | default:user:"$currentOwner":* | default:user:0:*) ;;
+            *:*w*)
+              echo "Codex home migration refuses a writable extended ACL in the target path: $directory" >&2
+              return 1
+              ;;
+          esac
+        done <<< "$aclListing"
+      ''}
+    }
+
+    targetParentOwner="$(stat -c %u "$targetParent")"
+    targetParentMode="$(stat -c %a "$targetParent")"
+    if [[ "$targetParentOwner" != "$currentOwner" ]] || (( 8#$targetParentMode & 0022 )); then
+      echo "Codex home migration requires a user-owned target parent without group or other write access: $targetParent" >&2
+      exit 1
+    fi
+    assertNoWritableExtendedAcl "$targetParent"
+
+    ancestor="$(dirname "$targetParent")"
+    while :; do
+      ancestorOwner="$(stat -c %u "$ancestor")"
+      ancestorMode="$(stat -c %a "$ancestor")"
+      trustedAncestorOwner=
+      if [[ "$ancestorOwner" == "$currentOwner" || "$ancestorOwner" == 0 ]]; then
+        trustedAncestorOwner=1
+      elif [[ "$ancestor" == / && -n "$rootOwnerIsUnmapped" ]]; then
+        trustedAncestorOwner=1
+      fi
+      if [[ -z "$trustedAncestorOwner" ]]; then
+        echo "Codex home migration refuses a target-path ancestor owned by another user: $ancestor" >&2
+        exit 1
+      fi
+      if (( (8#$ancestorMode & 0022) && !(8#$ancestorMode & 01000) )); then
+        echo "Codex home migration refuses a writable non-sticky target-path ancestor: $ancestor" >&2
+        exit 1
+      fi
+      assertNoWritableExtendedAcl "$ancestor"
+      [[ "$ancestor" == / ]] && break
+      ancestor="$(dirname "$ancestor")"
+    done
+
     stage="$(mktemp -d "$targetParent/.codex-home-migration.XXXXXX")"
     backup=""
     legacyMoved=""
@@ -94,19 +210,15 @@ pkgs.writeShellApplication {
         rename-no-replace "$backup" "$legacy"
       fi
       if [[ -n "$stage" && -d "$stage" ]]; then
+        ${pkgs.lib.optionalString pkgs.stdenv.hostPlatform.isDarwin ''
+          ${pkgs.darwin.file_cmds}/bin/chmod -RN "$stage" || true
+        ''}
+        chmod -R u+rwX "$stage" || true
         rm -rf "$stage"
       fi
       exit "$result"
     }
     trap rollback EXIT
-
-    rsync -aHAX --protect-args "$legacy/" "$stage/"
-    differences="$(rsync -aHAXnic --delete --protect-args "$legacy/" "$stage/")"
-    if [[ -n "$differences" ]]; then
-      printf '%s\n' "$differences" >&2
-      echo "Staged Codex home failed content or metadata verification" >&2
-      exit 1
-    fi
 
     timestamp="$(date -u +%Y%m%dT%H%M%SZ)"
     backup="$legacy.backup-$timestamp"
@@ -118,10 +230,14 @@ pkgs.writeShellApplication {
     rename-no-replace "$legacy" "$backup"
     legacyMoved=1
     assertUnused "$backup"
-    differences="$(rsync -aHAXnic --delete --protect-args "$backup/" "$stage/")"
+    # Copy only after the source path is frozen. This includes every completed
+    # pre-rename write and reconstructs exact hard-link topology in an empty
+    # stage; rsync --inplace cannot split stale destination hard links.
+    rsync "''${rsyncArgs[@]}" "$backup/" "$stage/"
+    differences="$(rsync "''${rsyncArgs[@]}" -nic --delete "$backup/" "$stage/")"
     if [[ -n "$differences" ]]; then
       printf '%s\n' "$differences" >&2
-      echo "Legacy Codex home changed during migration; restoring its original path" >&2
+      echo "Staged Codex home failed content or metadata verification; restoring its original path" >&2
       exit 1
     fi
     if [[ -e "$legacy" || -L "$legacy" ]]; then
