@@ -63,6 +63,7 @@ packageLib.mkNpmTarballPackage {
     . ${../../lib/package.sh}
 
     patch -p1 < ${./patch/normalizeCopiedPluginCachePermissions.patch}
+    patch -p1 < ${./patch/useBundledCleanupCli.patch}
 
     packageRoot="$out/libexec/lazycodex-ai"
     mkdir -p "$packageRoot" "$out/bin"
@@ -85,6 +86,7 @@ packageLib.mkNpmTarballPackage {
     makeWrapper "${nodejs}/bin/node" "$out/bin/lazycodex-ai" \
       --add-flags "$packageRoot/packages/omo-codex/scripts/install-local.mjs" \
       --set-default LAZYCODEX_AI_NIX_SKIP_CACHE_NPM 1 \
+      --set LAZYCODEX_AI_NIX_OMO_CLI "$packageRoot/dist/cli-node/index.js" \
       --prefix PATH : "${nodePath}"
 
     runHook postInstall
@@ -102,6 +104,12 @@ packageLib.mkNpmTarballPackage {
     case "$dryRunOutput" in
       *"oh-my-openagent@latest install --platform=codex"*) ;;
       *) failCheck "unexpected lazycodex-ai --dry-run output" ;;
+    esac
+
+    dryRunUninstallOutput="$("$out/bin/lazycodex-ai" --dry-run uninstall 2>&1)"
+    case "$dryRunUninstallOutput" in
+      *"${packageRoot}/dist/cli-node/index.js cleanup --platform=codex"*) ;;
+      *) failCheck "lazycodex-ai uninstall does not use its bundled same-version cleanup CLI" ;;
     esac
 
     installCheckHome="$PWD/installCheckHome"
@@ -152,6 +160,48 @@ packageLib.mkNpmTarballPackage {
     test -z "$bareNodeCommand" || failCheck "installed OMO plugin contains bare node command: $bareNodeCommand"
     grep -F '[hooks.state.' "$installCheckCodexHome/config.toml" > /dev/null \
       || failCheck "installed config contains no trusted hook state"
+
+    printf '\n[projects."/preserved-by-uninstall"]\ntrust_level = "trusted"\n' \
+      >> "$installCheckCodexHome/config.toml"
+    uninstallOutput="$PWD/lazycodex-uninstall.log"
+    npmOfflineCache="$PWD/npmOfflineCache"
+    mkdir -p "$npmOfflineCache"
+    if ! HOME="$installCheckHome" \
+      CODEX_HOME="$installCheckCodexHome" \
+      TMPDIR="$installCheckTmp" \
+      NPM_CONFIG_CACHE="$npmOfflineCache" \
+      NPM_CONFIG_OFFLINE=true \
+      NPM_CONFIG_REGISTRY=http://127.0.0.1:9 \
+      OMO_CODEX_DISABLE_POSTHOG=1 \
+      "$out/bin/lazycodex-ai" uninstall --json > "$uninstallOutput" 2>&1; then
+      sed -n '1,160p' "$uninstallOutput" >&2
+      failCheck "lazycodex-ai uninstall failed without npm registry access"
+    fi
+    grep -F '"configChanged": true' "$uninstallOutput" > /dev/null \
+      || failCheck "lazycodex-ai uninstall did not report a config change"
+    test ! -e "$installCheckCodexHome/plugins/cache/sisyphuslabs" \
+      || failCheck "lazycodex-ai uninstall left the managed plugin cache"
+    test ! -e "$installCheckCodexHome/.tmp/marketplaces/sisyphuslabs" \
+      || failCheck "lazycodex-ai uninstall left the managed marketplace cache"
+    test ! -e "$installCheckCodexHome/agents/explorer.toml" \
+      || failCheck "lazycodex-ai uninstall left a manifest-managed agent"
+    grep -F '[projects."/preserved-by-uninstall"]' "$installCheckCodexHome/config.toml" > /dev/null \
+      || failCheck "lazycodex-ai uninstall removed user-owned Codex config"
+    configBackups=("$installCheckCodexHome"/config.toml.backup-*)
+    test -e "''${configBackups[0]}" \
+      || failCheck "lazycodex-ai uninstall did not back up the Codex config"
+
+    cleanupOutput="$PWD/lazycodex-cleanup.log"
+    HOME="$installCheckHome" \
+      CODEX_HOME="$installCheckCodexHome" \
+      TMPDIR="$installCheckTmp" \
+      NPM_CONFIG_CACHE="$npmOfflineCache" \
+      NPM_CONFIG_OFFLINE=true \
+      NPM_CONFIG_REGISTRY=http://127.0.0.1:9 \
+      OMO_CODEX_DISABLE_POSTHOG=1 \
+      "$out/bin/lazycodex-ai" cleanup --json > "$cleanupOutput" 2>&1
+    grep -F '"configChanged": false' "$cleanupOutput" > /dev/null \
+      || failCheck "lazycodex-ai cleanup alias is not idempotent after uninstall"
 
     test ! -e "$out/bin/lazycodex" || failCheck "unexpected lazycodex compatibility launcher"
     assertFileExists "${packageRoot}/packages/omo-codex/marketplace.json"
