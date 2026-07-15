@@ -8,11 +8,13 @@
 
 let
   system = pkgs.stdenv.hostPlatform.system;
+  fakeHomeManagerModulesPath = "/home-manager/modules";
   testHome = "/tmp/lazycodex-ai-home-module-${
     builtins.substring 0 12 (builtins.hashString "sha256" package.outPath)
   }";
   codexHome = "${testHome}/.config/codex";
   statePackage = "state/lazycodex-ai-package";
+  stateInstallFingerprint = "state/lazycodex-ai-install-fingerprint";
 
   lazyCodexAiModule = import ../../homeModules/lazyCodexAi.nix {
     self.packages.${system} = {
@@ -22,6 +24,10 @@ let
   };
   codexModule = import ../../homeModules/codex.nix {
     self.packages.${system}.codex = packages.codex;
+  };
+  bundledCodexModule = {
+    key = "${fakeHomeManagerModulesPath}/programs/codex";
+    options.programs.codex.enable = lib.mkOption { type = lib.types.str; };
   };
 
   stubModule = { lib, ... }: {
@@ -36,30 +42,6 @@ let
           }
         );
         default = [ ];
-      };
-
-      programs.codex = {
-        enable = lib.mkEnableOption "Codex";
-        package = lib.mkOption {
-          type = lib.types.nullOr lib.types.package;
-          default = null;
-        };
-        settings = lib.mkOption {
-          type = lib.types.attrsOf lib.types.raw;
-          default = { };
-        };
-        enableMcpIntegration = lib.mkOption {
-          type = lib.types.bool;
-          default = false;
-        };
-        plugins = lib.mkOption {
-          type = lib.types.listOf lib.types.raw;
-          default = [ ];
-        };
-        marketplaces = lib.mkOption {
-          type = lib.types.attrsOf lib.types.raw;
-          default = { };
-        };
       };
 
       home = {
@@ -93,15 +75,13 @@ let
   mkEvaluation =
     module:
     lib.evalModules {
-      specialArgs = { inherit pkgs; };
+      specialArgs = {
+        inherit pkgs;
+        modulesPath = fakeHomeManagerModulesPath;
+      };
       modules = [
         stubModule
-        (
-          { config, lib, ... }:
-          lib.mkIf (config.programs.codex.enable && config.home.preferXdgDirectories) {
-            home.sessionVariables.CODEX_HOME = "${config.xdg.configHome}/codex";
-          }
-        )
+        bundledCodexModule
         lazyCodexAiModule
         {
           home = {
@@ -134,7 +114,7 @@ let
         enable = true;
         codeGraph = false;
       };
-      codex.config.plugins."omo@sisyphuslabs".mcp_servers.codegraph.enabled = true;
+      codex.settings.plugins."omo@sisyphuslabs".mcp_servers.codegraph.enabled = true;
     };
   };
   disabledEvaluation = mkEvaluation { programs.codex.enable = true; };
@@ -149,10 +129,27 @@ let
       package = failingPackage;
     };
   };
+  countingPackage = pkgs.writeShellApplication {
+    name = "lazycodex-ai";
+    text = ''
+      printf '%s\n' "$*" >> "''${LAZYCODEX_AI_TEST_INVOCATIONS:?}"
+      exec ${package}/bin/lazycodex-ai "$@"
+    '';
+  };
+  idempotentEvaluation = mkEvaluation {
+    programs.lazyCodexAi = {
+      enable = true;
+      package = countingPackage;
+    };
+  };
   composedEvaluation = lib.evalModules {
-    specialArgs = { inherit pkgs; };
+    specialArgs = {
+      inherit pkgs;
+      modulesPath = fakeHomeManagerModulesPath;
+    };
     modules = [
       stubModule
+      bundledCodexModule
       codexModule
       lazyCodexAiModule
       {
@@ -176,12 +173,19 @@ let
   commonAssertions = [
     (lib.all (assertion: assertion.assertion) activeConfig.assertions)
     activeConfig.programs.codex.enable
-    (activeConfig.home.packages == [ package ])
+    (activeConfig.programs.codex.package == packages.codex)
+    (lib.length activeConfig.home.packages == 2)
+    (lib.elem package activeConfig.home.packages)
+    (lib.elem packages.codex activeConfig.home.packages)
+    (activeConfig.home.sessionVariables.CODEX_HOME == codexHome)
+    (activeEvaluation.options.programs.codex ? settings)
+    (!(activeEvaluation.options.programs.codex ? config))
     (
-      activeConfig.programs.codex.config.plugins."omo@sisyphuslabs".mcp_servers.codegraph.enabled == false
+      activeConfig.programs.codex.settings.plugins."omo@sisyphuslabs".mcp_servers.codegraph.enabled
+      == false
     )
     (
-      userOverrideEvaluation.config.programs.codex.config.plugins."omo@sisyphuslabs".mcp_servers.codegraph.enabled
+      userOverrideEvaluation.config.programs.codex.settings.plugins."omo@sisyphuslabs".mcp_servers.codegraph.enabled
       == true
     )
     (
@@ -190,7 +194,7 @@ let
         "omo@sisyphuslabs"
         "mcp_servers"
         "codegraph"
-      ] defaultEvaluation.config.programs.codex.config
+      ] defaultEvaluation.config.programs.codex.settings
     )
     (lib.hasInfix "--no-codex-autonomous" activeLazyActivation.data)
     (!lib.hasInfix "--codex-autonomous" defaultLazyActivation.data)
@@ -236,6 +240,7 @@ let
   disabledLazyScript = mkActivationScript "deactivate-lazycodex-ai" disabledConfig.home.activation.lazyCodexAi.data;
   disabledCodexScript = mkActivationScript "activate-codex-after-lazycodex-ai-disable" disabledConfig.home.activation.codexConfig.data;
   failingLazyScript = mkActivationScript "activate-lazycodex-ai-failing" failingEvaluation.config.home.activation.lazyCodexAi.data;
+  idempotentLazyScript = mkActivationScript "activate-lazycodex-ai-idempotent" idempotentEvaluation.config.home.activation.lazyCodexAi.data;
 in
 {
   lazyCodexAiHomeModule =
@@ -254,6 +259,7 @@ in
       out="$activeGeneration"
       ${activeConfig.home.extraBuilderCommands}
       test -x "$activeGeneration/${statePackage}/bin/lazycodex-ai"
+      test -s "$activeGeneration/${stateInstallFingerprint}"
 
       HOME=${testHome} ${activeLazyScript}
       test ! -e "$TMPDIR/activate-lazycodex-ai-parent-trap"
@@ -266,6 +272,25 @@ in
       ${activeCodexScript} "$activeGeneration" "$activeGeneration"
       sed -n '/^\[plugins\."omo@sisyphuslabs"\.mcp_servers\.codegraph\]$/,/^\[/p' "$configFile" \
         | grep -Fx 'enabled = false'
+
+      idempotentGeneration="$TMPDIR/idempotent-generation"
+      idempotentInvocations="$TMPDIR/idempotent-invocations"
+      mkdir -p "$idempotentGeneration"
+      out="$idempotentGeneration"
+      ${idempotentEvaluation.config.home.extraBuilderCommands}
+      HOME=${testHome} LAZYCODEX_AI_TEST_INVOCATIONS="$idempotentInvocations" \
+        ${idempotentLazyScript} "" "$idempotentGeneration"
+      HOME=${testHome} LAZYCODEX_AI_TEST_INVOCATIONS="$idempotentInvocations" \
+        ${idempotentLazyScript} "$idempotentGeneration" "$idempotentGeneration"
+      mapfile -t idempotentInvocationLines < "$idempotentInvocations"
+      test "''${#idempotentInvocationLines[@]}" -eq 1
+      test "''${idempotentInvocationLines[0]}" = "install --no-tui"
+
+      rm -rf "$pluginCache"
+      HOME=${testHome} LAZYCODEX_AI_TEST_INVOCATIONS="$idempotentInvocations" \
+        ${idempotentLazyScript} "$idempotentGeneration" "$idempotentGeneration"
+      mapfile -t idempotentInvocationLines < "$idempotentInvocations"
+      test "''${#idempotentInvocationLines[@]}" -eq 2
 
       out="$defaultGeneration"
       ${defaultEvaluation.config.home.extraBuilderCommands}

@@ -7,6 +7,7 @@
 
 let
   system = pkgs.stdenv.hostPlatform.system;
+  fakeHomeManagerModulesPath = "/home-manager/modules";
   testHomeName = "codex-home-module-${
     builtins.substring 0 12 (builtins.hashString "sha256" package.outPath)
   }";
@@ -26,6 +27,10 @@ let
   codexModule = import ../../homeModules/codex.nix {
     self.packages.${system}.codex = package;
     codexHomeMigrationPackage = testMigration;
+  };
+  bundledCodexModule = {
+    key = "${fakeHomeManagerModulesPath}/programs/codex";
+    options.programs.codex.enable = lib.mkOption { type = lib.types.str; };
   };
 
   signalRenameNoReplace = pkgs.writeShellScriptBin "rename-no-replace" ''
@@ -85,6 +90,38 @@ let
   killExchangeMigration = import ../../lib/nix/codexHomeMigrate.nix {
     inherit pkgs;
     exchangePaths = killExchangePaths;
+    trustUnmappedOwnersForTests = pkgs.stdenv.hostPlatform.isLinux;
+  };
+
+  partialLiveExchangePaths = pkgs.writeShellScriptBin "exchange-paths" ''
+    set -euo pipefail
+
+    if (( $# == 3 )); then
+      ${lib.getExe exchangePaths} "$1" "$2"
+      kill -KILL "$PPID"
+      exit 1
+    fi
+    exec ${lib.getExe exchangePaths} "$@"
+  '';
+
+  partialLiveMigration = import ../../lib/nix/codexHomeMigrate.nix {
+    inherit pkgs;
+    exchangePaths = partialLiveExchangePaths;
+    trustUnmappedOwnersForTests = pkgs.stdenv.hostPlatform.isLinux;
+  };
+
+  completedLiveExchangePaths = pkgs.writeShellScriptBin "exchange-paths" ''
+    set -euo pipefail
+
+    ${lib.getExe exchangePaths} "$@"
+    if (( $# == 3 )); then
+      kill -KILL "$PPID"
+    fi
+  '';
+
+  completedLiveMigration = import ../../lib/nix/codexHomeMigrate.nix {
+    inherit pkgs;
+    exchangePaths = completedLiveExchangePaths;
     trustUnmappedOwnersForTests = pkgs.stdenv.hostPlatform.isLinux;
   };
 
@@ -235,8 +272,49 @@ let
     trustUnmappedOwnersForTests = pkgs.stdenv.hostPlatform.isLinux;
   };
 
+  verificationMismatchRsync = pkgs.writeShellScriptBin "rsync" ''
+    set -euo pipefail
+
+    ${lib.getExe pkgs.rsync} "$@"
+    for argument in "$@"; do
+      if [[ "$argument" == -nic ]]; then
+        printf '>f+++++++++ forced-verification-difference\n'
+        break
+      fi
+    done
+  '';
+
+  cleanupNoiseMigration = import ../../lib/nix/codexHomeMigrate.nix {
+    pkgs = pkgs // {
+      rsync = verificationMismatchRsync;
+    };
+    trustUnmappedOwnersForTests = pkgs.stdenv.hostPlatform.isLinux;
+  };
+
+  gitLensRenameNoReplace = pkgs.writeShellScriptBin "rename-no-replace" ''
+    set -euo pipefail
+
+    if [[ "$(dirname "$1")" == "$(dirname "$2")" ]]; then
+      echo "migration exposed its private stage beside the target" >&2
+      exit 1
+    fi
+    mkdir -p "$1/.tmp/plugins/.git/gk"
+    : > "$1/.tmp/plugins/.git/gk/config"
+    : > "$1/.tmp/plugins/.git/FETCH_HEAD"
+    exec ${lib.getExe renameNoReplace} "$@"
+  '';
+
+  gitLensMigration = import ../../lib/nix/codexHomeMigrate.nix {
+    inherit pkgs;
+    renameNoReplace = gitLensRenameNoReplace;
+    trustUnmappedOwnersForTests = pkgs.stdenv.hostPlatform.isLinux;
+  };
+
   moduleEvaluation = lib.evalModules {
-    specialArgs = { inherit pkgs; };
+    specialArgs = {
+      inherit pkgs;
+      modulesPath = fakeHomeManagerModulesPath;
+    };
     modules = [
       ({ lib, ... }: {
         options = {
@@ -252,35 +330,15 @@ let
             default = [ ];
           };
 
-          programs.codex = {
-            enable = lib.mkEnableOption "Codex";
-            package = lib.mkOption {
-              type = lib.types.nullOr lib.types.package;
-              default = null;
-            };
-            settings = lib.mkOption {
-              type = lib.types.attrsOf lib.types.raw;
-              default = { };
-            };
-            enableMcpIntegration = lib.mkOption {
-              type = lib.types.bool;
-              default = false;
-            };
-            plugins = lib.mkOption {
-              type = lib.types.listOf lib.types.raw;
-              default = [ ];
-            };
-            marketplaces = lib.mkOption {
-              type = lib.types.attrsOf lib.types.raw;
-              default = { };
-            };
-          };
-
           home = {
             homeDirectory = lib.mkOption { type = lib.types.str; };
             preferXdgDirectories = lib.mkOption {
               type = lib.types.bool;
               default = false;
+            };
+            packages = lib.mkOption {
+              type = lib.types.listOf lib.types.package;
+              default = [ ];
             };
             activation = lib.mkOption {
               type = lib.types.attrsOf lib.types.raw;
@@ -299,12 +357,7 @@ let
           xdg.configHome = lib.mkOption { type = lib.types.str; };
         };
       })
-      (
-        { config, lib, ... }:
-        lib.mkIf (config.programs.codex.enable && config.home.preferXdgDirectories) {
-          home.sessionVariables.CODEX_HOME = "${config.xdg.configHome}/codex";
-        }
-      )
+      bundledCodexModule
       codexModule
       {
         home.homeDirectory = testHome;
@@ -313,7 +366,7 @@ let
 
         programs.codex = {
           enable = true;
-          config = {
+          settings = {
             approval_policy = "on-request";
             features.plugins = true;
             model = "gpt-5.5";
@@ -337,37 +390,22 @@ let
               type = lib.types.listOf lib.types.raw;
               default = [ ];
             };
-            programs.codex = {
-              enable = lib.mkEnableOption "Codex";
-              package = lib.mkOption {
-                type = lib.types.nullOr lib.types.package;
-                default = null;
-              };
-              settings = lib.mkOption {
-                type = lib.types.attrsOf lib.types.raw;
-                default = { };
-              };
-              enableMcpIntegration = lib.mkOption {
-                type = lib.types.bool;
-                default = false;
-              };
-              plugins = lib.mkOption {
-                type = lib.types.listOf lib.types.raw;
-                default = [ ];
-              };
-              marketplaces = lib.mkOption {
-                type = lib.types.attrsOf lib.types.raw;
-                default = { };
-              };
-            };
             home = {
               homeDirectory = lib.mkOption { type = lib.types.str; };
               preferXdgDirectories = lib.mkOption {
                 type = lib.types.bool;
                 default = false;
               };
+              packages = lib.mkOption {
+                type = lib.types.listOf lib.types.package;
+                default = [ ];
+              };
               activation = lib.mkOption {
                 type = lib.types.attrsOf lib.types.raw;
+                default = { };
+              };
+              sessionVariables = lib.mkOption {
+                type = lib.types.attrsOf lib.types.str;
                 default = { };
               };
               extraBuilderCommands = lib.mkOption {
@@ -385,10 +423,7 @@ let
             preferXdgDirectories = true;
           };
           xdg.configHome = "${testHome}/.config";
-          programs.codex = {
-            enable = true;
-            migrateFromLegacyHome = true;
-          };
+          programs.codex.enable = true;
         }
       ];
     };
@@ -557,6 +592,10 @@ let
       --replace-fail ${lib.escapeShellArg testHome} "$testHome"
     chmod +x "$activationUnderTest" "$migrationUnderTest"
     grep -F ${lib.escapeShellArg (lib.getExe productionMigration)} ${productionMigrationScript}
+    if grep -F "Close every process" ${lib.getExe productionMigration}; then
+      echo "migration delegates process shutdown to the user" >&2
+      exit 1
+    fi
     ${lib.getExe productionMigration} --help >"$TMPDIR/migration-help.out"
     grep -F "Usage: codex-home-migrate LEGACY TARGET" "$TMPDIR/migration-help.out"
     assertUsageError() {
@@ -575,7 +614,7 @@ let
     cleanupTestHome() {
       ${lib.optionalString pkgs.stdenv.hostPlatform.isDarwin ''
         if [[ -d "$testHome" ]]; then
-          ${pkgs.darwin.file_cmds}/bin/chmod -RN "$testHome" || true
+        ${pkgs.darwin.file_cmds}/bin/chmod -f -RN "$testHome" || true
         fi
       ''}
       chmod -R u+rwX "$testHome" 2>/dev/null || true
@@ -638,13 +677,71 @@ let
       fi
     ''}
     mkdir -p "$legacy"
-    exec 9>"$legacy/open-session"
-    if "$migrationUnderTest"; then
-      echo "migration accepted an in-use source directory" >&2
+    printf 'before\n' > "$legacy/open-session"
+    exec 9>>"$legacy/open-session"
+    "$migrationUnderTest"
+    printf 'after\n' >&9
+    exec 9>&-
+    test -L "$legacy"
+    test "$(realpath "$legacy")" = "$(realpath "$migrated")"
+    grep -Fx before "$migrated/open-session"
+    grep -Fx after "$migrated/open-session"
+
+    cleanupTestHome
+    mkdir -p "$legacy/state" "$(dirname "$migrated")"
+    printf 'before-preparation-recovery\n' > "$legacy/state/session"
+    exec 9>>"$legacy/state/session"
+    preparationRedirect="$(realpath -ms --relative-to="$(dirname "$legacy")" "$migrated")"
+    ln -s "$preparationRedirect" "$legacy.migration-pending"
+    "$migrationUnderTest"
+    printf 'after-preparation-recovery\n' >&9
+    exec 9>&-
+    test -L "$legacy"
+    test -d "$migrated"
+    test ! -e "$legacy.migration-pending"
+    grep -Fx before-preparation-recovery "$migrated/state/session"
+    grep -Fx after-preparation-recovery "$migrated/state/session"
+
+    cleanupTestHome
+    mkdir -p "$legacy/state"
+    printf 'before-interruption\n' > "$legacy/state/session"
+    exec 9>>"$legacy/state/session"
+    if ${lib.getExe partialLiveMigration} "$legacy" "$migrated"; then
+      echo "migration ignored a process death between live path exchanges" >&2
       exit 1
     fi
+    test -L "$legacy"
+    test -L "$migrated"
+    test -d "$legacy.migration-pending"
+    "$migrationUnderTest"
+    printf 'after-recovery\n' >&9
     exec 9>&-
-    test -e "$legacy/open-session"
+    test -L "$legacy"
+    test -d "$migrated"
+    test ! -L "$migrated"
+    test ! -e "$legacy.migration-pending"
+    grep -Fx before-interruption "$migrated/state/session"
+    grep -Fx after-recovery "$migrated/state/session"
+
+    cleanupTestHome
+    mkdir -p "$legacy/state"
+    printf 'before-completed-interruption\n' > "$legacy/state/session"
+    exec 9>>"$legacy/state/session"
+    if ${lib.getExe completedLiveMigration} "$legacy" "$migrated"; then
+      echo "migration ignored a process death after live path exchanges" >&2
+      exit 1
+    fi
+    test -L "$legacy"
+    test -d "$migrated"
+    test -L "$legacy.migration-pending"
+    "$migrationUnderTest"
+    printf 'after-completed-recovery\n' >&9
+    exec 9>&-
+    test -L "$legacy"
+    test -d "$migrated"
+    test ! -e "$legacy.migration-pending"
+    grep -Fx before-completed-interruption "$migrated/state/session"
+    grep -Fx after-completed-recovery "$migrated/state/session"
 
     cleanupTestHome
     mkdir -p "$legacy/unreadable"
@@ -774,7 +871,7 @@ let
 
     cleanupTestHome
     lateWriterLock="$legacy/.tmp/plugins.sync.lock"
-    lateWriterData="$legacy/.tmp/plugins/.git/FETCH_HEAD"
+    lateWriterData="$legacy/.tmp/plugins/startup-sync-state"
     lateWriterReady="$TMPDIR/codex-home-late-writer.ready"
     lateWriterGo="$TMPDIR/codex-home-late-writer.go"
     lateWriterCount="$TMPDIR/codex-home-late-writer.count"
@@ -802,13 +899,45 @@ let
     test -L "$legacy"
     test "$(readlink "$legacy")" = .config/codex
     test "$(realpath "$legacy")" = "$(realpath "$migrated")"
-    grep -Fx after "$migrated/.tmp/plugins/.git/FETCH_HEAD"
+    grep -Fx after "$migrated/.tmp/plugins/startup-sync-state"
     lateWriterBackups=("$legacy".backup-*)
     test "''${#lateWriterBackups[@]}" = 1
-    grep -Fx before "''${lateWriterBackups[0]}/.tmp/plugins/.git/FETCH_HEAD"
+    grep -Fx before "''${lateWriterBackups[0]}/.tmp/plugins/startup-sync-state"
     test "$(stat -c %d:%i "$migrated/.tmp/plugins.sync.lock")" = \
       "$(stat -c %d:%i "''${lateWriterBackups[0]}/.tmp/plugins.sync.lock")"
     ${lib.getExe withFileLock} "$TMPDIR/codex-home-helper.lock" true
+
+    cleanupTestHome
+    mkdir -p "$legacy/.tmp/plugins/.git"
+    printf 'preserved-in-backup\n' > "$legacy/.tmp/plugins/.git/FETCH_HEAD"
+    printf 'preserved-checkout\n' > "$legacy/.tmp/plugins/marketplace"
+    ${lib.getExe gitLensMigration} "$legacy" "$migrated"
+    test -L "$legacy"
+    grep -Fx preserved-checkout "$migrated/.tmp/plugins/marketplace"
+    test -f "$migrated/.tmp/plugins/.git/gk/config"
+    test ! -s "$migrated/.tmp/plugins/.git/FETCH_HEAD"
+    gitLensBackups=("$legacy".backup-*)
+    test "''${#gitLensBackups[@]}" = 1
+    grep -Fx preserved-in-backup "''${gitLensBackups[0]}/.tmp/plugins/.git/FETCH_HEAD"
+
+    cleanupTestHome
+    mkdir -p "$legacy/state"
+    printf 'cleanup-source\n' > "$legacy/state/sentinel"
+    ln -s missing-target "$legacy/apply_patch"
+    if ${lib.getExe cleanupNoiseMigration} "$legacy" "$migrated" \
+      >"$TMPDIR/cleanup-noise.out" 2>"$TMPDIR/cleanup-noise.err"; then
+      echo "migration ignored a forced staged-verification mismatch" >&2
+      exit 1
+    fi
+    grep -F "Staged Codex home failed content or metadata verification" "$TMPDIR/cleanup-noise.err"
+    if grep -F "Failed to clear ACL" "$TMPDIR/cleanup-noise.err"; then
+      echo "migration emitted recursive ACL cleanup noise for a symbolic link" >&2
+      exit 1
+    fi
+    grep -Fx cleanup-source "$legacy/state/sentinel"
+    test ! -e "$migrated"
+    cleanupNoiseStages=("$(dirname "$migrated")"/.codex-home-migration.*)
+    test "''${#cleanupNoiseStages[@]}" = 0
 
     cleanupTestHome
     mkdir -p "$legacy/.tmp"

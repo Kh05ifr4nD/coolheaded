@@ -19,33 +19,50 @@ let
     #error "exchange-paths only supports Darwin and Linux"
     #endif
 
-    int main(int argc, char **argv) {
-      if (argc != 3) {
-        fprintf(stderr, "usage: exchange-paths FIRST SECOND\n");
-        return 2;
-      }
-
+    static int exchange_paths(const char *first, const char *second) {
     #if defined(__APPLE__)
-      int result = renamex_np(argv[1], argv[2], RENAME_SWAP);
+      return renamex_np(first, second, RENAME_SWAP);
     #else
-      int result = syscall(
+      return syscall(
         SYS_renameat2,
         AT_FDCWD,
-        argv[1],
+        first,
         AT_FDCWD,
-        argv[2],
+        second,
         RENAME_EXCHANGE
       );
     #endif
+    }
 
-      if (result != 0) {
-        fprintf(
-          stderr,
-          "exchange-paths: %s <-> %s: %s\n",
-          argv[1],
-          argv[2],
-          strerror(errno)
-        );
+    static void report_exchange_error(const char *first, const char *second, int error) {
+      fprintf(
+        stderr,
+        "exchange-paths: %s <-> %s: %s\n",
+        first,
+        second,
+        strerror(error)
+      );
+    }
+
+    int main(int argc, char **argv) {
+      if (argc != 3 && argc != 4) {
+        fprintf(stderr, "usage: exchange-paths FIRST SECOND [FINAL]\n");
+        return 2;
+      }
+
+      if (exchange_paths(argv[1], argv[2]) != 0) {
+        report_exchange_error(argv[1], argv[2], errno);
+        return 1;
+      }
+
+      if (argc == 4 && exchange_paths(argv[3], argv[2]) != 0) {
+        int exchange_error = errno;
+        if (exchange_paths(argv[1], argv[2]) != 0) {
+          report_exchange_error(argv[1], argv[2], errno);
+          fprintf(stderr, "exchange-paths: unable to restore the first exchange\n");
+          return 1;
+        }
+        report_exchange_error(argv[3], argv[2], exchange_error);
         return 1;
       }
       return 0;

@@ -3,7 +3,7 @@
   codexHomeMigrationPackage ? null,
 }:
 
-{
+moduleArgs@{
   config,
   lib,
   pkgs,
@@ -12,6 +12,7 @@
 
 let
   cfg = config.programs.codex;
+  modulesPath = moduleArgs.modulesPath or null;
 
   configValueType = lib.types.nullOr (
     lib.types.oneOf [
@@ -43,11 +44,11 @@ let
         }
       ];
 
-  managedEdits = lib.concatMap (name: flattenValue [ name ] cfg.config.${name}) (
-    lib.sort builtins.lessThan (builtins.attrNames cfg.config)
+  managedEdits = lib.concatMap (name: flattenValue [ name ] cfg.settings.${name}) (
+    lib.sort builtins.lessThan (builtins.attrNames cfg.settings)
   );
   managedPaths = map (edit: edit.keyPath) managedEdits;
-  releasedPaths = map renderKeyPath cfg.releasedConfigPaths;
+  releasedPaths = map renderKeyPath cfg.releasedSettingsPaths;
 
   managedEditsFile = pkgs.writeText "codex-managed-edits.json" (builtins.toJSON managedEdits);
   managedPathsFile = pkgs.writeText "codex-managed-paths.json" (builtins.toJSON managedPaths);
@@ -334,106 +335,89 @@ in
 {
   key = "coolheaded.homeModules.codex";
 
-  options.programs.codex.config = lib.mkOption {
-    type = lib.types.attrsOf configValueType;
-    default = { };
-    description = ''
-      Partial Codex configuration owned by Home Manager. Activation writes the
-      declared leaf values through Codex app-server, deletes formerly managed
-      leaves that are no longer declared, preserves all other app-owned values,
-      and canonically sorts the complete writable {file}`config.toml`. A null
-      value deletes that exact leaf. Do not put secrets here because Nix stores
-      option values in the world-readable store.
-    '';
-    example = lib.literalExpression ''
-      {
-        model = "gpt-5.5";
-        model_reasoning_effort = "xhigh";
-        features.plugins = true;
-        plugins."example@home-manager".enabled = true;
-      }
-    '';
-  };
+  disabledModules = lib.optional (modulesPath != null) "${modulesPath}/programs/codex";
 
-  options.programs.codex.releasedConfigPaths = lib.mkOption {
-    type = lib.types.listOf (lib.types.listOf lib.types.str);
-    default = [ ];
-    internal = true;
-    description = "Formerly managed Codex leaves handed back without deleting their current values.";
-  };
+  options.programs.codex = {
+    enable = lib.mkEnableOption "OpenAI Codex";
 
-  options.programs.codex.migrateFromLegacyHome = lib.mkOption {
-    type = lib.types.bool;
-    default = false;
-    description = ''
-      Migrate the legacy ~/.codex directory to the XDG Codex home before
-      activation. The migration refuses collisions and open files, verifies a
-      same-filesystem staging copy, atomically redirects the legacy path to the
-      XDG home for clients without `CODEX_HOME`, and retains the original
-      directory under a timestamped backup name.
-    '';
-  };
+    package = lib.mkOption {
+      type = lib.types.package;
+      default = self.packages.${pkgs.stdenv.hostPlatform.system}.codex;
+      defaultText = lib.literalExpression "inputs.coolheaded.packages.\${pkgs.stdenv.hostPlatform.system}.codex";
+      description = "Codex package to install and use for configuration reconciliation.";
+    };
 
-  config = lib.mkIf cfg.enable {
-    assertions = [
-      {
-        assertion = cfg.package != null;
-        message = "`programs.codex.config` requires a non-null `programs.codex.package`";
-      }
-      {
-        assertion = cfg.settings == { };
-        message = "Declare Codex settings in `programs.codex.config`, not `programs.codex.settings`";
-      }
-      {
-        assertion = !cfg.enableMcpIntegration;
-        message = "Declare MCP servers in `programs.codex.config`, not `programs.codex.enableMcpIntegration`";
-      }
-      {
-        assertion = cfg.plugins == [ ] && cfg.marketplaces == { };
-        message = "Declare plugins and marketplaces in `programs.codex.config`";
-      }
-      {
-        assertion = !cfg.migrateFromLegacyHome || config.home.preferXdgDirectories;
-        message = "`programs.codex.migrateFromLegacyHome` requires `home.preferXdgDirectories = true`";
-      }
-    ];
-
-    programs.codex.package = lib.mkDefault self.packages.${pkgs.stdenv.hostPlatform.system}.codex;
-
-    home.extraBuilderCommands = lib.mkAfter ''
-      mkdir -p "$out/state"
-      ln -s ${managedPathsFile} "$out/${stateFile}"
-    '';
-
-    home.activation.codexConfig = {
-      after = [ "linkGeneration" ];
-      before = [ ];
-      data = ''
-        oldManagedPaths=""
-        previousGeneration="''${oldGenPath:-}"
-        if [[ -n "$previousGeneration" && -f "$previousGeneration/${stateFile}" ]]; then
-          oldManagedPaths="$previousGeneration/${stateFile}"
-        fi
-        run ${reconcileConfig}/bin/codex-config-reconcile \
-          ${lib.escapeShellArg configFile} \
-          ${managedEditsFile} \
-          ${managedPathsFile} \
-          "$oldManagedPaths" \
-          ${releasedPathsFile}
+    settings = lib.mkOption {
+      type = lib.types.attrsOf configValueType;
+      default = { };
+      description = ''
+        Partial Codex settings owned by Home Manager. Activation writes the
+        declared leaf values through Codex app-server, deletes formerly managed
+        leaves that are no longer declared, preserves all other app-owned values,
+        and canonically sorts the complete writable {file}`config.toml`. A null
+        value deletes that exact leaf. Do not put secrets here because Nix stores
+        option values in the world-readable store.
+      '';
+      example = lib.literalExpression ''
+        {
+          model = "gpt-5.5";
+          model_reasoning_effort = "xhigh";
+          features.plugins = true;
+          plugins."example@home-manager".enabled = true;
+        }
       '';
     };
 
-    home.activation.codexHomeMigration = {
-      after = [ "linkGeneration" ];
-      before = [
-        "lazyCodexAi"
-        "codexConfig"
-      ];
-      data = lib.optionalString cfg.migrateFromLegacyHome ''
-        run ${migrateCodexHome}/bin/codex-home-migrate \
-          ${lib.escapeShellArg "${config.home.homeDirectory}/.codex"} \
-          ${lib.escapeShellArg configDirectory}
+    releasedSettingsPaths = lib.mkOption {
+      type = lib.types.listOf (lib.types.listOf lib.types.str);
+      default = [ ];
+      internal = true;
+      description = "Formerly managed Codex settings handed back without deleting their current values.";
+    };
+  };
+
+  config = lib.mkIf cfg.enable {
+    home = {
+      packages = [ cfg.package ];
+      sessionVariables.CODEX_HOME = configDirectory;
+
+      extraBuilderCommands = lib.mkAfter ''
+        mkdir -p "$out/state"
+        ln -s ${managedPathsFile} "$out/${stateFile}"
       '';
+
+      activation = {
+        codexConfig = {
+          after = [ "linkGeneration" ];
+          before = [ ];
+          data = ''
+            oldManagedPaths=""
+            previousGeneration="''${oldGenPath:-}"
+            if [[ -n "$previousGeneration" && -f "$previousGeneration/${stateFile}" ]]; then
+              oldManagedPaths="$previousGeneration/${stateFile}"
+            fi
+            run ${reconcileConfig}/bin/codex-config-reconcile \
+              ${lib.escapeShellArg configFile} \
+              ${managedEditsFile} \
+              ${managedPathsFile} \
+              "$oldManagedPaths" \
+              ${releasedPathsFile}
+          '';
+        };
+
+        codexHomeMigration = {
+          after = [ "linkGeneration" ];
+          before = [
+            "lazyCodexAi"
+            "codexConfig"
+          ];
+          data = lib.optionalString config.home.preferXdgDirectories ''
+            run ${migrateCodexHome}/bin/codex-home-migrate \
+              ${lib.escapeShellArg "${config.home.homeDirectory}/.codex"} \
+              ${lib.escapeShellArg configDirectory}
+          '';
+        };
+      };
     };
   };
 }
