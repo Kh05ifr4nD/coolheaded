@@ -1,5 +1,19 @@
 import { fileSpecError } from "coolheaded/repo/fileSpec/model.ts";
 
+type CommandEnvironment = Readonly<{
+  clearEnv?: boolean;
+  env?: Readonly<Record<string, string>>;
+}>;
+
+function commandEnvironment(command: string, cwd?: string): CommandEnvironment {
+  return command === "git" && typeof cwd === "string"
+    ? {
+        clearEnv: true,
+        env: { PATH: Deno.env.get("PATH") ?? "" },
+      }
+    : {};
+}
+
 async function commandOutputWithInput(
   command: string,
   args: readonly string[],
@@ -9,6 +23,7 @@ async function commandOutputWithInput(
 ): Promise<string> {
   const process = new Deno.Command(command, {
     args: [...args],
+    ...commandEnvironment(command, cwd),
     cwd,
     stderr: "piped",
     stdin: "piped",
@@ -37,6 +52,7 @@ async function commandOutput(
 ): Promise<string> {
   const process = new Deno.Command(command, {
     args: [...args],
+    ...commandEnvironment(command, cwd),
     ...(typeof cwd === "string" ? { cwd } : {}),
     stderr: "piped",
     stdout: "piped",
