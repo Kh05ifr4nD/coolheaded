@@ -1,14 +1,16 @@
 {
   cargo,
+  cmake,
   lib,
   fetchFromGitHub,
   maturin,
+  ninja,
   packageLib,
   python313,
   rustc,
   rustPlatform,
   runtimeShell,
-  withBot ? false,
+  withAll ? false,
 }:
 
 let
@@ -93,13 +95,31 @@ in
 packageLib.mkUvApplication {
   inherit pname pyproject uvLock;
 
-  extras = lib.optionals withBot [ "bot" ];
+  extras = lib.optionals withAll [
+    "bot"
+    "local-embed"
+  ];
   python = python313;
   workspaceRoot = workspaceSrc;
 
-  packageOverrides = _final: prev: {
+  packageOverrides = final: prev: {
     fusepy = prev.fusepy.overrideAttrs (oldAttrs: {
       nativeBuildInputs = (oldAttrs.nativeBuildInputs or [ ]) ++ [ prev.setuptools ];
+    });
+    "llama-cpp-python" = prev."llama-cpp-python".overrideAttrs (oldAttrs: {
+      cmakeFlags = (oldAttrs.cmakeFlags or [ ]) ++ [ (lib.cmakeBool "GGML_NATIVE" false) ];
+      dontUseCmakeConfigure = true;
+      nativeBuildInputs =
+        (oldAttrs.nativeBuildInputs or [ ])
+        ++ [
+          cmake
+          ninja
+        ]
+        ++ final.resolveBuildSystem {
+          pathspec = [ ];
+          pyproject-metadata = [ ];
+          scikit-build-core = [ ];
+        };
     });
     "openviking-sdk" = prev."openviking-sdk".overrideAttrs (oldAttrs: {
       env = (oldAttrs.env or { }) // {
@@ -136,10 +156,10 @@ packageLib.mkUvApplication {
     "openviking-server"
     "ov"
   ]
-  ++ lib.optionals withBot [ "vikingbot" ];
+  ++ lib.optionals withAll [ "vikingbot" ];
 
   postInstall = ''
-    ${lib.optionalString (!withBot) ''
+    ${lib.optionalString (!withAll) ''
       rm -f "$out/bin/vikingbot"
     ''}
 
@@ -169,12 +189,21 @@ packageLib.mkUvApplication {
     "$out/bin/ov" --help > /dev/null
     "$out/bin/openviking-server" --help > /dev/null
 
-    ${lib.optionalString withBot ''
+    ${lib.optionalString withAll ''
+      openvikingPython="$(dirname "$(readlink "$out/bin/openviking")")/python"
+      if ! "$openvikingPython" -c \
+        'import diskcache, jinja2, numpy, typing_extensions; from llama_cpp import Llama'; then
+        failCheck "OpenViking Full local embedding Python closure is incomplete"
+      fi
+
       "$out/bin/vikingbot" --help > /dev/null
     ''}
 
-    ${lib.optionalString (!withBot) ''
-      test ! -e "$out/bin/vikingbot" || failCheck "vikingbot requires the upstream bot extra"
+    ${lib.optionalString (!withAll) ''
+      openvikingPython="$(dirname "$(readlink "$out/bin/openviking")")/python"
+      "$openvikingPython" -c \
+        'from importlib.util import find_spec; assert find_spec("llama_cpp") is None'
+      test ! -e "$out/bin/vikingbot" || failCheck "vikingbot requires OpenViking Full"
     ''}
   '';
 

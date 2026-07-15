@@ -34,7 +34,9 @@ async function fileExists(path: string): Promise<boolean> {
 async function runGit(repositoryRoot: string, args: readonly string[]): Promise<void> {
   const output = await new Deno.Command("git", {
     args: [...args],
+    clearEnv: true,
     cwd: repositoryRoot,
+    env: { PATH: Deno.env.get("PATH") ?? "" },
     stderr: "piped",
     stdout: "piped",
   }).output();

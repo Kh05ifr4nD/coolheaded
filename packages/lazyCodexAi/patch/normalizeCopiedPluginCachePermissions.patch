@@ -3,7 +3,7 @@
 @@ -6974,3 +6974,3 @@
  // packages/omo-codex/src/install/codex-cache-install.ts
 -import { cp as cp2, mkdir as mkdir3, readFile as readFile8, readdir as readdir4, rename, rm as rm4 } from "node:fs/promises";
-+import { chmod as chmod3, cp as cp2, lstat as lstat11, mkdir as mkdir3, readFile as readFile8, readdir as readdir4, rename, rm as rm4 } from "node:fs/promises";
++import { chmod as chmod3, cp as cp2, lstat as lstat12, mkdir as mkdir3, readFile as readFile8, readdir as readdir4, rename, rm as rm4 } from "node:fs/promises";
  import { basename as basename3, dirname as dirname5, join as join12, sep as sep5 } from "node:path";
 @@ -7530,6 +7530,7 @@
    await rm4(tempPath, { recursive: true, force: true });
@@ -25,22 +25,22 @@
      throw error;
    }
 @@ -7551,7 +7554,14 @@
- async function maybeRunNpmInstall(cwd, runCommand, args = ["install"]) {
+ async function maybeRunNpmInstall(cwd, runCommand, env, args = ["install"]) {
    if (!await fileExistsStrict(join12(cwd, "package.json")))
      return;
 +  if (shouldSkipNixCacheNpmCommand(args))
 +    return;
-   await runCommand("npm", args, { cwd });
+   await runCommand("npm", args, { cwd, env });
 +}
 +function shouldSkipNixCacheNpmCommand(args) {
 +  if (process.env.LAZYCODEX_AI_NIX_SKIP_CACHE_NPM !== "1")
 +    return false;
 +  return args.length === 2 && (args[0] === "ci" && args[1] === "--omit=dev" || args[0] === "run" && args[1] === "sync:skills");
  }
- async function maybeRunNpmBuild(cwd, runCommand) {
+ async function maybeRunNpmBuild(cwd, runCommand, env) {
    if (!await fileExistsStrict(join12(cwd, "package.json")))
 @@ -7567,6 +7577,8 @@
- async function maybeRunNpmSyncSkills(cwd, runCommand) {
+ async function maybeRunNpmSyncSkills(cwd, runCommand, env) {
    if (!await fileExistsStrict(join12(cwd, "package.json")))
      return;
 +  if (shouldSkipNixCacheNpmCommand(["run", "sync:skills"]))
@@ -54,7 +54,7 @@
    return join12(dirname5(targetPath), `.backup-${basename3(targetPath)}-${process.pid}-${Date.now()}`);
 +}
 +async function normalizeCopiedPluginCachePermissions(path) {
-+  const stats = await lstat11(path);
++  const stats = await lstat12(path);
 +  if (stats.isSymbolicLink())
 +    return;
 +  if (stats.isDirectory()) {

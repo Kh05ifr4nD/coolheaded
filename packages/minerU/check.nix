@@ -1,3 +1,3 @@
 { package, ... }:
 
-{ minerUWithAll = package.override { withAll = true; }; }
+{ minerUFull = package.override { withAll = true; }; }

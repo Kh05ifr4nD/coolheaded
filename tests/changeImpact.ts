@@ -38,7 +38,8 @@ describe("CI change impact discovery", (): void => {
   it("classifies denoDependencies as a Deno snapshot", (): void => {
     assertEquals(activatedCheckKind("denoDependencies"), "denoSnapshot");
     assertEquals(activatedCheckKind("deno"), "package");
-    assertEquals(activatedCheckKind("minerUWithAll"), "package");
+    assertEquals(activatedCheckKind("minerUFull"), "package");
+    assertEquals(activatedCheckKind("openVikingFull"), "package");
   });
 
   it("selects checks whose derivation identity changed", (): void => {
@@ -141,7 +142,7 @@ describe("CI change impact discovery", (): void => {
         "codex",
         "codexHomeModule",
         "openViking",
-        "openVikingBot",
+        "openVikingFull",
         "paseo",
         "paseoHomeModule",
         "unrelated",
@@ -166,7 +167,7 @@ describe("CI change impact discovery", (): void => {
         "codexHomeModule",
         "codexMinimal",
         "openViking",
-        "openVikingBot",
+        "openVikingFull",
         "paseo",
         "paseoHomeModule",
       ],

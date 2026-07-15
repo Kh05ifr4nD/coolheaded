@@ -1,3 +1,3 @@
 { package, ... }:
 
-{ openVikingBot = package.override { withBot = true; }; }
+{ openVikingFull = package.override { withAll = true; }; }
