@@ -165,8 +165,8 @@ function hardenCleanupConfig(file, initialSource) {
   source = replaceExactly(
     file,
     source,
-    'import { lstat as lstat11, mkdir as mkdir8, readFile as readFile20, writeFile as writeFile12 } from "node:fs/promises";',
-    'import { constants as codexConfigFsConstants } from "node:fs";\nimport { lstat as lstat11, mkdir as mkdir8, open as openCodexConfig, rename as renameCodexConfig, unlink as unlinkCodexConfig, writeFile as writeFile12 } from "node:fs/promises";',
+    'import { lstat as lstat12, mkdir as mkdir8, readFile as readFile21, writeFile as writeFile12 } from "node:fs/promises";',
+    'import { constants as codexConfigFsConstants } from "node:fs";\nimport { lstat as lstat12, mkdir as mkdir8, open as openCodexConfig, rename as renameCodexConfig, unlink as unlinkCodexConfig, writeFile as writeFile12 } from "node:fs/promises";',
   );
   source = replaceExactly(
     file,
@@ -209,7 +209,7 @@ function hardenCleanupConfig(file, initialSource) {
     throw new Error(\`Refusing unsafe Codex config path: \${pathValidation.reason}\`);
   let entryStats;
   try {
-    entryStats = await lstat11(configPath);
+    entryStats = await lstat12(configPath);
   } catch (error) {
     if (nodeErrorCode5(error) === "ENOENT")
       return null;
@@ -332,12 +332,12 @@ async function removeManagedPathBestEffort(path7, seams) {`,
   source = replaceExactly(
     file,
     source,
-    "async function attemptRemove(path7) {\n  try {\n    if (await lstat12(path7).catch(() => null) === null)\n      return false;",
+    "async function attemptRemove(path7) {\n  try {\n    if (await lstat13(path7).catch(() => null) === null)\n      return false;",
     `async function attemptRemove(path7, codexHome) {
   try {
     if (await validateManagedPathComponents(codexHome, path7) !== null)
       return false;
-    if (await lstat12(path7).catch(() => null) === null)
+    if (await lstat13(path7).catch(() => null) === null)
       return false;`,
   );
   return source;
