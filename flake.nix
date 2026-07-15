@@ -110,15 +110,9 @@
           };
           checks =
             import ./flake/checks.nix {
-              lib = pkgs.lib;
-              inherit
-                pkgs
-                bun2nix
-                pyprojectBuildSystems
-                pyprojectNix
-                uv2nix
-                wrapBuddy
-                ;
+              inherit pkgs;
+              inherit (config) packages;
+              inherit (pkgs) lib;
             }
             // {
               codexHomeMigrate = self.lib.codexHomeMigrate pkgs;

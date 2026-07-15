@@ -1,25 +1,10 @@
 {
   lib,
+  packages,
   pkgs,
-  bun2nix,
-  pyprojectBuildSystems,
-  pyprojectNix,
-  uv2nix,
-  wrapBuddy,
 }:
 
 let
-  packages = import ./packageSet.nix {
-    inherit
-      lib
-      pkgs
-      bun2nix
-      pyprojectBuildSystems
-      pyprojectNix
-      uv2nix
-      wrapBuddy
-      ;
-  };
   packageCheckPath = name: ../packages + "/${name}/check.nix";
   packageChecks = lib.concatMapAttrs (
     name: package:
