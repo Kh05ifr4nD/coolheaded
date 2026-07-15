@@ -1,3 +1,3 @@
-{ package, ... }:
+{ packages, ... }:
 
-{ openVikingFull = package.override { withAll = true; }; }
+{ inherit (packages) openVikingFull; }

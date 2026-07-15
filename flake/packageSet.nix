@@ -32,6 +32,11 @@ let
       })
     else
       package;
+  withoutUpdateScript =
+    package:
+    package.overrideAttrs (oldAttrs: {
+      passthru = builtins.removeAttrs (oldAttrs.passthru or { }) [ "updateScript" ];
+    });
   packageLibArgs = name: {
     packageLib = import ../lib/nix/default.nix {
       inherit (pkgs)
@@ -62,20 +67,25 @@ let
       || (packageFunctionArgs ? uv2nix)
     ) pyprojectPackageArgs
     // (packageArgs.${name} or { });
+  basePackages = lib.fix (
+    packages:
+    lib.mapAttrs (
+      name: _type:
+      let
+        packageFunction = import (packageDirectory name + "/package.nix");
+        package = pkgs.callPackage packageFunction (
+          packageDirectoryArgs name
+          // lib.optionalAttrs ((builtins.functionArgs packageFunction) ? coolheaded) {
+            coolheaded = packages;
+          }
+        );
+      in
+      withUpdateScript name package
+    ) packageDirectories
+  );
 in
-lib.fix (
-  packages:
-  lib.mapAttrs (
-    name: _type:
-    let
-      packageFunction = import (packageDirectory name + "/package.nix");
-      package = pkgs.callPackage packageFunction (
-        packageDirectoryArgs name
-        // lib.optionalAttrs ((builtins.functionArgs packageFunction) ? coolheaded) {
-          coolheaded = packages;
-        }
-      );
-    in
-    withUpdateScript name package
-  ) packageDirectories
-)
+basePackages
+// {
+  minerUFull = withoutUpdateScript (basePackages.minerU.override { withAll = true; });
+  openVikingFull = withoutUpdateScript (basePackages.openViking.override { withAll = true; });
+}
