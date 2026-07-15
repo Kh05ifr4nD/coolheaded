@@ -368,8 +368,9 @@ in
     description = ''
       Migrate the legacy ~/.codex directory to the XDG Codex home before
       activation. The migration refuses collisions and open files, verifies a
-      same-filesystem staging copy, atomically installs it, and retains the
-      original directory under a timestamped backup name.
+      same-filesystem staging copy, atomically redirects the legacy path to the
+      XDG home for clients without `CODEX_HOME`, and retains the original
+      directory under a timestamped backup name.
     '';
   };
 
