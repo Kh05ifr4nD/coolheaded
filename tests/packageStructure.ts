@@ -8,6 +8,7 @@ import { serializePinJson } from "coolheaded/pin/json.ts";
 type PinJsonConfig = Parameters<typeof serializePinJson>[0];
 
 const PACKAGES_DIRECTORY_PATH = new globalThis.URL("../packages/", import.meta.url).pathname;
+const REPOSITORY_ROOT_PATH = new globalThis.URL("../", import.meta.url).pathname;
 
 async function packageDirectories(): Promise<readonly string[]> {
   const entries = await Array.fromAsync(Deno.readDir(PACKAGES_DIRECTORY_PATH));
@@ -109,6 +110,31 @@ async function invalidPinOrder(name: string): Promise<string | undefined> {
 describe("package structure", (): void => {
   it("keeps git ls-files fully conformant to fileSpec.cue", async (): Promise<void> => {
     await checkedFileSpec();
+  });
+
+  it("isolates fileSpec subprocesses from loader environment variables", async (): Promise<void> => {
+    const command = new Deno.Command(Deno.execPath(), {
+      args: [
+        "run",
+        "--allow-env=PATH",
+        "--allow-read",
+        "--allow-run=cue,git",
+        "--allow-write",
+        "lib/ts/repo/fileSpec.ts",
+      ],
+      clearEnv: true,
+      cwd: REPOSITORY_ROOT_PATH,
+      env: {
+        LD_DYLD_PATH: "/tmp/coolheaded-file-spec-loader-path",
+        PATH: Deno.env.get("PATH") ?? "",
+      },
+      stderr: "piped",
+      stdout: "piped",
+    });
+
+    const output = await command.output();
+
+    assertEquals(output.success, true, new globalThis.TextDecoder().decode(output.stderr).trim());
   });
 
   it("rejects ignored directories hiding fileSpec-admitted files", async (): Promise<void> => {

@@ -5,13 +5,11 @@ type CommandEnvironment = Readonly<{
   env?: Readonly<Record<string, string>>;
 }>;
 
-function commandEnvironment(command: string, cwd?: string): CommandEnvironment {
-  return command === "git" && typeof cwd === "string"
-    ? {
-        clearEnv: true,
-        env: { PATH: Deno.env.get("PATH") ?? "" },
-      }
-    : {};
+function isolatedCommandEnvironment(): CommandEnvironment {
+  return {
+    clearEnv: true,
+    env: { PATH: Deno.env.get("PATH") ?? "" },
+  };
 }
 
 async function commandOutputWithInput(
@@ -23,7 +21,7 @@ async function commandOutputWithInput(
 ): Promise<string> {
   const process = new Deno.Command(command, {
     args: [...args],
-    ...commandEnvironment(command, cwd),
+    ...isolatedCommandEnvironment(),
     cwd,
     stderr: "piped",
     stdin: "piped",
@@ -52,7 +50,7 @@ async function commandOutput(
 ): Promise<string> {
   const process = new Deno.Command(command, {
     args: [...args],
-    ...commandEnvironment(command, cwd),
+    ...isolatedCommandEnvironment(),
     ...(typeof cwd === "string" ? { cwd } : {}),
     stderr: "piped",
     stdout: "piped",
