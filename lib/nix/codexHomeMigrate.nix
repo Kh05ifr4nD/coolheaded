@@ -53,11 +53,53 @@ pkgs.writeShellApplication {
       rsyncArgs+=(--filter "-x com.apple.provenance")
     ''}
 
-    if [[ -L "$target" ]]; then
-      echo "Codex home migration refuses a symbolic-link target: $target" >&2
-      exit 1
-    fi
     targetParent="$(dirname "$target")"
+    livePending="$legacy.migration-pending"
+    redirectTarget="$(realpath -ms --relative-to="$(dirname "$legacy")" "$target")"
+    pendingFromTarget="$(realpath -ms --relative-to="$targetParent" "$livePending")"
+    preparedLive=
+    preparedPendingOnly=
+    interruptedLive=
+    completedLive=
+    if [[ ! -L "$legacy" && -d "$legacy" \
+      && ! -e "$target" && ! -L "$target" \
+      && -L "$livePending" \
+      && "$(readlink "$livePending")" == "$redirectTarget" ]]; then
+      preparedPendingOnly=1
+    elif [[ -L "$legacy" \
+      && "$(readlink "$legacy")" == "$redirectTarget" \
+      && -d "$target" && ! -L "$target" \
+      && -L "$livePending" \
+      && "$(readlink "$livePending")" == "$pendingFromTarget" ]]; then
+      completedLive=1
+    fi
+    if [[ -L "$target" ]]; then
+      if [[ ! -L "$legacy" && -d "$legacy" \
+        && -L "$livePending" \
+        && "$(readlink "$livePending")" == "$redirectTarget" \
+        && "$(readlink "$target")" == "$pendingFromTarget" ]]; then
+        preparedLive=1
+      elif [[ -L "$legacy" \
+        && "$(readlink "$legacy")" == "$redirectTarget" \
+        && -d "$livePending" && ! -L "$livePending" \
+        && "$(readlink "$target")" == "$pendingFromTarget" ]]; then
+        interruptedLive=1
+      else
+        echo "Codex home migration refuses a symbolic-link target: $target" >&2
+        exit 1
+      fi
+    fi
+    if [[ -n "$completedLive" ]]; then
+      rm -f "$livePending"
+      if [[ ! -L "$legacy" || ! -d "$target" || -L "$target" \
+        || "$(realpath "$legacy")" != "$(realpath "$target")" ]]; then
+        echo "Codex home migration could not finish its interrupted live cutover" >&2
+        exit 1
+      fi
+      printf 'Finished live Codex home at %s; redirected %s to the same directory\n' \
+        "$target" "$legacy"
+      exit 0
+    fi
     if [[ -d "$targetParent" ]]; then
       shopt -s nullglob
       interruptedStages=("$targetParent"/.codex-home-migration.*)
@@ -68,7 +110,7 @@ pkgs.writeShellApplication {
         exit 1
       fi
     fi
-    if [[ -e "$target" ]]; then
+    if [[ -e "$target" && -z "$interruptedLive" ]]; then
       if [[ -L "$legacy" ]]; then
         if [[ "$(realpath "$legacy")" == "$(realpath "$target")" ]]; then
           exit 0
@@ -82,7 +124,7 @@ pkgs.writeShellApplication {
       fi
       exit 0
     fi
-    if [[ -L "$legacy" ]]; then
+    if [[ -L "$legacy" && -z "$interruptedLive" ]]; then
       echo "Codex home migration refuses a symbolic-link source without its target: $legacy" >&2
       exit 1
     fi
@@ -116,8 +158,9 @@ pkgs.writeShellApplication {
       with-file-lock --validate "$lockFd" "$lockPath"
     fi
 
-    assertUnused() {
+    detectSourceUsage() {
       path="$1"
+      sourceInUse=
       openFiles="$(mktemp "''${TMPDIR:-/tmp}/codex-home-open-files.XXXXXX")"
       diagnostics="$(mktemp "''${TMPDIR:-/tmp}/codex-home-lsof-diagnostics.XXXXXX")"
       lsofArgs=(-Q +D "$path")
@@ -142,10 +185,7 @@ pkgs.writeShellApplication {
         return 1
       fi
       if [[ -s "$openFiles" ]]; then
-        cat "$openFiles" >&2
-        rm -f "$openFiles" "$diagnostics"
-        echo "Close every process using the Codex home before migration: $path" >&2
-        return 1
+        sourceInUse=1
       fi
       rm -f "$openFiles" "$diagnostics"
     }
@@ -175,6 +215,7 @@ pkgs.writeShellApplication {
         openPath="''${field#n}"
         case "$openPath" in
           "$legacy/.tmp/plugins.sync.lock" | "$target/.tmp/plugins.sync.lock" | "$backup/.tmp/plugins.sync.lock") ;;
+          */.git | */.git/*) ;;
           *)
             unsafeOpenFiles+="$openPath"$'\n'
             ;;
@@ -183,12 +224,10 @@ pkgs.writeShellApplication {
       rm -f "$openFiles" "$diagnostics"
       if [[ -n "$unsafeOpenFiles" ]]; then
         printf '%s' "$unsafeOpenFiles" >&2
-        echo "Close every process using Codex data before migration: $path" >&2
+        echo "Codex data remained active during copy-based cutover: $path" >&2
         return 1
       fi
     }
-
-    assertUnused "$legacy"
 
     mkdir -p "$targetParent"
     currentOwner="$(id -u)"
@@ -302,7 +341,108 @@ pkgs.writeShellApplication {
         "$0" "$legacy" "$target"
     fi
 
-    stage="$targetParent/.codex-home-migration.$$"
+    if [[ -n "$preparedLive" || -n "$preparedPendingOnly" ]]; then
+      rm -f "$target" "$livePending"
+      preparedLive=
+      preparedPendingOnly=
+    fi
+    if [[ -n "$interruptedLive" ]]; then
+      legacyIdentity="$("$statCommand" -c %d:%i -- "$livePending")"
+      exchange-paths "$target" "$livePending"
+      rm -f "$livePending"
+      if [[ ! -L "$legacy" || ! -d "$target" || -L "$target" \
+        || "$(realpath "$legacy")" != "$(realpath "$target")" \
+        || "$("$statCommand" -c %d:%i -- "$target")" != "$legacyIdentity" ]]; then
+        echo "Codex home migration could not recover its interrupted live cutover" >&2
+        exit 1
+      fi
+      printf 'Recovered live Codex home at %s; redirected %s to the same directory\n' \
+        "$target" "$legacy"
+      exit 0
+    fi
+
+    detectSourceUsage "$legacy"
+    if [[ -n "$sourceInUse" ]]; then
+      legacyOwner="$("$statCommand" -c %u "$legacy")"
+      if [[ "$legacyOwner" != "$currentOwner" ]]; then
+        echo "Codex home migration refuses a source owned by another user: $legacy" >&2
+        exit 1
+      fi
+      if [[ "$("$statCommand" -c %d "$legacy")" != "$("$statCommand" -c %d "$targetParent")" ]]; then
+        echo "Codex home migration requires source and target on one filesystem: $legacy, $target" >&2
+        exit 1
+      fi
+
+      livePending="$legacy.migration-pending"
+      if [[ -e "$livePending" || -L "$livePending" ]]; then
+        echo "Codex home migration found an interrupted live migration: $livePending" >&2
+        exit 1
+      fi
+      legacyIdentity="$("$statCommand" -c %d:%i -- "$legacy")"
+      redirectTarget="$(realpath -ms --relative-to="$(dirname "$legacy")" "$target")"
+      pendingFromTarget="$(realpath -ms --relative-to="$targetParent" "$livePending")"
+
+      # shellcheck disable=SC2329
+      cleanupLiveTransition() {
+        result="$?"
+        set +e
+        if [[ ! -L "$legacy" && -d "$legacy" ]]; then
+          [[ -L "$target" ]] && rm -f "$target"
+          [[ -L "$livePending" ]] && rm -f "$livePending"
+        fi
+        exit "$result"
+      }
+      trap cleanupLiveTransition EXIT
+
+      # Before the first exchange only the legacy path is live. Between the
+      # two exchanges both legacy and target resolve through livePending to
+      # the original directory. After the second exchange the original inode
+      # is the target and legacy is its compatibility redirect.
+      ln -s "$redirectTarget" "$livePending"
+      ln -s "$pendingFromTarget" "$target"
+      exchange-paths "$legacy" "$livePending" "$target"
+      rm -f "$livePending"
+
+      if [[ ! -L "$legacy" || ! -d "$target" || -L "$target" ]]; then
+        echo "Codex home migration failed to publish the live directory" >&2
+        exit 1
+      fi
+      if [[ "$(realpath "$legacy")" != "$(realpath "$target")" ]]; then
+        echo "Codex home migration produced an invalid legacy redirect" >&2
+        exit 1
+      fi
+      if [[ "$("$statCommand" -c %d:%i -- "$target")" != "$legacyIdentity" ]]; then
+        echo "Codex home migration changed the live directory identity" >&2
+        exit 1
+      fi
+      trap - EXIT
+      printf 'Moved live Codex home to %s without copying; redirected %s to the same directory\n' \
+        "$target" "$legacy"
+      exit 0
+    fi
+
+    stageParent="''${CODEX_HOME_MIGRATION_STAGE_PARENT:-''${TMPDIR:-/tmp}}"
+    if [[ -L "$stageParent" || ! -d "$stageParent" ]]; then
+      echo "Codex home migration requires a real staging directory: $stageParent" >&2
+      exit 1
+    fi
+    stageParent="$(realpath "$stageParent")"
+    stageParentOwner="$("$statCommand" -c %u "$stageParent")"
+    stageParentMode="$("$statCommand" -c %a "$stageParent")"
+    if [[ "$stageParentOwner" != "$currentOwner" && "$stageParentOwner" != 0 ]]; then
+      echo "Codex home migration refuses a staging directory owned by another user: $stageParent" >&2
+      exit 1
+    fi
+    if (( (8#$stageParentMode & 0022) && !(8#$stageParentMode & 01000) )); then
+      echo "Codex home migration refuses a writable non-sticky staging directory: $stageParent" >&2
+      exit 1
+    fi
+    if [[ "$("$statCommand" -c %d "$stageParent")" != "$("$statCommand" -c %d "$targetParent")" ]]; then
+      echo "Codex home migration requires its private staging directory and target on one filesystem: $stageParent, $targetParent" >&2
+      exit 1
+    fi
+
+    stage=""
     stageIdentity=""
     pending="$targetParent/.codex-home-migration.pending-$$"
     legacyIdentity="$("$statCommand" -c %d:%i -- "$legacy")"
@@ -352,7 +492,7 @@ pkgs.writeShellApplication {
       local directory="$1"
       [[ -d "$directory" && ! -L "$directory" ]] || return 0
       ${pkgs.lib.optionalString pkgs.stdenv.hostPlatform.isDarwin ''
-        ${pkgs.darwin.file_cmds}/bin/chmod -RN "$directory" || true
+        ${pkgs.darwin.file_cmds}/bin/chmod -f -RN "$directory" || true
       ''}
       chmod -R u+rwX "$directory" || true
       rm -rf "$directory"
@@ -381,11 +521,11 @@ pkgs.writeShellApplication {
     }
     trap rollback EXIT
 
-    if ! mkdir -m 700 -- "$stage"; then
-      stage=""
+    if ! stage="$(mktemp -d "$stageParent/.codex-home-migration.XXXXXXXX")"; then
       echo "Unable to create a private Codex migration stage" >&2
       exit 1
     fi
+    chmod 700 "$stage"
     stageIdentity="$("$statCommand" -c %d:%i -- "$stage")"
 
     # The lock file is linked into the staged home after copying. Both the old
@@ -413,10 +553,14 @@ pkgs.writeShellApplication {
 
     # The exchange freezes the original tree at its final backup path. A
     # writer that bypassed startup-sync locking after the first lsof scan must
-    # never turn a stale stage into a successful migration.
+    # never turn a stale stage into a successful migration. Repository tools
+    # may legitimately recognize and update Git metadata once the private
+    # stage is published, so compare every non-Git path while retaining the
+    # complete pre-publication Git data in the rollback directory.
     assertUnusedExceptStartupLock "$backup"
     assertUnusedExceptStartupLock "$target"
-    differences="$(rsync "''${copyRsyncArgs[@]}" -nic --delete "$backup/" "$target/")"
+    postCutoverRsyncArgs=("''${copyRsyncArgs[@]}" --exclude=.git/)
+    differences="$(rsync "''${postCutoverRsyncArgs[@]}" -nic --delete "$backup/" "$target/")"
     if [[ -n "$differences" ]]; then
       printf '%s\n' "$differences" >&2
       echo "Codex home changed during atomic cutover; preserving target and backup for recovery" >&2

@@ -10,6 +10,7 @@
 let
   cfg = config.programs.lazyCodexAi;
   statePackage = "state/lazycodex-ai-package";
+  stateInstallFingerprint = "state/lazycodex-ai-install-fingerprint";
   codexHome =
     if config.home.preferXdgDirectories then
       "${config.xdg.configHome}/codex"
@@ -22,6 +23,7 @@ let
   ]
   ++ lib.optional (cfg.codexAutonomous == true) "--codex-autonomous"
   ++ lib.optional (cfg.codexAutonomous == false) "--no-codex-autonomous";
+  installFingerprint = builtins.hashString "sha256" (builtins.toJSON installArguments);
   codeGraphPath = [
     "plugins"
     "omo@sisyphuslabs"
@@ -68,7 +70,7 @@ in
         Whether the installer writes its autonomous Codex permission defaults.
         Null omits both CLI flags and follows the packaged LazyCodex behavior;
         true passes --codex-autonomous; false passes --no-codex-autonomous.
-        Values declared through programs.codex.config are reconciled after
+        Values declared through programs.codex.settings are reconciled after
         installation and therefore remain authoritative.
       '';
     };
@@ -79,8 +81,8 @@ in
       description = ''
         Whether the OMO CodeGraph MCP server is enabled. Null leaves the leaf
         unmanaged and follows the packaged LazyCodex behavior. True or false
-        declares the leaf through programs.codex.config. A direct user value
-        in programs.codex.config has higher priority.
+        declares the leaf through programs.codex.settings. A direct user value
+        in programs.codex.settings has higher priority.
       '';
     };
   };
@@ -93,11 +95,21 @@ in
         data =
           if cfg.enable then
             withIsolatedProject ''
-              run env \
-                CODEX_HOME=${lib.escapeShellArg codexHome} \
-                OMO_CODEX_PROJECT="$lazyCodexAiProject" \
-                OMO_CODEX_DISABLE_POSTHOG=1 \
-                ${lib.escapeShellArgs installArguments}
+              previousGeneration="''${oldGenPath:-}"
+              previousFingerprint="$previousGeneration/${stateInstallFingerprint}"
+              pluginCache=${lib.escapeShellArg "${codexHome}/plugins/cache/sisyphuslabs/omo"}
+              previousInstallFingerprint=
+              if [[ -r "$previousFingerprint" ]]; then
+                IFS= read -r previousInstallFingerprint < "$previousFingerprint"
+              fi
+
+              if [[ "$previousInstallFingerprint" != ${lib.escapeShellArg installFingerprint} || ! -d "$pluginCache" ]]; then
+                run env \
+                  CODEX_HOME=${lib.escapeShellArg codexHome} \
+                  OMO_CODEX_PROJECT="$lazyCodexAiProject" \
+                  OMO_CODEX_DISABLE_POSTHOG=1 \
+                  ${lib.escapeShellArgs installArguments}
+              fi
             ''
           else
             lib.optionalString cfg.cleanupOnDisable (withIsolatedProject ''
@@ -124,10 +136,10 @@ in
 
       programs.codex = {
         enable = lib.mkDefault true;
-        config = lib.mkIf (cfg.codeGraph != null) {
+        settings = lib.mkIf (cfg.codeGraph != null) {
           plugins."omo@sisyphuslabs".mcp_servers.codegraph.enabled = lib.mkDefault cfg.codeGraph;
         };
-        releasedConfigPaths = lib.optional (cfg.codeGraph == null) codeGraphPath;
+        releasedSettingsPaths = lib.optional (cfg.codeGraph == null) codeGraphPath;
       };
 
       home = {
@@ -135,6 +147,7 @@ in
         extraBuilderCommands = lib.mkAfter ''
           mkdir -p "$out/state"
           ln -s ${cfg.package} "$out/${statePackage}"
+          printf '%s\n' ${lib.escapeShellArg installFingerprint} > "$out/${stateInstallFingerprint}"
         '';
       };
     })
