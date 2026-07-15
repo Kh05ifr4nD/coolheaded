@@ -10,7 +10,7 @@
   rustc,
   rustPlatform,
   runtimeShell,
-  withBot ? false,
+  withAll ? false,
 }:
 
 let
@@ -95,7 +95,10 @@ in
 packageLib.mkUvApplication {
   inherit pname pyproject uvLock;
 
-  extras = [ "local-embed" ] ++ lib.optionals withBot [ "bot" ];
+  extras = lib.optionals withAll [
+    "bot"
+    "local-embed"
+  ];
   python = python313;
   workspaceRoot = workspaceSrc;
 
@@ -153,10 +156,10 @@ packageLib.mkUvApplication {
     "openviking-server"
     "ov"
   ]
-  ++ lib.optionals withBot [ "vikingbot" ];
+  ++ lib.optionals withAll [ "vikingbot" ];
 
   postInstall = ''
-    ${lib.optionalString (!withBot) ''
+    ${lib.optionalString (!withAll) ''
       rm -f "$out/bin/vikingbot"
     ''}
 
@@ -186,18 +189,21 @@ packageLib.mkUvApplication {
     "$out/bin/ov" --help > /dev/null
     "$out/bin/openviking-server" --help > /dev/null
 
-    openvikingPython="$(dirname "$(readlink "$out/bin/openviking")")/python"
-    if ! "$openvikingPython" -c \
-      'import diskcache, jinja2, numpy, typing_extensions; from llama_cpp import Llama'; then
-      failCheck "OpenViking local embedding Python closure is incomplete"
-    fi
+    ${lib.optionalString withAll ''
+      openvikingPython="$(dirname "$(readlink "$out/bin/openviking")")/python"
+      if ! "$openvikingPython" -c \
+        'import diskcache, jinja2, numpy, typing_extensions; from llama_cpp import Llama'; then
+        failCheck "OpenViking Full local embedding Python closure is incomplete"
+      fi
 
-    ${lib.optionalString withBot ''
       "$out/bin/vikingbot" --help > /dev/null
     ''}
 
-    ${lib.optionalString (!withBot) ''
-      test ! -e "$out/bin/vikingbot" || failCheck "vikingbot requires the upstream bot extra"
+    ${lib.optionalString (!withAll) ''
+      openvikingPython="$(dirname "$(readlink "$out/bin/openviking")")/python"
+      "$openvikingPython" -c \
+        'from importlib.util import find_spec; assert find_spec("llama_cpp") is None'
+      test ! -e "$out/bin/vikingbot" || failCheck "vikingbot requires OpenViking Full"
     ''}
   '';
 
