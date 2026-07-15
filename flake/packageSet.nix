@@ -83,9 +83,14 @@ let
       withUpdateScript name package
     ) packageDirectories
   );
+  packageVariants = lib.mapAttrs (_name: package: withoutUpdateScript package) {
+    codexMinimal = basePackages.codex.override {
+      withBubblewrap = false;
+      withRipgrep = false;
+    };
+    minerUFull = basePackages.minerU.override { withAll = true; };
+    openVikingFull = basePackages.openViking.override { withAll = true; };
+    oxlintMinimal = basePackages.oxlint.override { withTypecheck = false; };
+  };
 in
-basePackages
-// {
-  minerUFull = withoutUpdateScript (basePackages.minerU.override { withAll = true; });
-  openVikingFull = withoutUpdateScript (basePackages.openViking.override { withAll = true; });
-}
+basePackages // packageVariants
