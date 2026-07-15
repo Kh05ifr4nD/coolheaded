@@ -1,8 +1,10 @@
 {
   cargo,
+  cmake,
   lib,
   fetchFromGitHub,
   maturin,
+  ninja,
   packageLib,
   python313,
   rustc,
@@ -93,13 +95,28 @@ in
 packageLib.mkUvApplication {
   inherit pname pyproject uvLock;
 
-  extras = lib.optionals withBot [ "bot" ];
+  extras = [ "local-embed" ] ++ lib.optionals withBot [ "bot" ];
   python = python313;
   workspaceRoot = workspaceSrc;
 
-  packageOverrides = _final: prev: {
+  packageOverrides = final: prev: {
     fusepy = prev.fusepy.overrideAttrs (oldAttrs: {
       nativeBuildInputs = (oldAttrs.nativeBuildInputs or [ ]) ++ [ prev.setuptools ];
+    });
+    "llama-cpp-python" = prev."llama-cpp-python".overrideAttrs (oldAttrs: {
+      cmakeFlags = (oldAttrs.cmakeFlags or [ ]) ++ [ (lib.cmakeBool "GGML_NATIVE" false) ];
+      dontUseCmakeConfigure = true;
+      nativeBuildInputs =
+        (oldAttrs.nativeBuildInputs or [ ])
+        ++ [
+          cmake
+          ninja
+        ]
+        ++ final.resolveBuildSystem {
+          pathspec = [ ];
+          pyproject-metadata = [ ];
+          scikit-build-core = [ ];
+        };
     });
     "openviking-sdk" = prev."openviking-sdk".overrideAttrs (oldAttrs: {
       env = (oldAttrs.env or { }) // {
@@ -168,6 +185,12 @@ packageLib.mkUvApplication {
     "$out/bin/openviking" --help > /dev/null
     "$out/bin/ov" --help > /dev/null
     "$out/bin/openviking-server" --help > /dev/null
+
+    openvikingPython="$(dirname "$(readlink "$out/bin/openviking")")/python"
+    if ! "$openvikingPython" -c \
+      'import diskcache, jinja2, numpy, typing_extensions; from llama_cpp import Llama'; then
+      failCheck "OpenViking local embedding Python closure is incomplete"
+    fi
 
     ${lib.optionalString withBot ''
       "$out/bin/vikingbot" --help > /dev/null
