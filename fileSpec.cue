@@ -96,10 +96,12 @@ package fileSpec
 			"base.nix"!:             #RegularFile
 			"codexHomeMigrate.nix"!: #RegularFile
 			"default.nix"!:          #RegularFile
+			"exchangePaths.nix"!:    #RegularFile
 			"github.nix"!:           #RegularFile
 			"npm.nix"!:              #RegularFile
 			"python.nix"!:           #RegularFile
 			"renameNoReplace.nix"!:  #RegularFile
+			"withFileLock.nix"!:     #RegularFile
 		}
 		"package.sh"!: #RegularFile
 		ts!: {

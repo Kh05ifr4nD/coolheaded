@@ -12,11 +12,16 @@ let
   }";
   testHome = "/__${testHomeName}__";
 
+  exchangePaths = import ../../lib/nix/exchangePaths.nix { inherit pkgs; };
   renameNoReplace = import ../../lib/nix/renameNoReplace.nix { inherit pkgs; };
+  withFileLock = import ../../lib/nix/withFileLock.nix { inherit pkgs; };
   productionMigration = import ../../lib/nix/codexHomeMigrate.nix { inherit pkgs; };
   testMigration = import ../../lib/nix/codexHomeMigrate.nix {
     inherit pkgs;
     trustUnmappedOwnersForTests = pkgs.stdenv.hostPlatform.isLinux;
+  };
+  productionCodexModule = import ../../homeModules/codex.nix {
+    self.packages.${system}.codex = package;
   };
   codexModule = import ../../homeModules/codex.nix {
     self.packages.${system}.codex = package;
@@ -43,6 +48,190 @@ let
   signalMigration = import ../../lib/nix/codexHomeMigrate.nix {
     inherit pkgs;
     renameNoReplace = signalRenameNoReplace;
+    trustUnmappedOwnersForTests = pkgs.stdenv.hostPlatform.isLinux;
+  };
+
+  signalExchangePaths = pkgs.writeShellScriptBin "exchange-paths" ''
+    set -euo pipefail
+
+    stateFile="''${CODEX_HOME_MIGRATION_TEST_EXCHANGE_SIGNAL_STATE:?}"
+    count=0
+    if [[ -s "$stateFile" ]]; then
+      read -r count < "$stateFile"
+    fi
+    count=$((count + 1))
+    printf '%s\n' "$count" > "$stateFile"
+
+    ${lib.getExe exchangePaths} "$@"
+    if [[ "$count" == 1 ]]; then
+      printf 'target-write-after-exchange\n' > "$1/state/after-exchange"
+      kill -TERM "$PPID"
+    fi
+  '';
+
+  exchangeSignalMigration = import ../../lib/nix/codexHomeMigrate.nix {
+    inherit pkgs;
+    exchangePaths = signalExchangePaths;
+    trustUnmappedOwnersForTests = pkgs.stdenv.hostPlatform.isLinux;
+  };
+
+  killExchangePaths = pkgs.writeShellScriptBin "exchange-paths" ''
+    set -euo pipefail
+
+    ${lib.getExe exchangePaths} "$@"
+    kill -KILL "$PPID"
+  '';
+
+  killExchangeMigration = import ../../lib/nix/codexHomeMigrate.nix {
+    inherit pkgs;
+    exchangePaths = killExchangePaths;
+    trustUnmappedOwnersForTests = pkgs.stdenv.hostPlatform.isLinux;
+  };
+
+  lateExchangePaths = pkgs.writeShellScriptBin "exchange-paths" ''
+    set -euo pipefail
+
+    printf 'late-write-before-exchange\n' > "$1/state/late-cutover"
+    exec ${lib.getExe exchangePaths} "$@"
+  '';
+
+  lateExchangeMigration = import ../../lib/nix/codexHomeMigrate.nix {
+    inherit pkgs;
+    exchangePaths = lateExchangePaths;
+    trustUnmappedOwnersForTests = pkgs.stdenv.hostPlatform.isLinux;
+  };
+
+  failingStageStat = pkgs.writeShellScript "codex-home-migration-failing-stage-stat" ''
+    set -euo pipefail
+
+    if (( $# == 4 )) && [[ "$1" == -c && "$2" == %d:%i && "$3" == -- && "$4" == */.codex-home-migration.* ]]; then
+      exit 70
+    fi
+    exec ${pkgs.coreutils}/bin/stat "$@"
+  '';
+
+  stageFailureMigration = import ../../lib/nix/codexHomeMigrate.nix {
+    inherit pkgs;
+    statCommand = failingStageStat;
+    trustUnmappedOwnersForTests = pkgs.stdenv.hostPlatform.isLinux;
+  };
+
+  zeroRootStat = pkgs.writeShellScript "codex-home-migration-zero-root-stat" ''
+    set -euo pipefail
+
+    if (( $# == 3 )) && [[ "$1" == -c && "$2" == %u && "$3" == / ]]; then
+      printf '0\n'
+      exit 0
+    fi
+    exec ${pkgs.coreutils}/bin/stat "$@"
+  '';
+  overflowUidZero = pkgs.writeText "codex-home-migration-overflowuid-zero" "0\n";
+  zeroOverflowProductionMigration = import ../../lib/nix/codexHomeMigrate.nix {
+    inherit pkgs;
+    statCommand = zeroRootStat;
+    overflowUidFile = overflowUidZero;
+  };
+
+  lateLockWriter =
+    let
+      source = pkgs.writeText "codex-home-migration-late-lock-writer.c" ''
+        #if defined(__APPLE__)
+        #define _DARWIN_C_SOURCE
+        #else
+        #define _DEFAULT_SOURCE
+        #endif
+        #define _POSIX_C_SOURCE 200809L
+
+        #include <errno.h>
+        #include <fcntl.h>
+        #include <stdio.h>
+        #include <string.h>
+        #include <sys/file.h>
+        #include <sys/stat.h>
+        #include <time.h>
+        #include <unistd.h>
+
+        static int create_marker(const char *path) {
+          int fd = open(path, O_WRONLY | O_CREAT | O_TRUNC, S_IRUSR | S_IWUSR);
+          if (fd < 0) {
+            fprintf(stderr, "late-lock-writer: create %s: %s\n", path, strerror(errno));
+            return -1;
+          }
+          return close(fd);
+        }
+
+        int main(int argc, char **argv) {
+          if (argc != 5) {
+            fprintf(stderr, "usage: late-lock-writer LOCK DATA READY GO\n");
+            return 2;
+          }
+
+          int lock_fd = open(argv[1], O_WRONLY | O_CREAT, S_IRUSR | S_IWUSR);
+          if (lock_fd < 0) {
+            fprintf(stderr, "late-lock-writer: open fixture: %s\n", strerror(errno));
+            return 1;
+          }
+          if (create_marker(argv[3]) != 0) {
+            return 1;
+          }
+          while (access(argv[4], F_OK) != 0) {
+            struct timespec delay = {.tv_sec = 0, .tv_nsec = 1000000};
+            while (nanosleep(&delay, &delay) != 0 && errno == EINTR) {}
+          }
+          if (flock(lock_fd, LOCK_EX) != 0) {
+            fprintf(stderr, "late-lock-writer: lock: %s\n", strerror(errno));
+            return 1;
+          }
+          int data_fd = open(argv[2], O_WRONLY | O_CREAT | O_TRUNC, S_IRUSR | S_IWUSR);
+          if (data_fd < 0) {
+            fprintf(stderr, "late-lock-writer: open data after lock: %s\n", strerror(errno));
+            return 1;
+          }
+          if (write(data_fd, "after\n", 6) != 6 || fsync(data_fd) != 0) {
+            fprintf(stderr, "late-lock-writer: write data: %s\n", strerror(errno));
+            return 1;
+          }
+          return 0;
+        }
+      '';
+    in
+    pkgs.runCommandCC "codex-home-migration-late-lock-writer" { meta.mainProgram = "late-lock-writer"; }
+      ''
+        mkdir -p "$out/bin"
+        $CC -std=c11 -O2 -Wall -Wextra -Werror \
+          ${source} \
+          -o "$out/bin/late-lock-writer"
+      '';
+
+  lateWriterLsof = pkgs.writeShellScriptBin "lsof" ''
+    set -euo pipefail
+
+    countFile="''${CODEX_HOME_MIGRATION_LATE_WRITER_COUNT:?}"
+    count=0
+    if [[ -s "$countFile" ]]; then
+      read -r count < "$countFile"
+    fi
+    count=$((count + 1))
+    printf '%s\n' "$count" > "$countFile"
+    if [[ "$count" == 2 ]]; then
+      touch "''${CODEX_HOME_MIGRATION_LATE_WRITER_GO:?}"
+    fi
+  '';
+
+  delayedRsync = pkgs.writeShellScriptBin "rsync" ''
+    set -euo pipefail
+
+    if mkdir "''${CODEX_HOME_MIGRATION_DELAYED_RSYNC_ONCE:?}" 2>/dev/null; then
+      sleep 1
+    fi
+    exec ${lib.getExe pkgs.rsync} "$@"
+  '';
+
+  lateWriterMigration = import ../../lib/nix/codexHomeMigrate.nix {
+    pkgs = pkgs // {
+      lsof = lateWriterLsof;
+      rsync = delayedRsync;
+    };
     trustUnmappedOwnersForTests = pkgs.stdenv.hostPlatform.isLinux;
   };
 
@@ -137,70 +326,74 @@ let
     ];
   };
 
-  migrationEvaluation = lib.evalModules {
-    specialArgs = { inherit pkgs; };
-    modules = [
-      ({ lib, ... }: {
-        options = {
-          assertions = lib.mkOption {
-            type = lib.types.listOf lib.types.raw;
-            default = [ ];
-          };
-          programs.codex = {
-            enable = lib.mkEnableOption "Codex";
-            package = lib.mkOption {
-              type = lib.types.nullOr lib.types.package;
-              default = null;
-            };
-            settings = lib.mkOption {
-              type = lib.types.attrsOf lib.types.raw;
-              default = { };
-            };
-            enableMcpIntegration = lib.mkOption {
-              type = lib.types.bool;
-              default = false;
-            };
-            plugins = lib.mkOption {
+  mkMigrationEvaluation =
+    module:
+    lib.evalModules {
+      specialArgs = { inherit pkgs; };
+      modules = [
+        ({ lib, ... }: {
+          options = {
+            assertions = lib.mkOption {
               type = lib.types.listOf lib.types.raw;
               default = [ ];
             };
-            marketplaces = lib.mkOption {
-              type = lib.types.attrsOf lib.types.raw;
-              default = { };
+            programs.codex = {
+              enable = lib.mkEnableOption "Codex";
+              package = lib.mkOption {
+                type = lib.types.nullOr lib.types.package;
+                default = null;
+              };
+              settings = lib.mkOption {
+                type = lib.types.attrsOf lib.types.raw;
+                default = { };
+              };
+              enableMcpIntegration = lib.mkOption {
+                type = lib.types.bool;
+                default = false;
+              };
+              plugins = lib.mkOption {
+                type = lib.types.listOf lib.types.raw;
+                default = [ ];
+              };
+              marketplaces = lib.mkOption {
+                type = lib.types.attrsOf lib.types.raw;
+                default = { };
+              };
             };
+            home = {
+              homeDirectory = lib.mkOption { type = lib.types.str; };
+              preferXdgDirectories = lib.mkOption {
+                type = lib.types.bool;
+                default = false;
+              };
+              activation = lib.mkOption {
+                type = lib.types.attrsOf lib.types.raw;
+                default = { };
+              };
+              extraBuilderCommands = lib.mkOption {
+                type = lib.types.lines;
+                default = "";
+              };
+            };
+            xdg.configHome = lib.mkOption { type = lib.types.str; };
           };
+        })
+        module
+        {
           home = {
-            homeDirectory = lib.mkOption { type = lib.types.str; };
-            preferXdgDirectories = lib.mkOption {
-              type = lib.types.bool;
-              default = false;
-            };
-            activation = lib.mkOption {
-              type = lib.types.attrsOf lib.types.raw;
-              default = { };
-            };
-            extraBuilderCommands = lib.mkOption {
-              type = lib.types.lines;
-              default = "";
-            };
+            homeDirectory = testHome;
+            preferXdgDirectories = true;
           };
-          xdg.configHome = lib.mkOption { type = lib.types.str; };
-        };
-      })
-      codexModule
-      {
-        home = {
-          homeDirectory = testHome;
-          preferXdgDirectories = true;
-        };
-        xdg.configHome = "${testHome}/.config";
-        programs.codex = {
-          enable = true;
-          migrateFromLegacyHome = true;
-        };
-      }
-    ];
-  };
+          xdg.configHome = "${testHome}/.config";
+          programs.codex = {
+            enable = true;
+            migrateFromLegacyHome = true;
+          };
+        }
+      ];
+    };
+  migrationEvaluation = mkMigrationEvaluation codexModule;
+  productionMigrationEvaluation = mkMigrationEvaluation productionCodexModule;
 
   activationScript = pkgs.writeShellScript "activate-codex-home-module" ''
     set -euo pipefail
@@ -226,6 +419,16 @@ let
     }
 
     ${migrationEvaluation.config.home.activation.codexHomeMigration.data}
+  '';
+
+  productionMigrationScript = pkgs.writeShellScript "migrate-codex-home-module-production" ''
+    set -euo pipefail
+
+    run() {
+      "$@"
+    }
+
+    ${productionMigrationEvaluation.config.home.activation.codexHomeMigration.data}
   '';
 
   barrierLsof = pkgs.writeShellScriptBin "lsof" ''
@@ -336,6 +539,7 @@ let
   );
 
   codexHomeModule = pkgs.runCommand "codex-home-module-check" { } ''
+    shopt -s nullglob
     derivationOutput="$out"
     testHome="$NIX_BUILD_TOP/${testHomeName}"
     case "$testHome" in
@@ -352,22 +556,21 @@ let
     substitute ${migrationScript} "$migrationUnderTest" \
       --replace-fail ${lib.escapeShellArg testHome} "$testHome"
     chmod +x "$activationUnderTest" "$migrationUnderTest"
-    if grep -F 'rootOwnerIsUnmapped' ${lib.getExe productionMigration}; then
-      echo "production migration trusts an unprovable overflow UID" >&2
-      exit 1
-    fi
+    grep -F ${lib.escapeShellArg (lib.getExe productionMigration)} ${productionMigrationScript}
     ${lib.getExe productionMigration} --help >"$TMPDIR/migration-help.out"
     grep -F "Usage: codex-home-migrate LEGACY TARGET" "$TMPDIR/migration-help.out"
-    if ${lib.getExe productionMigration} only-one-argument \
-      >"$TMPDIR/migration-invalid.out" 2>"$TMPDIR/migration-invalid.err"; then
-      echo "migration accepted an invalid argument count" >&2
-      exit 1
-    fi
-    grep -F "Usage: codex-home-migrate LEGACY TARGET" "$TMPDIR/migration-invalid.err"
-    ${lib.optionalString pkgs.stdenv.hostPlatform.isLinux ''
-      grep -F 'testOnlyUnmappedOwner=' ${lib.getExe testMigration}
-    ''}
-
+    assertUsageError() {
+      set +e
+      ${lib.getExe productionMigration} "$@" \
+        >"$TMPDIR/migration-invalid.out" 2>"$TMPDIR/migration-invalid.err"
+      invalidStatus="$?"
+      set -e
+      test "$invalidStatus" = 64
+      grep -F "Usage: codex-home-migrate LEGACY TARGET" "$TMPDIR/migration-invalid.err"
+    }
+    assertUsageError
+    assertUsageError only-one-argument
+    assertUsageError one two three
     target="$testHome/.config/codex/config.toml"
     cleanupTestHome() {
       ${lib.optionalString pkgs.stdenv.hostPlatform.isDarwin ''
@@ -408,6 +611,18 @@ let
     legacy="$testHome/.codex"
     migrated="$testHome/.config/codex"
     ${lib.optionalString pkgs.stdenv.hostPlatform.isLinux ''
+      mkdir -p "$legacy/state"
+      printf 'zero-overflow-root\n' > "$legacy/state/sentinel"
+      if ${lib.getExe zeroOverflowProductionMigration} "$legacy" "$migrated" \
+        >"$TMPDIR/zero-overflow.out" 2>"$TMPDIR/zero-overflow.err"; then
+        echo "production migration trusted root represented by overflowuid 0" >&2
+        exit 1
+      fi
+      grep -F "refuses an ambiguous overflow UID owner: /" "$TMPDIR/zero-overflow.err"
+      grep -Fx zero-overflow-root "$legacy/state/sentinel"
+      test ! -e "$migrated"
+      cleanupTestHome
+
       if [[ "$(stat -c %u /)" != 0 ]]; then
         mkdir -p "$legacy/state"
         printf 'unmapped-root\n' > "$legacy/state/sentinel"
@@ -416,7 +631,7 @@ let
           echo "production migration trusted an unmapped root owner" >&2
           exit 1
         fi
-        grep -F "refuses a target-path ancestor owned by another user: /" "$TMPDIR/unmapped-root.err"
+        grep -F "refuses an ambiguous overflow UID owner: /" "$TMPDIR/unmapped-root.err"
         grep -Fx unmapped-root "$legacy/state/sentinel"
         test ! -e "$migrated"
         cleanupTestHome
@@ -558,6 +773,58 @@ let
     ''}
 
     cleanupTestHome
+    lateWriterLock="$legacy/.tmp/plugins.sync.lock"
+    lateWriterData="$legacy/.tmp/plugins/.git/FETCH_HEAD"
+    lateWriterReady="$TMPDIR/codex-home-late-writer.ready"
+    lateWriterGo="$TMPDIR/codex-home-late-writer.go"
+    lateWriterCount="$TMPDIR/codex-home-late-writer.count"
+    delayedRsyncOnce="$TMPDIR/codex-home-delayed-rsync.once"
+    mkdir -p "$(dirname "$lateWriterData")"
+    printf 'before\n' > "$lateWriterData"
+    rm -f "$lateWriterReady" "$lateWriterGo" "$lateWriterCount"
+    rm -rf "$delayedRsyncOnce"
+    ${pkgs.coreutils}/bin/timeout 15s ${lib.getExe lateLockWriter} \
+      "$lateWriterLock" "$lateWriterData" "$lateWriterReady" "$lateWriterGo" &
+    lateWriterPid="$!"
+    for _ in {1..1000}; do
+      [[ -e "$lateWriterReady" ]] && break
+      sleep 0.01
+    done
+    if [[ ! -e "$lateWriterReady" ]]; then
+      echo "timed out waiting for the late Codex plugin writer" >&2
+      exit 1
+    fi
+    CODEX_HOME_MIGRATION_LATE_WRITER_COUNT="$lateWriterCount" \
+      CODEX_HOME_MIGRATION_LATE_WRITER_GO="$lateWriterGo" \
+    CODEX_HOME_MIGRATION_DELAYED_RSYNC_ONCE="$delayedRsyncOnce" \
+      ${lib.getExe lateWriterMigration} "$legacy" "$migrated"
+    wait "$lateWriterPid"
+    test -L "$legacy"
+    test "$(readlink "$legacy")" = .config/codex
+    test "$(realpath "$legacy")" = "$(realpath "$migrated")"
+    grep -Fx after "$migrated/.tmp/plugins/.git/FETCH_HEAD"
+    lateWriterBackups=("$legacy".backup-*)
+    test "''${#lateWriterBackups[@]}" = 1
+    grep -Fx before "''${lateWriterBackups[0]}/.tmp/plugins/.git/FETCH_HEAD"
+    test "$(stat -c %d:%i "$migrated/.tmp/plugins.sync.lock")" = \
+      "$(stat -c %d:%i "''${lateWriterBackups[0]}/.tmp/plugins.sync.lock")"
+    ${lib.getExe withFileLock} "$TMPDIR/codex-home-helper.lock" true
+
+    cleanupTestHome
+    mkdir -p "$legacy/.tmp"
+    touch "$legacy/.tmp/plugins.sync.lock" "$legacy/held-by-parent"
+    exec 9>"$legacy/held-by-parent"
+    if CODEX_HOME_MIGRATION_LOCK_FD=9 "$migrationUnderTest" \
+      >"$TMPDIR/forged-lock.out" 2>"$TMPDIR/forged-lock.err"; then
+      echo "migration trusted a forged inherited lock descriptor" >&2
+      exit 1
+    fi
+    exec 9>&-
+    grep -F "invalid locked descriptor" "$TMPDIR/forged-lock.err"
+    test -d "$legacy"
+    test ! -e "$migrated"
+
+    cleanupTestHome
     interruptedStage="$testHome/.config/.codex-home-migration.interrupted"
     mkdir -p "$legacy/state" "$interruptedStage/state"
     printf 'source-data\n' > "$legacy/state/sentinel"
@@ -589,8 +856,39 @@ let
     test ! -e "$migrated"
 
     cleanupTestHome
+    interruptedBackup="$legacy.backup-interrupted"
+    mkdir -p "$legacy/state" "$interruptedBackup/state"
+    printf 'recreated-source\n' > "$legacy/state/sentinel"
+    printf 'original-rollback\n' > "$interruptedBackup/state/sentinel"
+    if "$migrationUnderTest" >"$TMPDIR/source-and-rollback.out" 2>"$TMPDIR/source-and-rollback.err"; then
+      echo "migration chose between a recreated source and rollback data" >&2
+      exit 1
+    fi
+    grep -F "Codex home migration found source and rollback data without a target" "$TMPDIR/source-and-rollback.err"
+    grep -F "$interruptedBackup" "$TMPDIR/source-and-rollback.err"
+    grep -Fx recreated-source "$legacy/state/sentinel"
+    grep -Fx original-rollback "$interruptedBackup/state/sentinel"
+    test ! -e "$migrated"
+
+    cleanupTestHome
+    mkdir -p "$legacy/state"
+    printf 'stage-identity-failure\n' > "$legacy/state/sentinel"
+    stageFailureLegacyIdentity="$(stat -c %d:%i "$legacy")"
+    if ${lib.getExe stageFailureMigration} "$legacy" "$migrated" \
+      >"$TMPDIR/stage-failure.out" 2>"$TMPDIR/stage-failure.err"; then
+      echo "migration ignored failure while recording the stage identity" >&2
+      exit 1
+    fi
+    test "$(stat -c %d:%i "$legacy")" = "$stageFailureLegacyIdentity"
+    grep -Fx stage-identity-failure "$legacy/state/sentinel"
+    test ! -e "$migrated"
+    failedStages=("$(dirname "$migrated")"/.codex-home-migration.*)
+    test "''${#failedStages[@]}" = 0
+
+    cleanupTestHome
     mkdir -p "$legacy/state"
     printf 'first-rename\n' > "$legacy/state/sentinel"
+    firstSignalLegacyIdentity="$(stat -c %d:%i "$legacy")"
     signalState="$TMPDIR/codex-home-signal-state"
     rm -f "$signalState"
     if CODEX_HOME_MIGRATION_TEST_SIGNAL_STATE="$signalState" \
@@ -599,26 +897,87 @@ let
       echo "migration ignored TERM immediately after the source rename" >&2
       exit 1
     fi
+    if [[ "$(stat -c %d:%i "$legacy")" != "$firstSignalLegacyIdentity" ]]; then
+      echo "source identity changed after interrupted target publication" >&2
+      exit 1
+    fi
     grep -Fx first-rename "$legacy/state/sentinel"
-    test ! -e "$migrated"
+    if [[ ! -d "$migrated" || -L "$migrated" ]]; then
+      echo "published target was not preserved after interruption: $migrated" >&2
+      exit 1
+    fi
+    grep -Fx first-rename "$migrated/state/sentinel"
     firstSignalBackups=("$legacy".backup-*)
-    test "''${#firstSignalBackups[@]}" = 0
+    test "''${#firstSignalBackups[@]}" = 1
+    test -L "''${firstSignalBackups[0]}"
+    test "$(realpath "''${firstSignalBackups[0]}")" = "$(realpath "$migrated")"
+    firstSignalPending=("$(dirname "$migrated")"/.codex-home-migration.pending-*)
+    test "''${#firstSignalPending[@]}" = 1
 
     cleanupTestHome
     mkdir -p "$legacy/state"
-    printf 'second-rename\n' > "$legacy/state/sentinel"
-    rm -f "$signalState"
-    if CODEX_HOME_MIGRATION_TEST_SIGNAL_STATE="$signalState" \
-      CODEX_HOME_MIGRATION_TEST_SIGNAL_AFTER=2 \
-      ${lib.getExe signalMigration} "$legacy" "$migrated"; then
-      echo "migration ignored TERM immediately after the target rename" >&2
+    printf 'exchange-signal\n' > "$legacy/state/sentinel"
+    exchangeSignalLegacyIdentity="$(stat -c %d:%i "$legacy")"
+    exchangeSignalState="$TMPDIR/codex-home-exchange-signal-state"
+    rm -f "$exchangeSignalState"
+    if CODEX_HOME_MIGRATION_TEST_EXCHANGE_SIGNAL_STATE="$exchangeSignalState" \
+      ${lib.getExe exchangeSignalMigration} "$legacy" "$migrated"; then
+      echo "migration ignored TERM immediately after the atomic redirect exchange" >&2
       exit 1
     fi
-    test ! -e "$legacy"
-    grep -Fx second-rename "$migrated/state/sentinel"
-    secondSignalBackups=("$legacy".backup-*)
-    test "''${#secondSignalBackups[@]}" = 1
-    grep -Fx second-rename "''${secondSignalBackups[0]}/state/sentinel"
+    test -L "$legacy"
+    test "$(realpath "$legacy")" = "$(realpath "$migrated")"
+    grep -Fx exchange-signal "$migrated/state/sentinel"
+    grep -Fx target-write-after-exchange "$migrated/state/after-exchange"
+    exchangeSignalBackups=("$legacy".backup-*)
+    test "''${#exchangeSignalBackups[@]}" = 1
+    test "$(stat -c %d:%i "''${exchangeSignalBackups[0]}")" = "$exchangeSignalLegacyIdentity"
+    grep -Fx exchange-signal "''${exchangeSignalBackups[0]}/state/sentinel"
+    test ! -e "''${exchangeSignalBackups[0]}/state/after-exchange"
+    exchangeSignalPending=("$(dirname "$migrated")"/.codex-home-migration.pending-*)
+    test "''${#exchangeSignalPending[@]}" = 1
+
+    cleanupTestHome
+    mkdir -p "$legacy/state"
+    printf 'kill-after-exchange\n' > "$legacy/state/sentinel"
+    killExchangeLegacyIdentity="$(stat -c %d:%i "$legacy")"
+    if ${lib.getExe killExchangeMigration} "$legacy" "$migrated"; then
+      echo "migration ignored KILL immediately after the atomic exchange" >&2
+      exit 1
+    fi
+    test -L "$legacy"
+    test "$(realpath "$legacy")" = "$(realpath "$migrated")"
+    killExchangeBackups=("$legacy".backup-*)
+    test "''${#killExchangeBackups[@]}" = 1
+    test "$(stat -c %d:%i "''${killExchangeBackups[0]}")" = "$killExchangeLegacyIdentity"
+    grep -Fx kill-after-exchange "''${killExchangeBackups[0]}/state/sentinel"
+    killExchangePending=("$(dirname "$migrated")"/.codex-home-migration.pending-*)
+    test "''${#killExchangePending[@]}" = 1
+    if "$migrationUnderTest" >"$TMPDIR/kill-retry.out" 2>"$TMPDIR/kill-retry.err"; then
+      echo "migration silently accepted a KILL-interrupted commit" >&2
+      exit 1
+    fi
+    grep -F "Codex home migration found staged data from an interrupted run" "$TMPDIR/kill-retry.err"
+
+    cleanupTestHome
+    mkdir -p "$legacy/state"
+    printf 'late-cutover-source\n' > "$legacy/state/sentinel"
+    lateCutoverLegacyIdentity="$(stat -c %d:%i "$legacy")"
+    if ${lib.getExe lateExchangeMigration} "$legacy" "$migrated" \
+      >"$TMPDIR/late-cutover.out" 2>"$TMPDIR/late-cutover.err"; then
+      echo "migration accepted a write after staged verification" >&2
+      exit 1
+    fi
+    grep -F "Codex home changed during atomic cutover" "$TMPDIR/late-cutover.err"
+    test -L "$legacy"
+    test "$(realpath "$legacy")" = "$(realpath "$migrated")"
+    test ! -e "$migrated/state/late-cutover"
+    lateCutoverBackups=("$legacy".backup-*)
+    test "''${#lateCutoverBackups[@]}" = 1
+    test "$(stat -c %d:%i "''${lateCutoverBackups[0]}")" = "$lateCutoverLegacyIdentity"
+    grep -Fx late-write-before-exchange "''${lateCutoverBackups[0]}/state/late-cutover"
+    lateCutoverPending=("$(dirname "$migrated")"/.codex-home-migration.pending-*)
+    test "''${#lateCutoverPending[@]}" = 1
 
     cleanupTestHome
     mkdir -p "$legacy/state"
@@ -626,9 +985,12 @@ let
     printf 'session\n' > "$legacy/state/session"
     ln "$legacy/state/session" "$legacy/state/session-hardlink"
     ln -s session "$legacy/state/session-symlink"
+    migrationLegacyIdentity="$(stat -c %d:%i "$legacy")"
 
     "$migrationUnderTest"
-    test ! -e "$legacy"
+    test -L "$legacy"
+    test "$(readlink "$legacy")" = .config/codex
+    test "$(realpath "$legacy")" = "$(realpath "$migrated")"
     test -d "$migrated"
     diff -u ${initialConfig} "$migrated/config.toml"
     test "$(stat -c %a "$migrated/config.toml")" = 600
@@ -637,11 +999,13 @@ let
     backups=("$legacy".backup-*)
     test "''${#backups[@]}" = 1
     test -d "''${backups[0]}"
+    test "$(stat -c %d:%i "''${backups[0]}")" = "$migrationLegacyIdentity"
 
     "$migrationUnderTest"
     repeatedBackups=("$legacy".backup-*)
     test "''${#repeatedBackups[@]}" = 1
 
+    rm "$legacy"
     mkdir -p "$legacy"
     printf 'collision\n' > "$legacy/sentinel"
     if "$migrationUnderTest"; then
