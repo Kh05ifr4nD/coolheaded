@@ -99,6 +99,7 @@ let
       enable = true;
       codeGraph = false;
       codexAutonomous = false;
+      context7 = false;
     };
   };
   defaultEvaluation = mkEvaluation { programs.lazyCodexAi.enable = true; };
@@ -106,6 +107,7 @@ let
     programs.lazyCodexAi = {
       enable = true;
       codexAutonomous = true;
+      context7 = true;
     };
   };
   userOverrideEvaluation = mkEvaluation {
@@ -113,8 +115,12 @@ let
       lazyCodexAi = {
         enable = true;
         codeGraph = false;
+        context7 = false;
       };
-      codex.settings.plugins."omo@sisyphuslabs".mcp_servers.codegraph.enabled = true;
+      codex.settings.plugins."omo@sisyphuslabs".mcp_servers = {
+        codegraph.enabled = true;
+        context7.enabled = true;
+      };
     };
   };
   disabledEvaluation = mkEvaluation { programs.codex.enable = true; };
@@ -185,7 +191,19 @@ let
       == false
     )
     (
+      activeConfig.programs.codex.settings.plugins."omo@sisyphuslabs".mcp_servers.context7.enabled
+      == false
+    )
+    (
       userOverrideEvaluation.config.programs.codex.settings.plugins."omo@sisyphuslabs".mcp_servers.codegraph.enabled
+      == true
+    )
+    (
+      userOverrideEvaluation.config.programs.codex.settings.plugins."omo@sisyphuslabs".mcp_servers.context7.enabled
+      == true
+    )
+    (
+      autonomousEvaluation.config.programs.codex.settings.plugins."omo@sisyphuslabs".mcp_servers.context7.enabled
       == true
     )
     (
@@ -196,6 +214,15 @@ let
         "codegraph"
       ] defaultEvaluation.config.programs.codex.settings
     )
+    (
+      !lib.hasAttrByPath [
+        "plugins"
+        "omo@sisyphuslabs"
+        "mcp_servers"
+        "context7"
+      ] defaultEvaluation.config.programs.codex.settings
+    )
+    (activeEvaluation.options.programs.lazyCodexAi ? context7)
     (lib.hasInfix "--no-codex-autonomous" activeLazyActivation.data)
     (!lib.hasInfix "--codex-autonomous" defaultLazyActivation.data)
     (!lib.hasInfix "--no-codex-autonomous" defaultLazyActivation.data)
@@ -267,10 +294,14 @@ in
       ${activeCodexScript} "" "$activeGeneration"
       sed -n '/^\[plugins\."omo@sisyphuslabs"\.mcp_servers\.codegraph\]$/,/^\[/p' "$configFile" \
         | grep -Fx 'enabled = false'
+      sed -n '/^\[plugins\."omo@sisyphuslabs"\.mcp_servers\.context7\]$/,/^\[/p' "$configFile" \
+        | grep -Fx 'enabled = false'
 
       HOME=${testHome} ${activeLazyScript} "$activeGeneration" "$activeGeneration"
       ${activeCodexScript} "$activeGeneration" "$activeGeneration"
       sed -n '/^\[plugins\."omo@sisyphuslabs"\.mcp_servers\.codegraph\]$/,/^\[/p' "$configFile" \
+        | grep -Fx 'enabled = false'
+      sed -n '/^\[plugins\."omo@sisyphuslabs"\.mcp_servers\.context7\]$/,/^\[/p' "$configFile" \
         | grep -Fx 'enabled = false'
 
       idempotentGeneration="$TMPDIR/idempotent-generation"
@@ -299,11 +330,15 @@ in
       ${defaultCodexScript} "$activeGeneration" "$defaultGeneration"
       sed -n '/^\[plugins\."omo@sisyphuslabs"\.mcp_servers\.codegraph\]$/,/^\[/p' "$configFile" \
         | grep -Fx 'enabled = true'
+      sed -n '/^\[plugins\."omo@sisyphuslabs"\.mcp_servers\.context7\]$/,/^\[/p' "$configFile" \
+        | grep -Fx 'enabled = true'
 
       HOME=${testHome} ${mkActivationScript "reactivate-lazycodex-ai-default" defaultLazyActivation.data} \
         "$defaultGeneration" "$defaultGeneration"
       ${defaultCodexScript} "$defaultGeneration" "$defaultGeneration"
       sed -n '/^\[plugins\."omo@sisyphuslabs"\.mcp_servers\.codegraph\]$/,/^\[/p' "$configFile" \
+        | grep -Fx 'enabled = true'
+      sed -n '/^\[plugins\."omo@sisyphuslabs"\.mcp_servers\.context7\]$/,/^\[/p' "$configFile" \
         | grep -Fx 'enabled = true'
 
       out="$disabledGeneration"
@@ -314,6 +349,7 @@ in
       test ! -e "$pluginCache"
       ${disabledCodexScript} "$activeGeneration" "$disabledGeneration"
       ! grep -F 'mcp_servers.codegraph' "$configFile"
+      ! grep -F 'mcp_servers.context7' "$configFile"
 
       failureTmp="$TMPDIR/failing-activation"
       mkdir -p "$failureTmp"
