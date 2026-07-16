@@ -24,13 +24,15 @@ let
   ++ lib.optional (cfg.codexAutonomous == true) "--codex-autonomous"
   ++ lib.optional (cfg.codexAutonomous == false) "--no-codex-autonomous";
   installFingerprint = builtins.hashString "sha256" (builtins.toJSON installArguments);
-  codeGraphPath = [
+  mcpEnabledPath = server: [
     "plugins"
     "omo@sisyphuslabs"
     "mcp_servers"
-    "codegraph"
+    server
     "enabled"
   ];
+  codeGraphPath = mcpEnabledPath "codegraph";
+  context7Path = mcpEnabledPath "context7";
   withIsolatedProject = command: ''
     (
       lazyCodexAiProject="$(mktemp -d "''${TMPDIR:-/tmp}/lazycodex-ai-project.XXXXXX")"
@@ -80,6 +82,17 @@ in
       default = null;
       description = ''
         Whether the OMO CodeGraph MCP server is enabled. Null leaves the leaf
+        unmanaged and follows the packaged LazyCodex behavior. True or false
+        declares the leaf through programs.codex.settings. A direct user value
+        in programs.codex.settings has higher priority.
+      '';
+    };
+
+    context7 = lib.mkOption {
+      type = lib.types.nullOr lib.types.bool;
+      default = null;
+      description = ''
+        Whether the OMO Context7 MCP server is enabled. Null leaves the leaf
         unmanaged and follows the packaged LazyCodex behavior. True or false
         declares the leaf through programs.codex.settings. A direct user value
         in programs.codex.settings has higher priority.
@@ -136,10 +149,17 @@ in
 
       programs.codex = {
         enable = lib.mkDefault true;
-        settings = lib.mkIf (cfg.codeGraph != null) {
-          plugins."omo@sisyphuslabs".mcp_servers.codegraph.enabled = lib.mkDefault cfg.codeGraph;
-        };
-        releasedSettingsPaths = lib.optional (cfg.codeGraph == null) codeGraphPath;
+        settings = lib.mkMerge [
+          (lib.mkIf (cfg.codeGraph != null) {
+            plugins."omo@sisyphuslabs".mcp_servers.codegraph.enabled = lib.mkDefault cfg.codeGraph;
+          })
+          (lib.mkIf (cfg.context7 != null) {
+            plugins."omo@sisyphuslabs".mcp_servers.context7.enabled = lib.mkDefault cfg.context7;
+          })
+        ];
+        releasedSettingsPaths =
+          lib.optional (cfg.codeGraph == null) codeGraphPath
+          ++ lib.optional (cfg.context7 == null) context7Path;
       };
 
       home = {
