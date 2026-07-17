@@ -73,8 +73,6 @@
           ;
       };
 
-      flake.lib.codexHomeMigrate = pkgs: import ./lib/nix/codexHomeMigrate.nix { inherit pkgs; };
-
       flake.homeModules =
         let
           modules = nixpkgs.lib.pipe (builtins.readDir ./homeModules) [
@@ -108,15 +106,11 @@
               in
               builtins.any (license: !(license.free or true)) licenses;
           };
-          checks =
-            import ./flake/checks.nix {
-              inherit pkgs;
-              inherit (config) packages;
-              inherit (pkgs) lib;
-            }
-            // {
-              codexHomeMigrate = self.lib.codexHomeMigrate pkgs;
-            };
+          checks = import ./flake/checks.nix {
+            inherit pkgs;
+            inherit (config) packages;
+            inherit (pkgs) lib;
+          };
           devShells.default = import ./flake/devShell.nix { inherit config pkgs; };
           packages = import ./flake/packages.nix {
             lib = pkgs.lib;

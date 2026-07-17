@@ -229,7 +229,7 @@ let
     (lib.hasInfix "--codex-autonomous" autonomousLazyActivation.data)
     (!lib.hasInfix "uninstall" retainedLazyActivation.data)
     (lib.hasInfix "OMO_CODEX_PROJECT=" activeLazyActivation.data)
-    (activeLazyActivation.after == [ "codexHomeMigration" ])
+    (activeLazyActivation.after == [ "linkGeneration" ])
     (activeLazyActivation.before == [ "codexConfig" ])
     (composedEvaluation.config.programs.codex.package == packages.codex)
     (!(activeEvaluation.options.programs.lazyCodexAi ? gitBash))
