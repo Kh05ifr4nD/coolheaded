@@ -1,7 +1,4 @@
-{
-  self,
-  codexHomeMigrationPackage ? null,
-}:
+{ self }:
 
 moduleArgs@{
   config,
@@ -26,9 +23,7 @@ let
     ]
   );
 
-  quoteKey = builtins.toJSON;
-  renderKeyPath = path: lib.concatStringsSep "." (map quoteKey path);
-
+  renderKeyPath = path: lib.concatStringsSep "." (map builtins.toJSON path);
   flattenValue =
     path: value:
     if builtins.isAttrs value && value != { } then
@@ -47,13 +42,7 @@ let
   managedEdits = lib.concatMap (name: flattenValue [ name ] cfg.settings.${name}) (
     lib.sort builtins.lessThan (builtins.attrNames cfg.settings)
   );
-  managedPaths = map (edit: edit.keyPath) managedEdits;
-  releasedPaths = map renderKeyPath cfg.releasedSettingsPaths;
-
   managedEditsFile = pkgs.writeText "codex-managed-edits.json" (builtins.toJSON managedEdits);
-  managedPathsFile = pkgs.writeText "codex-managed-paths.json" (builtins.toJSON managedPaths);
-  releasedPathsFile = pkgs.writeText "codex-released-paths.json" (builtins.toJSON releasedPaths);
-  stateFile = "state/codex-managed-paths.json";
 
   configDirectory =
     if config.home.preferXdgDirectories then
@@ -64,7 +53,8 @@ let
 
   reconcileConfig = pkgs.writeShellApplication {
     name = "codex-config-reconcile";
-    runtimeInputs = lib.optional (cfg.package != null) cfg.package ++ [
+    runtimeInputs = [
+      cfg.package
       pkgs.coreutils
       pkgs.jq
       pkgs.toml-sort
@@ -72,26 +62,40 @@ let
     text = ''
       target="$1"
       desired_edits_file="$2"
-      current_paths_file="$3"
-      old_paths_file="''${4:-}"
-      released_paths_file="$5"
 
       umask 077
+      jq -e '
+        type == "array"
+        and all(.[];
+          type == "object"
+          and (.keyPath | type == "string")
+          and .mergeStrategy == "replace"
+          and has("value")
+        )
+      ' "$desired_edits_file" >/dev/null
+
       target_directory="$(dirname "$target")"
       mkdir -p "$target_directory"
 
-      if [[ -L "$target" ]]; then
-        echo "Codex config must be a writable regular file, but $target is a symbolic link" >&2
-        exit 1
+      validate_target() {
+        if [[ -L "$target" ]]; then
+          echo "Codex config must be a writable regular file, but $target is a symbolic link" >&2
+          return 1
+        fi
+        if [[ -e "$target" && ! -f "$target" ]]; then
+          echo "Codex config must be a writable regular file: $target" >&2
+          return 1
+        fi
+        if [[ -e "$target" && ! -w "$target" ]]; then
+          echo "Codex config is not writable: $target" >&2
+          return 1
+        fi
+      }
+      validate_target
+
+      if [[ ! -e "$target" ]] && jq -e 'length == 0' "$desired_edits_file" >/dev/null; then
+        exit 0
       fi
-      if [[ -e "$target" && ! -f "$target" ]]; then
-        echo "Codex config must be a writable regular file: $target" >&2
-        exit 1
-      fi
-      if [[ ! -e "$target" ]]; then
-        install -m 600 /dev/null "$target"
-      fi
-      chmod 600 "$target"
 
       runtime_root="$(mktemp -d "''${TMPDIR:-/tmp}/codex-home-manager.XXXXXX")"
       sorted_file=""
@@ -114,37 +118,9 @@ let
         if [[ -n "$sorted_file" ]]; then
           rm -f "$sorted_file"
         fi
-        rm -rf "$runtime_root"
+        rm -rf "''${runtime_root:?}"
       }
       trap cleanup EXIT
-
-      mkdir -p "$runtime_root/home" "$runtime_root/codex-home"
-      ln -s "$target" "$runtime_root/codex-home/config.toml"
-
-      if [[ -n "$old_paths_file" && -f "$old_paths_file" ]]; then
-        cp "$old_paths_file" "$runtime_root/old-paths.json"
-      else
-        printf '[]\n' >"$runtime_root/old-paths.json"
-      fi
-
-      jq -e 'type == "array"' "$desired_edits_file" >/dev/null
-      jq -e 'type == "array" and all(.[]; type == "string")' "$current_paths_file" >/dev/null
-      jq -e 'type == "array" and all(.[]; type == "string")' "$runtime_root/old-paths.json" >/dev/null
-      jq -e 'type == "array" and all(.[]; type == "string")' "$released_paths_file" >/dev/null
-
-      jq -n \
-        --slurpfile desired "$desired_edits_file" \
-        --slurpfile current "$current_paths_file" \
-        --slurpfile old "$runtime_root/old-paths.json" \
-        --slurpfile released "$released_paths_file" \
-        '($current[0] | unique) as $currentPaths
-        | ($released[0] | unique) as $releasedPaths
-        | ((($old[0] | unique) - $currentPaths) - $releasedPaths) as $stalePaths
-        | ($desired[0] + ($stalePaths | map({
-            keyPath: ., mergeStrategy: "replace", value: null
-          })))
-        | sort_by(.keyPath)' \
-        >"$runtime_root/edits.json"
 
       read_response() {
         local request_id="$1"
@@ -177,8 +153,8 @@ let
         server_pid=""
       }
 
-      applied_hash=""
       apply_edits() {
+        local candidate="$1"
         local response
         local status
         local version
@@ -231,17 +207,16 @@ let
           ' <<<"$response"
         )"
         if [[ -z "$version" ]]; then
-          version="sha256:$(sha256sum "$target" | cut -d ' ' -f 1)"
+          version="sha256:$(sha256sum "$candidate" | cut -d ' ' -f 1)"
         fi
 
-        if jq -e 'length == 0' "$runtime_root/edits.json" >/dev/null; then
-          applied_hash="$(sha256sum "$target" | cut -d ' ' -f 1)"
+        if jq -e 'length == 0' "$desired_edits_file" >/dev/null; then
           stop_server
           return 0
         fi
 
         jq -nc \
-          --slurpfile edits "$runtime_root/edits.json" \
+          --slurpfile edits "$desired_edits_file" \
           --arg version "$version" \
           '{
             id: 3,
@@ -253,10 +228,6 @@ let
           }' >&"$server_write_fd"
         response="$(read_response 3)"
         if ! jq -e '.error == null' <<<"$response" >/dev/null; then
-          if jq -e '(.error.message // "") | test("version|conflict"; "i")' <<<"$response" >/dev/null; then
-            stop_server || true
-            return 75
-          fi
           jq -r '.error.message // "Codex config write failed"' <<<"$response" >&2
           return 1
         fi
@@ -270,51 +241,67 @@ let
             ;;
         esac
         jq -er '.result.version' <<<"$response" >/dev/null
-        applied_hash="$(sha256sum "$target" | cut -d ' ' -f 1)"
         stop_server
       }
 
       success=""
       for attempt in 1 2 3; do
         : "$attempt"
-        if apply_edits; then
-          :
+        rm -rf "''${runtime_root:?}/home" "''${runtime_root:?}/codex-home"
+        mkdir -p "$runtime_root/home" "$runtime_root/codex-home"
+
+        validate_target
+        candidate="$runtime_root/codex-home/config.toml"
+        snapshot_exists=""
+        snapshot_hash=""
+        if [[ -e "$target" ]]; then
+          snapshot_exists=1
+          snapshot_hash="$(sha256sum "$target" | cut -d ' ' -f 1)"
+          cp --preserve=mode -- "$target" "$candidate"
+        elif jq -e 'length == 0' "$desired_edits_file" >/dev/null; then
+          success=1
+          break
         else
-          result="$?"
-          if [[ "$result" == 75 ]]; then
-            continue
-          fi
-          exit "$result"
+          install -m 600 /dev/null "$candidate"
         fi
+
+        apply_edits "$candidate"
 
         sorted_file="$(mktemp "$target_directory/.config.toml.home-manager.XXXXXX")"
         toml-sort \
           --sort-inline-tables \
           --sort-table-keys \
           --output "$sorted_file" \
-          "$target"
+          "$candidate"
         toml-sort \
           --check \
           --sort-inline-tables \
           --sort-table-keys \
           "$sorted_file"
 
-        current_hash="$(sha256sum "$target" | cut -d ' ' -f 1)"
-        if [[ "$current_hash" != "$applied_hash" ]]; then
-          rm -f "$sorted_file"
-          sorted_file=""
-          continue
-        fi
-
-        if cmp -s "$target" "$sorted_file"; then
-          rm -f "$sorted_file"
-          sorted_file=""
+        if [[ -n "$snapshot_exists" ]]; then
+          validate_target
+          if [[ ! -e "$target" ]] || [[ "$(sha256sum "$target" | cut -d ' ' -f 1)" != "$snapshot_hash" ]]; then
+            rm -f "$sorted_file"
+            sorted_file=""
+            continue
+          fi
+          if cmp -s "$target" "$sorted_file"; then
+            rm -f "$sorted_file"
+          else
+            chmod --reference="$target" "$sorted_file"
+            mv -f "$sorted_file" "$target"
+          fi
         else
+          if [[ -e "$target" || -L "$target" ]]; then
+            rm -f "$sorted_file"
+            sorted_file=""
+            continue
+          fi
           chmod 600 "$sorted_file"
           mv -f "$sorted_file" "$target"
-          sorted_file=""
         fi
-        chmod 600 "$target"
+        sorted_file=""
         success=1
         break
       done
@@ -325,12 +312,6 @@ let
       fi
     '';
   };
-
-  migrateCodexHome =
-    if codexHomeMigrationPackage == null then
-      import ../lib/nix/codexHomeMigrate.nix { inherit pkgs; }
-    else
-      codexHomeMigrationPackage;
 in
 {
   key = "coolheaded.homeModules.codex";
@@ -351,12 +332,12 @@ in
       type = lib.types.attrsOf configValueType;
       default = { };
       description = ''
-        Partial Codex settings owned by Home Manager. Activation writes the
-        declared leaf values through Codex app-server, deletes formerly managed
-        leaves that are no longer declared, preserves all other app-owned values,
-        and canonically sorts the complete writable {file}`config.toml`. A null
-        value deletes that exact leaf. Do not put secrets here because Nix stores
-        option values in the world-readable store.
+        Partial Codex settings owned by Home Manager. Activation writes only
+        declared values through Codex app-server, preserves every undeclared
+        value, and canonically sorts the complete writable
+        {file}config.toml. A null value deletes that exact node; removing a
+        declaration leaves its current value untouched. Do not put secrets
+        here because Nix stores option values in the world-readable store.
       '';
       example = lib.literalExpression ''
         {
@@ -367,56 +348,23 @@ in
         }
       '';
     };
-
-    releasedSettingsPaths = lib.mkOption {
-      type = lib.types.listOf (lib.types.listOf lib.types.str);
-      default = [ ];
-      internal = true;
-      description = "Formerly managed Codex settings handed back without deleting their current values.";
-    };
   };
 
   config = lib.mkIf cfg.enable {
     home = {
       packages = [ cfg.package ];
-      sessionVariables.CODEX_HOME = configDirectory;
+      sessionVariables = lib.optionalAttrs config.home.preferXdgDirectories {
+        CODEX_HOME = configDirectory;
+      };
 
-      extraBuilderCommands = lib.mkAfter ''
-        mkdir -p "$out/state"
-        ln -s ${managedPathsFile} "$out/${stateFile}"
-      '';
-
-      activation = {
-        codexConfig = {
-          after = [ "linkGeneration" ];
-          before = [ ];
-          data = ''
-            oldManagedPaths=""
-            previousGeneration="''${oldGenPath:-}"
-            if [[ -n "$previousGeneration" && -f "$previousGeneration/${stateFile}" ]]; then
-              oldManagedPaths="$previousGeneration/${stateFile}"
-            fi
-            run ${reconcileConfig}/bin/codex-config-reconcile \
-              ${lib.escapeShellArg configFile} \
-              ${managedEditsFile} \
-              ${managedPathsFile} \
-              "$oldManagedPaths" \
-              ${releasedPathsFile}
-          '';
-        };
-
-        codexHomeMigration = {
-          after = [ "linkGeneration" ];
-          before = [
-            "lazyCodexAi"
-            "codexConfig"
-          ];
-          data = lib.optionalString config.home.preferXdgDirectories ''
-            run ${migrateCodexHome}/bin/codex-home-migrate \
-              ${lib.escapeShellArg "${config.home.homeDirectory}/.codex"} \
-              ${lib.escapeShellArg configDirectory}
-          '';
-        };
+      activation.codexConfig = {
+        after = [ "linkGeneration" ];
+        before = [ ];
+        data = ''
+          run ${reconcileConfig}/bin/codex-config-reconcile \
+            ${lib.escapeShellArg configFile} \
+            ${managedEditsFile}
+        '';
       };
     };
   };

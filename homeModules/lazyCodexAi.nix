@@ -24,15 +24,6 @@ let
   ++ lib.optional (cfg.codexAutonomous == true) "--codex-autonomous"
   ++ lib.optional (cfg.codexAutonomous == false) "--no-codex-autonomous";
   installFingerprint = builtins.hashString "sha256" (builtins.toJSON installArguments);
-  mcpEnabledPath = server: [
-    "plugins"
-    "omo@sisyphuslabs"
-    "mcp_servers"
-    server
-    "enabled"
-  ];
-  codeGraphPath = mcpEnabledPath "codegraph";
-  context7Path = mcpEnabledPath "context7";
   withIsolatedProject = command: ''
     (
       lazyCodexAiProject="$(mktemp -d "''${TMPDIR:-/tmp}/lazycodex-ai-project.XXXXXX")"
@@ -103,7 +94,7 @@ in
   config = lib.mkMerge [
     {
       home.activation.lazyCodexAi = {
-        after = [ "codexHomeMigration" ];
+        after = [ "linkGeneration" ];
         before = [ "codexConfig" ];
         data =
           if cfg.enable then
@@ -157,9 +148,6 @@ in
             plugins."omo@sisyphuslabs".mcp_servers.context7.enabled = lib.mkDefault cfg.context7;
           })
         ];
-        releasedSettingsPaths =
-          lib.optional (cfg.codeGraph == null) codeGraphPath
-          ++ lib.optional (cfg.context7 == null) context7Path;
       };
 
       home = {

@@ -93,15 +93,11 @@ package fileSpec
 	lib!: {
 		".gitignore"!: #RegularFile
 		nix!: {
-			"base.nix"!:             #RegularFile
-			"codexHomeMigrate.nix"!: #RegularFile
-			"default.nix"!:          #RegularFile
-			"exchangePaths.nix"!:    #RegularFile
-			"github.nix"!:           #RegularFile
-			"npm.nix"!:              #RegularFile
-			"python.nix"!:           #RegularFile
-			"renameNoReplace.nix"!:  #RegularFile
-			"withFileLock.nix"!:     #RegularFile
+			"base.nix"!:    #RegularFile
+			"default.nix"!: #RegularFile
+			"github.nix"!:  #RegularFile
+			"npm.nix"!:     #RegularFile
+			"python.nix"!:  #RegularFile
 		}
 		"package.sh"!: #RegularFile
 		ts!: {
