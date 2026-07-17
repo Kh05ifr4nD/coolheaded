@@ -1,0 +1,161 @@
+diff --git a/src/specify_cli/_utils.py b/src/specify_cli/_utils.py
+index 6603d65..f6afc9a 100644
+--- a/src/specify_cli/_utils.py
++++ b/src/specify_cli/_utils.py
+@@ -17,6 +17,15 @@ CLAUDE_LOCAL_PATH = Path.home() / ".claude" / "local" / "claude"
+ CLAUDE_NPM_LOCAL_PATH = Path.home() / ".claude" / "local" / "node_modules" / ".bin" / "claude"
+ 
+ 
++def ensure_owner_writable(path: Path) -> None:
++    """Make a copied file tree readable and writable by its owner."""
++    items = [path, *path.rglob("*")] if path.is_dir() else [path]
++    for item in items:
++        mode = item.stat().st_mode
++        owner_permissions = 0o700 if item.is_dir() else 0o600
++        item.chmod(mode | owner_permissions)
++
++
+ def relative_extension_path_violation(value: Any) -> str | None:
+     """Return why ``value`` is unsafe as an extension-relative ``file`` path.
+ 
+@@ -205,12 +214,14 @@ def handle_vscode_settings(sub_item, dest_file, rel_path, verbose=False, tracker
+                 log("Skipped merge (preserved existing settings)", "yellow")
+         else:
+             shutil.copy2(sub_item, dest_file)
++            ensure_owner_writable(dest_file)
+             log("Copied (no existing settings.json):", "blue")
+ 
+     except Exception as e:
+         log(f"Warning: Could not merge settings: {e}", "yellow")
+         if not dest_file.exists():
+             shutil.copy2(sub_item, dest_file)
++            ensure_owner_writable(dest_file)
+ 
+ 
+ def merge_json_files(existing_path: Path, new_content: Any, verbose: bool = False) -> dict[str, Any] | None:
+diff --git a/src/specify_cli/commands/init.py b/src/specify_cli/commands/init.py
+index 1a1dd04..b62fd25 100644
+--- a/src/specify_cli/commands/init.py
++++ b/src/specify_cli/commands/init.py
+@@ -23,7 +23,7 @@ from .._assets import (
+     get_speckit_version,
+ )
+ from .._console import StepTracker, console, select_with_arrows, show_banner
+-from .._utils import check_tool
++from .._utils import check_tool, ensure_owner_writable
+ 
+ 
+ def _stdin_is_interactive() -> bool:
+@@ -501,12 +501,14 @@ def register(app: typer.Typer) -> None:
+                                 project_path / ".specify" / "workflows" / "speckit"
+                             )
+                             dest_wf.mkdir(parents=True, exist_ok=True)
++                            workflow_file = dest_wf / "workflow.yml"
+                             _shutil.copy2(
+                                 bundled_wf / "workflow.yml",
+-                                dest_wf / "workflow.yml",
++                                workflow_file,
+                             )
++                            ensure_owner_writable(workflow_file)
+                             definition = WorkflowDefinition.from_yaml(
+-                                dest_wf / "workflow.yml"
++                                workflow_file
+                             )
+                             wf_registry.add(
+                                 "speckit",
+diff --git a/src/specify_cli/extensions/__init__.py b/src/specify_cli/extensions/__init__.py
+index 05aa35f..572bd18 100644
+--- a/src/specify_cli/extensions/__init__.py
++++ b/src/specify_cli/extensions/__init__.py
+@@ -29,7 +29,7 @@ from packaging.specifiers import InvalidSpecifier, SpecifierSet
+ from .._assets import _locate_core_pack, _repo_root
+ from .._init_options import is_ai_skills_enabled
+ from .._invocation_style import is_dollar_skills_agent, is_slash_skills_agent
+-from .._utils import dump_frontmatter, relative_extension_path_violation, version_satisfies
++from .._utils import dump_frontmatter, ensure_owner_writable, relative_extension_path_violation, version_satisfies
+ from ..catalogs import CatalogEntry as BaseCatalogEntry
+ from ..catalogs import CatalogStackBase
+ from ..shared_infra import verify_archive_sha256
+@@ -1434,6 +1434,7 @@ class ExtensionManager:
+ 
+         ignore_fn = self._load_extensionignore(source_dir)
+         shutil.copytree(source_dir, dest_dir, ignore=ignore_fn)
++        ensure_owner_writable(dest_dir)
+ 
+         # Register commands with AI agents
+         registered_commands = {}
+diff --git a/src/specify_cli/integrations/base.py b/src/specify_cli/integrations/base.py
+index a425d4e..71b5ace 100644
+--- a/src/specify_cli/integrations/base.py
++++ b/src/specify_cli/integrations/base.py
+@@ -28,6 +28,7 @@ import yaml
+ 
+ from .._toml_string import escape_toml_basic as _escape_toml_basic
+ from .._toml_string import has_illegal_toml_control as _has_illegal_toml_control
++from .._utils import ensure_owner_writable
+ 
+ if TYPE_CHECKING:
+     from .manifest import IntegrationManifest
+@@ -467,6 +468,7 @@ class IntegrationBase(ABC):
+         dest_dir.mkdir(parents=True, exist_ok=True)
+         dst = dest_dir / filename
+         shutil.copy2(src, dst)
++        ensure_owner_writable(dst)
+         return dst
+ 
+     @staticmethod
+@@ -545,6 +547,7 @@ class IntegrationBase(ABC):
+             shutil.copy2(src_script, dst_script)
+             if dst_script.suffix in (".sh", ".py"):
+                 dst_script.chmod(dst_script.stat().st_mode | 0o111)
++            ensure_owner_writable(dst_script)
+             self.record_file_in_manifest(dst_script, project_root, manifest)
+             created.append(dst_script)
+ 
+diff --git a/src/specify_cli/presets/__init__.py b/src/specify_cli/presets/__init__.py
+index 98bba08..1140ac1 100644
+--- a/src/specify_cli/presets/__init__.py
++++ b/src/specify_cli/presets/__init__.py
+@@ -30,7 +30,7 @@ from packaging.specifiers import SpecifierSet, InvalidSpecifier
+ from ..extensions import REINSTALL_COMMAND, ExtensionRegistry, normalize_priority
+ from .._init_options import is_ai_skills_enabled
+ from ..integrations.base import IntegrationBase
+-from .._utils import dump_frontmatter, version_satisfies
++from .._utils import dump_frontmatter, ensure_owner_writable, version_satisfies
+ from ..shared_infra import (
+     _ensure_safe_shared_destination,
+     _ensure_safe_shared_directory,
+@@ -1662,6 +1662,7 @@ class PresetManager:
+             shutil.rmtree(dest_dir)
+ 
+         shutil.copytree(source_dir, dest_dir)
++        ensure_owner_writable(dest_dir)
+ 
+         # Pre-register the preset so that composition resolution can see it
+         # in the priority stack when resolving composed command content.
+diff --git a/src/specify_cli/workflows/_commands.py b/src/specify_cli/workflows/_commands.py
+index 9ab199c..39af81c 100644
+--- a/src/specify_cli/workflows/_commands.py
++++ b/src/specify_cli/workflows/_commands.py
+@@ -1461,7 +1461,7 @@ def workflow_add(
+             # Write the exact bytes parsed above so a concurrent source edit
+             # cannot desynchronize installed content from validated metadata.
+             staged_file.write_bytes(source_content)
+-            staged_file.set_mode(source_mode)
++            staged_file.set_mode(source_mode | 0o600)
+         except OSError as exc:
+             _safe_discard_staged_workflow_file(staged_file, dest_dir, existed_before)
+             console.print(
+diff --git a/src/specify_cli/shared_infra.py b/src/specify_cli/shared_infra.py
+index 1b07cc7..269e4d1 100644
+--- a/src/specify_cli/shared_infra.py
++++ b/src/specify_cli/shared_infra.py
+@@ -258,7 +258,7 @@ def _write_shared_bytes(
+     try:
+         with os.fdopen(fd, "wb") as fh:
+             fh.write(content)
+-        temp_path.chmod(mode)
++        temp_path.chmod(mode | 0o600)
+         _ensure_safe_shared_destination(project_path, dest)
+         os.replace(temp_path, dest)
+     finally:
