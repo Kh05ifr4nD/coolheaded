@@ -15,7 +15,9 @@ packageLib.mkReleaseBinaryPackage {
   inherit pname;
   inherit targets;
   asset = { target, ... }: "deno-${target}.zip";
-  url = { version, releaseAsset, ... }: "https://dl.deno.land/release/v${version}/${releaseAsset}";
+  url =
+    { version, releaseAsset, ... }:
+    "https://github.com/denoland/deno/releases/download/v${version}/${releaseAsset}";
   changelog = { version, ... }: "https://github.com/denoland/deno/releases/tag/v${version}";
 
   nativeBuildInputs = [
