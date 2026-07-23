@@ -8,10 +8,14 @@ pkgs.mkShellNoCC {
     ++ (with packages; [
       cue
       deno
+      pkgs.git
     ])
   );
 
   shellHook = ''
+    export COOLHEADED_CUE="${config.packages.cue}/bin/cue"
+    export COOLHEADED_GIT="${pkgs.git}/bin/git"
+
     ${config.pre-commit.shellHook}
 
     generatedDir="$PWD/.generated"

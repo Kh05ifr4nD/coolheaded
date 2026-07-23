@@ -1,17 +1,64 @@
 import {
+  CUE_PATH_SCHEMA_NAME,
   CUE_SCHEMA_NAME,
   FILE_SPEC_SCHEMA_FILE_NAME,
+  conformanceViolation,
   fileSpec,
-  fileSpecError,
-  isFileSpecError,
+  isConformanceViolation,
+  isToolExecutionError,
+  snapshotChangedError,
 } from "coolheaded/repo/fileSpec/model.ts";
 import {
+  MAX_CONCURRENT_FILE_SPEC_PROCESSES,
   commandOutput,
+  gitIndexEntriesFrom,
   gitPathsFrom,
   ignoredFilePaths,
   ignoredIndexPathDetails,
+  mapWithConcurrency,
   repositoryRoot,
+  repositorySnapshot,
+  validateGitPathNames,
 } from "coolheaded/repo/fileSpec/git.ts";
+import { join } from "@jsr/std__path";
+
+const CUE_CONFORMANCE_MARKERS = [
+  "conflicting values",
+  "field is required but not present",
+  "field not allowed",
+  "incomplete value",
+  "invalid value",
+  "cannot unify",
+] as const;
+
+type GitIndexEntry = Awaited<ReturnType<typeof gitIndexEntriesFrom>>[number];
+type RepositoryEnumeration = Parameters<typeof repositorySnapshot>[1];
+type RepositorySnapshot = Awaited<ReturnType<typeof repositorySnapshot>>;
+
+type CUECommandError = Readonly<{
+  readonly command: string;
+  readonly exitCode: number | undefined;
+  readonly stderr: string;
+}>;
+
+type FileSpecEnumeration = RepositoryEnumeration &
+  Readonly<{
+    readonly indexEntries: readonly GitIndexEntry[];
+  }>;
+
+type IgnoredPathResult = Readonly<{
+  readonly admitted: boolean;
+  readonly path: string;
+}>;
+
+function isCueConformanceFailure(error: CUECommandError): boolean {
+  return (
+    error.command === "cue" &&
+    error.exitCode === 1 &&
+    error.stderr.includes("fileSpec.json") &&
+    CUE_CONFORMANCE_MARKERS.some((marker: string): boolean => error.stderr.includes(marker))
+  );
+}
 
 async function validateIndexPathsNotIgnored(
   repositoryRootPath: string,
@@ -23,7 +70,7 @@ async function validateIndexPathsNotIgnored(
     return;
   }
 
-  throw fileSpecError(
+  throw conformanceViolation(
     [
       "git index contains paths ignored by current ignore rules:",
       ...ignoredPaths.map((path: string): string => `- ${path}`),
@@ -49,18 +96,24 @@ async function validateFileSpec(
   repositoryRootPath: string,
   spec: ReturnType<typeof fileSpec>,
   label: string,
+  schemaName: string = CUE_SCHEMA_NAME,
 ): Promise<void> {
   await withTemporaryDirectory(async (directoryPath: string): Promise<void> => {
-    const schemaPath = `${repositoryRootPath}/${FILE_SPEC_SCHEMA_FILE_NAME}`;
-    const specPath = `${directoryPath}/fileSpec.json`;
-    const cueArguments = ["vet", schemaPath, specPath, "-d", CUE_SCHEMA_NAME];
+    const schemaPath = join(repositoryRootPath, FILE_SPEC_SCHEMA_FILE_NAME);
+    const specPath = join(directoryPath, "fileSpec.json");
+    const cueArguments = ["vet", schemaPath, specPath, "-d", schemaName];
 
     await Deno.writeTextFile(specPath, `${JSON.stringify(spec, null, 2)}\n`);
     try {
       await commandOutput("cue", cueArguments, repositoryRootPath);
     } catch (error: unknown) {
-      const message = error instanceof Error ? error.message : String(error);
-      throw fileSpecError(`${label} does not conform to ${FILE_SPEC_SCHEMA_FILE_NAME}: ${message}`);
+      if (isToolExecutionError(error) && isCueConformanceFailure(error)) {
+        throw conformanceViolation(
+          `${label} does not conform to ${FILE_SPEC_SCHEMA_FILE_NAME}: ${error.stderr}`,
+        );
+      }
+
+      throw error;
     }
   });
 }
@@ -76,12 +129,13 @@ async function validateGitPaths(
 async function fileSpecConforms(
   repositoryRootPath: string,
   paths: readonly string[],
+  schemaName: string,
 ): Promise<boolean> {
   try {
-    await validateFileSpec(repositoryRootPath, fileSpec(paths), "candidate git paths");
+    await validateFileSpec(repositoryRootPath, fileSpec(paths), "candidate git paths", schemaName);
     return true;
   } catch (error: unknown) {
-    if (isFileSpecError(error)) {
+    if (isConformanceViolation(error)) {
       return false;
     }
 
@@ -91,45 +145,115 @@ async function fileSpecConforms(
 
 async function validateIgnoredPathsNotAdmittedByFileSpec(
   repositoryRootPath: string,
-  indexPaths: readonly string[],
+  ignoredPaths: readonly string[],
 ): Promise<void> {
-  const ignoredPaths = await ignoredFilePaths(repositoryRootPath);
-  const admittedIgnoredPathResults = await Promise.all(
-    ignoredPaths.map(async (ignoredPath: string): Promise<string | undefined> => {
-      const candidatePaths = [...indexPaths, ignoredPath].toSorted();
-      const conforms = await fileSpecConforms(repositoryRootPath, candidatePaths);
+  const ignoredPathResults = await mapWithConcurrency(
+    ignoredPaths,
+    MAX_CONCURRENT_FILE_SPEC_PROCESSES,
+    async (ignoredPath: string): Promise<IgnoredPathResult> => {
+      const conforms = await fileSpecConforms(
+        repositoryRootPath,
+        [ignoredPath],
+        CUE_PATH_SCHEMA_NAME,
+      );
 
-      return conforms ? ignoredPath : undefined;
-    }),
+      return { admitted: conforms, path: ignoredPath };
+    },
   );
-  const admittedIgnoredPaths = admittedIgnoredPathResults.filter(
-    (path: string | undefined): path is string => typeof path === "string",
-  );
+  const admittedIgnoredPaths = ignoredPathResults
+    .filter((result: IgnoredPathResult): boolean => result.admitted)
+    .map((result: IgnoredPathResult): string => result.path);
 
   if (admittedIgnoredPaths.length === 0) {
     return;
   }
 
-  throw fileSpecError(
+  const batchCount = Math.ceil(ignoredPaths.length / MAX_CONCURRENT_FILE_SPEC_PROCESSES);
+  throw conformanceViolation(
     [
       "current ignore rules hide paths admitted by fileSpec.cue:",
       ...admittedIgnoredPaths.map((path: string): string => `- ${path}`),
+      `ignored files checked: ${ignoredPaths.length}; CUE batches: ${batchCount}; max concurrency: ${MAX_CONCURRENT_FILE_SPEC_PROCESSES}`,
     ].join("\n"),
   );
 }
 
-async function checkFileSpec(repositoryRootPath: string): Promise<void> {
-  const indexPaths = await gitPathsFrom(repositoryRootPath, ["--cached"]);
+async function enumerateRepository(repositoryRootPath: string): Promise<FileSpecEnumeration> {
+  const indexEntries = await gitIndexEntriesFrom(repositoryRootPath);
+  const indexPaths = indexEntries.map((entry: GitIndexEntry): string => entry.path);
   const visiblePaths = await gitPathsFrom(repositoryRootPath, [
     "--cached",
     "--others",
     "--exclude-standard",
   ]);
+  const ignoredPaths = await ignoredFilePaths(repositoryRootPath);
+  validateGitPathNames([...indexPaths, ...visiblePaths, ...ignoredPaths]);
 
-  await validateGitPaths(repositoryRootPath, "git index", indexPaths);
-  await validateIndexPathsNotIgnored(repositoryRootPath, indexPaths);
-  await validateGitPaths(repositoryRootPath, "git visible files", visiblePaths);
-  await validateIgnoredPathsNotAdmittedByFileSpec(repositoryRootPath, indexPaths);
+  return { ignoredPaths, indexEntries, indexPaths, visiblePaths };
+}
+
+function snapshotEnumeration(enumeration: FileSpecEnumeration): RepositoryEnumeration {
+  return {
+    ignoredPaths: enumeration.ignoredPaths,
+    indexPaths: enumeration.indexPaths,
+    visiblePaths: enumeration.visiblePaths,
+  };
+}
+
+function snapshotFingerprint(snapshot: RepositorySnapshot): string {
+  return JSON.stringify(snapshot);
+}
+
+function assertSnapshotUnchanged(before: RepositorySnapshot, after: RepositorySnapshot): void {
+  const beforeFingerprint = snapshotFingerprint(before);
+  const afterFingerprint = snapshotFingerprint(after);
+  if (beforeFingerprint !== afterFingerprint) {
+    throw snapshotChangedError(beforeFingerprint, afterFingerprint);
+  }
+}
+
+function validateGitIndexEntries(entries: readonly GitIndexEntry[]): void {
+  const nonRegularEntries = entries.filter(
+    (entry: GitIndexEntry): boolean => entry.kind === "symlink" || entry.kind === "gitlink",
+  );
+
+  if (nonRegularEntries.length === 0) {
+    return;
+  }
+
+  throw conformanceViolation(
+    [
+      "git index contains nodes that are not regular files:",
+      ...nonRegularEntries.map(
+        (entry: GitIndexEntry): string =>
+          `- ${entry.path} (mode ${entry.mode}, kind ${entry.kind})`,
+      ),
+    ].join("\n"),
+  );
+}
+
+async function checkFileSpec(repositoryRootPath: string): Promise<void> {
+  const initialEnumeration = await enumerateRepository(repositoryRootPath);
+  const beforeSnapshot = await repositorySnapshot(
+    repositoryRootPath,
+    snapshotEnumeration(initialEnumeration),
+  );
+
+  validateGitIndexEntries(initialEnumeration.indexEntries);
+  await validateGitPaths(repositoryRootPath, "git index", initialEnumeration.indexPaths);
+  await validateIndexPathsNotIgnored(repositoryRootPath, initialEnumeration.indexPaths);
+  await validateGitPaths(repositoryRootPath, "git visible files", initialEnumeration.visiblePaths);
+  await validateIgnoredPathsNotAdmittedByFileSpec(
+    repositoryRootPath,
+    initialEnumeration.ignoredPaths,
+  );
+
+  const afterEnumeration = await enumerateRepository(repositoryRootPath);
+  const afterSnapshot = await repositorySnapshot(
+    repositoryRootPath,
+    snapshotEnumeration(afterEnumeration),
+  );
+  assertSnapshotUnchanged(beforeSnapshot, afterSnapshot);
 }
 
 async function checkedFileSpec(): Promise<void> {
