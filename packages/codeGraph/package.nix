@@ -51,6 +51,6 @@ packageLib.mkGitHubReleaseBinaryPackage {
 
   meta = {
     license = lib.licenses.mit;
-    description = "Pre-indexed code knowledge graph for Claude Code, Codex, Gemini, Cursor, OpenCode, AntiGravity, Kiro, and Hermes Agent";
+    description = "Pre-indexed code knowledge graph";
   };
 }

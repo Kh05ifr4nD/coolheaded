@@ -41,5 +41,6 @@ upstreamPackage.overrideAttrs (oldAttrs: {
 
   meta = oldAttrs.meta // {
     changelog = "https://github.com/getpaseo/paseo/releases/tag/v${pin.version}";
+    description = "Orchestrate multiple coding agents from desktop and mobile";
   };
 })

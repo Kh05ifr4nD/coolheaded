@@ -70,6 +70,6 @@ packageLib.mkNpmCliPackage {
   meta = {
     homepage = "https://github.com/vercel-labs/skills";
     license = lib.licenses.mit;
-    description = "CLI for the open agent skills ecosystem";
+    description = "Open agent skills tool";
   };
 }

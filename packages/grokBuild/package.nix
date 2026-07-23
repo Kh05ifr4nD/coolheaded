@@ -30,6 +30,6 @@ packageLib.mkReleaseBinaryPackage {
   meta = {
     homepage = "https://github.com/xai-org/grok-build";
     license = lib.licenses.asl20;
-    description = "Terminal-based AI coding assistant";
+    description = "SpaceXAI's coding agent harness and TUI";
   };
 }

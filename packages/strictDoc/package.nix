@@ -45,7 +45,7 @@ packageLib.mkUvApplication {
   meta = pin: {
     homepage = "https://strictdoc.readthedocs.io/en/stable/";
     license = lib.licenses.asl20;
-    description = "Open-source software for technical documentation and requirements management";
+    description = "Software for technical documentation and requirements management";
     mainProgram = "strictdoc";
     changelog = "https://github.com/strictdoc-project/strictdoc/releases/tag/${pin.version}";
   };

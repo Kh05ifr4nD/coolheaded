@@ -361,6 +361,6 @@ packageLib.mkNpmTarballPackage {
   meta = {
     homepage = "https://www.npmjs.com/package/lazycodex-ai";
     license = lib.licenses.unfree;
-    description = "Coding agent for tokenmaxxers";
+    description = "Agent harness for complex codebases";
   };
 }

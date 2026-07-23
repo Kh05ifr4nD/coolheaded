@@ -45,6 +45,6 @@ packageLib.mkGitHubReleaseBinaryPackage {
 
   meta = {
     license = lib.licenses.mit;
-    description = "Fast file search toolkit for AI agents";
+    description = "File search toolkit for humans and AI agents";
   };
 }

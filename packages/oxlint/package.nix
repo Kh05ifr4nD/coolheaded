@@ -129,7 +129,6 @@ packageLib.mkGitHubReleaseBinaryPackage {
 
   meta = {
     license = lib.licenses.mit;
-    # https://oxc.rs/docs/guide/usage/linter.html
-    description = "High-performance linter for JavaScript and TypeScript built on the Oxc compiler stack";
+    description = "Linter for Oxc";
   };
 }
