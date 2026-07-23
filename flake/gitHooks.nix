@@ -22,8 +22,8 @@ let
   denoTaskHook = task: extraPackages: {
     enable = true;
     package = packages.deno;
-    inherit extraPackages;
-    entry = "${packages.deno}/bin/deno task ${task}";
+    extraPackages = extraPackages ++ [ pkgs.git ];
+    entry = "${pkgs.coreutils}/bin/env COOLHEADED_CUE=${packages.cue}/bin/cue COOLHEADED_GIT=${pkgs.git}/bin/git ${packages.deno}/bin/deno task ${task}";
     pass_filenames = false;
     always_run = true;
   };
@@ -61,7 +61,7 @@ in
     };
 
     denoCheck = denoTaskHook "check" [ packages.cue ];
-    denoTest = denoTaskHook "test" [ ];
+    denoTest = denoTaskHook "test" [ packages.cue ];
 
     denolint = {
       enable = true;

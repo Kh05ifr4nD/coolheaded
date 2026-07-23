@@ -80,7 +80,6 @@ packageLib.mkGitHubReleaseBinaryPackage {
 
   meta = {
     license = lib.licenses.mit;
-    # https://oxc.rs/docs/guide/usage/formatter.html
-    description = "Rust-powered, Prettier-compatible code formatter built for the JavaScript ecosystem";
+    description = "Formatter for Oxc";
   };
 }

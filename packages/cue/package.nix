@@ -42,6 +42,6 @@ packageLib.mkGitHubReleaseBinaryPackage {
   meta = {
     homepage = "https://cuelang.org/";
     license = lib.licenses.asl20;
-    description = "Data constraint language and validation tool";
+    description = "Validate and define text-based and dynamic configuration";
   };
 }
