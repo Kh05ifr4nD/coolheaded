@@ -9,7 +9,10 @@ import {
   run,
   writeOutput,
 } from "coolheadedCi/process.ts";
-import { compareVersions } from "coolheaded/core/version.ts";
+import { compareVersions, isSemver } from "coolheaded/core/version.ts";
+import type { CommandRunner } from "coolheaded/core/commandRunner.ts";
+import { UpdateError } from "coolheaded/core/updateScript.ts";
+import { denoCommandRunner } from "coolheaded/core/denoCommandRunner.ts";
 
 const PACKAGE_UPDATE_ALLOWED_FILES_EXPR = `
 let
@@ -32,8 +35,13 @@ function parseStringList(value: unknown): readonly string[] {
   return value;
 }
 
-async function packageUpdateAllowedFiles(system: string, name: string): Promise<readonly string[]> {
+async function packageUpdateAllowedFiles(
+  system: string,
+  name: string,
+  runner: CommandRunner,
+): Promise<readonly string[]> {
   const result = await run(
+    runner,
     ["nix", "eval", "--json", "--impure", "--expr", PACKAGE_UPDATE_ALLOWED_FILES_EXPR],
     {
       capture: true,
@@ -55,23 +63,31 @@ function assertVersionAdvanced(
   currentVersion: string | undefined,
   newVersion: string,
 ): void {
-  if (
-    currentVersion !== undefined &&
-    currentVersion.length > 0 &&
-    compareVersions(currentVersion, newVersion) >= 0
-  ) {
-    throw new Error(
-      `${name} produced package changes without a version advance: ${currentVersion} -> ${newVersion}`,
-    );
+  if (!isSemver(newVersion)) {
+    throw new UpdateError(`${name} produced invalid SemVer: ${newVersion}`);
+  }
+
+  if (currentVersion !== undefined && currentVersion.length > 0) {
+    if (!isSemver(currentVersion)) {
+      throw new UpdateError(`${name} has invalid current SemVer: ${currentVersion}`);
+    }
+
+    if (compareVersions(currentVersion, newVersion) >= 0) {
+      throw new UpdateError(
+        `${name} produced package changes without a version advance: ${currentVersion} -> ${newVersion}`,
+      );
+    }
   }
 }
 
 async function runPackage(
   name: string,
+  runner: CommandRunner,
   version?: string,
   currentVersion = Deno.env.get("CURRENT_VERSION"),
 ): Promise<void> {
   await run(
+    runner,
     [
       "deno",
       "run",
@@ -86,25 +102,25 @@ async function runPackage(
     { capture: false },
   );
 
-  if (!(await gitHasChanges())) {
+  if (!(await gitHasChanges(runner))) {
     await writeOutput("updated", "false");
     return;
   }
 
-  const system = await currentSystem();
-  const extraAllowedFiles = await packageUpdateAllowedFiles(system, name);
-  const files = await changedFiles();
+  const system = await currentSystem(runner);
+  const extraAllowedFiles = await packageUpdateAllowedFiles(system, name, runner);
+  const files = await changedFiles(runner);
   assertOnlyChangedFiles(files, (file: string): boolean =>
     packageAllowedFile(name, extraAllowedFiles, file),
   );
 
   const attr = `.#packages.${system}.${JSON.stringify(name)}`;
-  const newVersion = await nixEvalRaw(`${attr}.version`);
+  const newVersion = await nixEvalRaw(runner, `${attr}.version`);
   assertVersionAdvanced(name, currentVersion, newVersion);
 
   await writeOutput("updated", "true");
   await writeOutput("newVersion", newVersion);
-  const changelog = await run(["nix", "eval", "--raw", `${attr}.meta.changelog`], {
+  const changelog = await run(runner, ["nix", "eval", "--raw", `${attr}.meta.changelog`], {
     capture: true,
     check: false,
   });
@@ -117,11 +133,11 @@ async function main(args: readonly string[]): Promise<void> {
     throw new Error("Usage: package.ts <name> [version]");
   }
 
-  await runPackage(name, version);
+  await runPackage(name, denoCommandRunner, version);
 }
 
 if (import.meta.main) {
   void main(Deno.args);
 }
 
-export { runPackage };
+export { assertVersionAdvanced, runPackage };

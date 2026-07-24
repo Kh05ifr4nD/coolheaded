@@ -11,10 +11,22 @@ const FILE_SPEC_COMMANDS = {
   cue: { environmentVariable: "COOLHEADED_CUE", versionArguments: ["version"] },
   git: { environmentVariable: "COOLHEADED_GIT", versionArguments: ["--version"] },
 } as const;
+type FileSpecCommand = keyof typeof FILE_SPEC_COMMANDS;
+type ToolIdentity = Readonly<{
+  readonly executable: string;
+  readonly sha256: string;
+  readonly version: string;
+}>;
+type RepositorySnapshot = Readonly<{
+  readonly enumerationSha256: string;
+  readonly fileSpecSha256: string;
+  readonly head: string;
+  readonly ignoreSourcesSha256: string;
+  readonly indexTree: string;
+  readonly tools: Readonly<Record<FileSpecCommand | "deno", ToolIdentity>>;
+}>;
 
 const MAX_CONCURRENT_FILE_SPEC_PROCESSES = 8;
-
-type FileSpecCommand = keyof typeof FILE_SPEC_COMMANDS;
 
 type CommandEnvironment = Readonly<{
   clearEnv?: boolean;
@@ -34,22 +46,6 @@ type RepositoryEnumeration = Readonly<{
   readonly ignoredPaths: readonly string[];
   readonly indexPaths: readonly string[];
   readonly visiblePaths: readonly string[];
-}>;
-
-type ToolIdentity = Readonly<{
-  readonly command: FileSpecCommand;
-  readonly executable: string;
-  readonly sha256: string;
-  readonly version: string;
-}>;
-
-type RepositorySnapshot = Readonly<{
-  readonly enumerationSha256: string;
-  readonly fileSpecSha256: string;
-  readonly head: string;
-  readonly ignoreSourcesSha256: string;
-  readonly indexTree: string;
-  readonly tools: readonly ToolIdentity[];
 }>;
 
 const GIT_MODES = {
@@ -438,10 +434,20 @@ async function toolIdentity(command: FileSpecCommand): Promise<ToolIdentity> {
   const executableBytes = await toolExecutableBytes(command, executable);
 
   return {
-    command,
     executable,
     sha256: await digestBytes([...executableBytes]),
     version: version.trim(),
+  };
+}
+
+async function denoToolIdentity(): Promise<ToolIdentity> {
+  const executable = Deno.execPath();
+  const executableBytes = await Deno.readFile(executable);
+
+  return {
+    executable,
+    sha256: await digestBytes([...executableBytes]),
+    version: Deno.version.deno,
   };
 }
 
@@ -535,14 +541,16 @@ async function repositorySnapshot(
   repositoryRootPath: string,
   enumeration: RepositoryEnumeration,
 ): Promise<RepositorySnapshot> {
-  const [head, indexTree, fileSpecSha256, ignoreSourcesSha256, enumerationSha256, tools] =
+  const [head, indexTree, fileSpecSha256, ignoreSourcesSha256, enumerationSha256, cue, deno, git] =
     await Promise.all([
       gitHead(repositoryRootPath),
       gitIndexTree(repositoryRootPath),
       digestFile(join(repositoryRootPath, "fileSpec.cue")),
       ignoreSourcesDigest(repositoryRootPath),
       enumerationDigest(enumeration),
-      Promise.all([toolIdentity("cue"), toolIdentity("git")]),
+      toolIdentity("cue"),
+      denoToolIdentity(),
+      toolIdentity("git"),
     ]);
 
   return {
@@ -551,7 +559,7 @@ async function repositorySnapshot(
     head,
     ignoreSourcesSha256,
     indexTree,
-    tools,
+    tools: { cue, deno, git },
   };
 }
 
@@ -559,6 +567,7 @@ export {
   MAX_CONCURRENT_FILE_SPEC_PROCESSES,
   commandOutput,
   gitIndexEntriesFrom,
+  gitPaths,
   gitPathsFrom,
   ignoredFilePaths,
   ignoredIndexPathDetails,
@@ -567,10 +576,4 @@ export {
   repositorySnapshot,
   validateGitPathNames,
 };
-export type {
-  FileSpecCommand,
-  GitIndexEntry,
-  RepositoryEnumeration,
-  RepositorySnapshot,
-  ToolIdentity,
-};
+export type { GitIndexEntry, RepositoryEnumeration };

@@ -1,10 +1,12 @@
+import { InvalidSriHashError, parseSriHash } from "coolheaded/pin/sriHash.ts";
 import { Effect } from "effect";
 import { systemRecord } from "coolheaded/system/target.ts";
 
+type SriHash = ReturnType<typeof parseSriHash>;
 type SupportedSystem = keyof ReturnType<typeof systemRecord<string>>;
 interface PackageHashConfig {
   readonly binaryVersion?: string;
-  readonly platformPackageHashes: Readonly<Record<SupportedSystem, string>>;
+  readonly platformPackageHashes: Readonly<Record<SupportedSystem, SriHash>>;
   readonly version: string;
 }
 
@@ -33,13 +35,23 @@ function objectRecord(value: unknown, name: string): Readonly<Record<string, unk
   return value;
 }
 
-function hashForSystem(hashes: Readonly<Record<string, unknown>>, system: SupportedSystem): string {
+function hashForSystem(
+  hashes: Readonly<Record<string, unknown>>,
+  system: SupportedSystem,
+): SriHash {
   const hash = hashes[system];
-  if (typeof hash !== "string" || hash.length === 0) {
+  if (hash === undefined) {
     throw new InvalidPackageHashConfigError(`Missing hash for ${system}`);
   }
 
-  return hash;
+  try {
+    return parseSriHash(hash);
+  } catch (error: unknown) {
+    if (error instanceof InvalidSriHashError) {
+      throw new InvalidPackageHashConfigError(`Invalid hash for ${system}: ${error.message}`);
+    }
+    throw error;
+  }
 }
 
 function optionalNonEmptyString(
@@ -58,9 +70,9 @@ function optionalNonEmptyString(
   return value;
 }
 
-function platformPackageHashes(value: unknown): Readonly<Record<SupportedSystem, string>> {
+function platformPackageHashes(value: unknown): Readonly<Record<SupportedSystem, SriHash>> {
   const hashes = objectRecord(value, "platformPackageHashes");
-  return systemRecord((system: SupportedSystem): string => hashForSystem(hashes, system));
+  return systemRecord((system: SupportedSystem): SriHash => hashForSystem(hashes, system));
 }
 
 function parsePackageHashConfig(value: unknown): PackageHashConfig {

@@ -38,10 +38,12 @@ package fileSpec
 		".gitignore"?:     #RegularFile
 		"actionlint.yml"?: #RegularFile
 		ci?: {
-			".gitignore"?: #RegularFile
-			"impact.ts"?:  #RegularFile
-			"model.ts"?:   #RegularFile
-			"process.ts"?: #RegularFile
+			".gitignore"?:        #RegularFile
+			"coverage.ts"?:       #RegularFile
+			"coveragePolicy.ts"?: #RegularFile
+			"impact.ts"?:         #RegularFile
+			"model.ts"?:          #RegularFile
+			"process.ts"?:        #RegularFile
 			update?: {
 				"branch.ts"?:      #RegularFile
 				"discover.ts"?:    #RegularFile
@@ -107,6 +109,10 @@ package fileSpec
 		"package.sh"?: #RegularFile
 		ts?: {
 			core?: {
+				"commandRunner.ts"?:      #RegularFile
+				"denoCommandRunner.ts"?:  #RegularFile
+				"fetchHttpClient.ts"?:    #RegularFile
+				"httpClient.ts"?:         #RegularFile
 				"temporaryDirectory.ts"?: #RegularFile
 				"updateScript.ts"?:       #RegularFile
 				"version.ts"?:            #RegularFile
@@ -123,6 +129,7 @@ package fileSpec
 			pin?: {
 				"json.ts"?:              #RegularFile
 				"packageHashConfig.ts"?: #RegularFile
+				"sriHash.ts"?:           #RegularFile
 			}
 			repo?: {
 				"denoSnapshot.ts"?: #RegularFile
@@ -134,17 +141,19 @@ package fileSpec
 				}
 			}
 			source?: {
-				"github.ts"?:  #RegularFile
-				"version.ts"?: #RegularFile
+				"github.ts"?:        #RegularFile
+				"githubVersion.ts"?: #RegularFile
+				"version.ts"?:       #RegularFile
 			}
 			system?: {
 				"target.ts"?:    #RegularFile
 				"targets.json"?: #RegularFile
 			}
 			update?: {
-				"release.ts"?:     #RegularFile
-				"rustPackage.ts"?: #RegularFile
-				"uvLock.ts"?:      #RegularFile
+				"checksumManifest.ts"?: #RegularFile
+				"release.ts"?:          #RegularFile
+				"rustPackage.ts"?:      #RegularFile
+				"uvLock.ts"?:           #RegularFile
 			}
 		}
 	}
@@ -155,19 +164,103 @@ package fileSpec
 	}
 
 	tests?: {
-		"changeImpact.ts"?:      #RegularFile
-		"denoDependencies.ts"?:  #RegularFile
-		"denoSnapshot.ts"?:      #RegularFile
-		"fetchMock.ts"?:         #RegularFile
-		"latestVersion.ts"?:     #RegularFile
-		"npmPackageHash.ts"?:    #RegularFile
-		"packageHashConfig.ts"?: #RegularFile
-		"packageHashTypes.ts"?:  #RegularFile
-		"packageStructure.ts"?:  #RegularFile
-		"releaseHash.ts"?:       #RegularFile
-		"pullRequest.ts"?:       #RegularFile
-		"systems.ts"?:           #RegularFile
-		"testingTypes.ts"?:      #RegularFile
+		ci?: {
+			"changeImpact.ts"?:          #RegularFile
+			"coverage.ts"?:              #RegularFile
+			"coveragePolicy.ts"?:        #RegularFile
+			"denoDependenciesRun.ts"?:   #RegularFile
+			"fileSystemPermissions.ts"?: #RegularFile
+			"flakeInputRun.ts"?:         #RegularFile
+			"packageRun.ts"?:            #RegularFile
+			"pullRequest.ts"?:           #RegularFile
+			"pullRequestControl.ts"?:    #RegularFile
+			"pullRequestFailure.ts"?:    #RegularFile
+			"runtimePermissions.ts"?:    #RegularFile
+			"taskTopology.ts"?:          #RegularFile
+			"updateControl.ts"?:         #RegularFile
+			"updateDiscovery.ts"?:       #RegularFile
+			"updateGit.ts"?:             #RegularFile
+			"updateGitBranch.ts"?:       #RegularFile
+			"updateGitFixture.ts"?:      #RegularFile
+			"updateRuntime.ts"?:         #RegularFile
+			"updateState.ts"?:           #RegularFile
+			"updateStateCompletion.ts"?: #RegularFile
+			"updateStateContract.ts"?:   #RegularFile
+			"updateStateModel.ts"?:      #RegularFile
+			"updateStateOracle.ts"?:     #RegularFile
+			"updatePackage.ts"?:         #RegularFile
+		}
+		core?: {
+			"commandRunner.ts"?: #RegularFile
+			"fastCheck.ts"?:     #RegularFile
+			"version.ts"?:       #RegularFile
+		}
+		nix?: {
+			"denoDependencies.ts"?: #RegularFile
+			"denoSnapshot.ts"?:     #RegularFile
+			"systems.ts"?:          #RegularFile
+		}
+		npm?: {
+			"packageHash.ts"?:       #RegularFile
+			"packageHashUpdate.ts"?: #RegularFile
+			"platformHash.ts"?:      #RegularFile
+			"registry.ts"?:          #RegularFile
+			"tarball.ts"?:           #RegularFile
+		}
+		pin?: {
+			"jsonOrder.ts"?:         #RegularFile
+			"packageHashConfig.ts"?: #RegularFile
+			"sriHash.ts"?:           #RegularFile
+		}
+		repo?: {
+			"fileSpecCli.ts"?:  #RegularFile
+			"pathProperty.ts"?: #RegularFile
+			fileSpec?: {
+				"conformance.ts"?:     #RegularFile
+				"fixture.ts"?:         #RegularFile
+				"ignoredPath.ts"?:     #RegularFile
+				"index.ts"?:           #RegularFile
+				"process.ts"?:         #RegularFile
+				"snapshot.ts"?:        #RegularFile
+				"snapshotFixture.ts"?: #RegularFile
+				"toolIdentity.ts"?:    #RegularFile
+			}
+		}
+		source?: {
+			"githubVersion.ts"?: #RegularFile
+			"httpClient.ts"?:    #RegularFile
+			"jsonClient.ts"?:    #RegularFile
+			"version.ts"?:       #RegularFile
+		}
+		support?: {
+			"commandRunner.ts"?:  #RegularFile
+			"fastCheck.ts"?:      #RegularFile
+			"fastCheckError.ts"?: #RegularFile
+			"httpClient.ts"?:     #RegularFile
+		}
+		type?: {
+			"packageHashTypes.ts"?:  #RegularFile
+			"testingTypes.ts"?:      #RegularFile
+			"updateScriptTypes.ts"?: #RegularFile
+		}
+		update?: {
+			"checksumManifest.ts"?:       #RegularFile
+			"checksumPackage.ts"?:        #RegularFile
+			"checksumPackageFixture.ts"?: #RegularFile
+			"checksumPackageHttp.ts"?:    #RegularFile
+			"deno.ts"?:                   #RegularFile
+			"grokBuild.ts"?:              #RegularFile
+			"httpPassThrough.ts"?:        #RegularFile
+			"nixfmt.ts"?:                 #RegularFile
+			"ohMyOpenAgent.ts"?:          #RegularFile
+			"oxfmt.ts"?:                  #RegularFile
+			"paseo.ts"?:                  #RegularFile
+			"qmd.ts"?:                    #RegularFile
+			"releaseHash.ts"?:            #RegularFile
+			"rustPackage.ts"?:            #RegularFile
+			"stateProperty.ts"?:          #RegularFile
+			"uvLock.ts"?:                 #RegularFile
+		}
 	}
 }
 
@@ -184,10 +277,12 @@ package fileSpec
 		".gitignore"!:     #RegularFile
 		"actionlint.yml"!: #RegularFile
 		ci!: {
-			".gitignore"!: #RegularFile
-			"impact.ts"!:  #RegularFile
-			"model.ts"!:   #RegularFile
-			"process.ts"!: #RegularFile
+			".gitignore"!:        #RegularFile
+			"coverage.ts"!:       #RegularFile
+			"coveragePolicy.ts"!: #RegularFile
+			"impact.ts"!:         #RegularFile
+			"model.ts"!:          #RegularFile
+			"process.ts"!:        #RegularFile
 			update!: {
 				"branch.ts"!:      #RegularFile
 				"discover.ts"!:    #RegularFile
@@ -253,6 +348,10 @@ package fileSpec
 		"package.sh"!: #RegularFile
 		ts!: {
 			core!: {
+				"commandRunner.ts"!:      #RegularFile
+				"denoCommandRunner.ts"!:  #RegularFile
+				"fetchHttpClient.ts"!:    #RegularFile
+				"httpClient.ts"!:         #RegularFile
 				"temporaryDirectory.ts"!: #RegularFile
 				"updateScript.ts"!:       #RegularFile
 				"version.ts"!:            #RegularFile
@@ -269,6 +368,7 @@ package fileSpec
 			pin!: {
 				"json.ts"!:              #RegularFile
 				"packageHashConfig.ts"!: #RegularFile
+				"sriHash.ts"!:           #RegularFile
 			}
 			repo!: {
 				"denoSnapshot.ts"!: #RegularFile
@@ -280,17 +380,19 @@ package fileSpec
 				}
 			}
 			source!: {
-				"github.ts"!:  #RegularFile
-				"version.ts"!: #RegularFile
+				"github.ts"!:        #RegularFile
+				"githubVersion.ts"!: #RegularFile
+				"version.ts"!:       #RegularFile
 			}
 			system!: {
 				"target.ts"!:    #RegularFile
 				"targets.json"!: #RegularFile
 			}
 			update!: {
-				"release.ts"!:     #RegularFile
-				"rustPackage.ts"!: #RegularFile
-				"uvLock.ts"!:      #RegularFile
+				"checksumManifest.ts"!: #RegularFile
+				"release.ts"!:          #RegularFile
+				"rustPackage.ts"!:      #RegularFile
+				"uvLock.ts"!:           #RegularFile
 			}
 		}
 	}
@@ -301,18 +403,102 @@ package fileSpec
 	}
 
 	tests!: {
-		"changeImpact.ts"!:      #RegularFile
-		"denoDependencies.ts"!:  #RegularFile
-		"denoSnapshot.ts"!:      #RegularFile
-		"fetchMock.ts"!:         #RegularFile
-		"latestVersion.ts"!:     #RegularFile
-		"npmPackageHash.ts"!:    #RegularFile
-		"packageHashConfig.ts"!: #RegularFile
-		"packageHashTypes.ts"!:  #RegularFile
-		"packageStructure.ts"!:  #RegularFile
-		"releaseHash.ts"!:       #RegularFile
-		"pullRequest.ts"!:       #RegularFile
-		"systems.ts"!:           #RegularFile
-		"testingTypes.ts"!:      #RegularFile
+		ci!: {
+			"changeImpact.ts"!:          #RegularFile
+			"coverage.ts"!:              #RegularFile
+			"coveragePolicy.ts"!:        #RegularFile
+			"denoDependenciesRun.ts"!:   #RegularFile
+			"fileSystemPermissions.ts"!: #RegularFile
+			"flakeInputRun.ts"!:         #RegularFile
+			"packageRun.ts"!:            #RegularFile
+			"pullRequest.ts"!:           #RegularFile
+			"pullRequestControl.ts"!:    #RegularFile
+			"pullRequestFailure.ts"!:    #RegularFile
+			"runtimePermissions.ts"!:    #RegularFile
+			"taskTopology.ts"!:          #RegularFile
+			"updateControl.ts"!:         #RegularFile
+			"updateDiscovery.ts"!:       #RegularFile
+			"updateGit.ts"!:             #RegularFile
+			"updateGitBranch.ts"!:       #RegularFile
+			"updateGitFixture.ts"!:      #RegularFile
+			"updateRuntime.ts"!:         #RegularFile
+			"updateState.ts"!:           #RegularFile
+			"updateStateCompletion.ts"!: #RegularFile
+			"updateStateContract.ts"!:   #RegularFile
+			"updateStateModel.ts"!:      #RegularFile
+			"updateStateOracle.ts"!:     #RegularFile
+			"updatePackage.ts"!:         #RegularFile
+		}
+		core!: {
+			"commandRunner.ts"!: #RegularFile
+			"fastCheck.ts"!:     #RegularFile
+			"version.ts"!:       #RegularFile
+		}
+		nix!: {
+			"denoDependencies.ts"!: #RegularFile
+			"denoSnapshot.ts"!:     #RegularFile
+			"systems.ts"!:          #RegularFile
+		}
+		npm!: {
+			"packageHash.ts"!:       #RegularFile
+			"packageHashUpdate.ts"!: #RegularFile
+			"platformHash.ts"!:      #RegularFile
+			"registry.ts"!:          #RegularFile
+			"tarball.ts"!:           #RegularFile
+		}
+		pin!: {
+			"jsonOrder.ts"!:         #RegularFile
+			"packageHashConfig.ts"!: #RegularFile
+			"sriHash.ts"!:           #RegularFile
+		}
+		repo!: {
+			"fileSpecCli.ts"!:  #RegularFile
+			"pathProperty.ts"!: #RegularFile
+			fileSpec!: {
+				"conformance.ts"!:     #RegularFile
+				"fixture.ts"!:         #RegularFile
+				"ignoredPath.ts"!:     #RegularFile
+				"index.ts"!:           #RegularFile
+				"process.ts"!:         #RegularFile
+				"snapshot.ts"!:        #RegularFile
+				"snapshotFixture.ts"!: #RegularFile
+				"toolIdentity.ts"!:    #RegularFile
+			}
+		}
+		source!: {
+			"githubVersion.ts"!: #RegularFile
+			"httpClient.ts"!:    #RegularFile
+			"jsonClient.ts"!:    #RegularFile
+			"version.ts"!:       #RegularFile
+		}
+		support!: {
+			"commandRunner.ts"!:  #RegularFile
+			"fastCheck.ts"!:      #RegularFile
+			"fastCheckError.ts"!: #RegularFile
+			"httpClient.ts"!:     #RegularFile
+		}
+		type!: {
+			"packageHashTypes.ts"!:  #RegularFile
+			"testingTypes.ts"!:      #RegularFile
+			"updateScriptTypes.ts"!: #RegularFile
+		}
+		update!: {
+			"checksumManifest.ts"!:       #RegularFile
+			"checksumPackage.ts"!:        #RegularFile
+			"checksumPackageFixture.ts"!: #RegularFile
+			"checksumPackageHttp.ts"!:    #RegularFile
+			"deno.ts"!:                   #RegularFile
+			"grokBuild.ts"!:              #RegularFile
+			"httpPassThrough.ts"!:        #RegularFile
+			"nixfmt.ts"!:                 #RegularFile
+			"ohMyOpenAgent.ts"!:          #RegularFile
+			"oxfmt.ts"!:                  #RegularFile
+			"paseo.ts"!:                  #RegularFile
+			"qmd.ts"!:                    #RegularFile
+			"releaseHash.ts"!:            #RegularFile
+			"rustPackage.ts"!:            #RegularFile
+			"stateProperty.ts"!:          #RegularFile
+			"uvLock.ts"!:                 #RegularFile
+		}
 	}
 }

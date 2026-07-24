@@ -1,6 +1,8 @@
 #!/usr/bin/env -S deno run --allow-env --allow-run
 
 import { isRecord, run, writeStdout } from "coolheadedCi/process.ts";
+import type { CommandRunner } from "coolheaded/core/commandRunner.ts";
+import { denoCommandRunner } from "coolheaded/core/denoCommandRunner.ts";
 
 const BASE_BRANCH = "main";
 
@@ -44,8 +46,12 @@ function parseConfig(args: readonly string[]): PullRequestConfig {
   };
 }
 
-async function existingPrNumber(branch: string): Promise<string | undefined> {
+async function existingPrNumber(
+  branch: string,
+  runner: CommandRunner,
+): Promise<string | undefined> {
   const result = await run(
+    runner,
     ["gh", "pr", "list", "--head", branch, "--json", "number", "--jq", ".[0].number // empty"],
     { capture: true },
   );
@@ -148,16 +154,26 @@ function rulesetHasRequiredChecks(value: unknown, branch: string): boolean {
   });
 }
 
-async function classicProtectionReady(repository: string, branch: string): Promise<boolean> {
+async function classicProtectionReady(
+  repository: string,
+  branch: string,
+  runner: CommandRunner,
+): Promise<boolean> {
   const result = await run(
+    runner,
     ["gh", "api", `repos/${repository}/branches/${branch}/protection/required_status_checks`],
     { capture: true, check: false },
   );
   return result.code === 0 && classicProtectionHasRequiredChecks(JSON.parse(result.stdout));
 }
 
-async function activeRulesetIds(repository: string): Promise<readonly number[]> {
-  const result = await run(["gh", "api", `repos/${repository}/rulesets`], { capture: true });
+async function activeRulesetIds(
+  repository: string,
+  runner: CommandRunner,
+): Promise<readonly number[]> {
+  const result = await run(runner, ["gh", "api", `repos/${repository}/rulesets`], {
+    capture: true,
+  });
   const value = JSON.parse(result.stdout);
   if (!Array.isArray(value)) {
     return [];
@@ -173,11 +189,15 @@ async function activeRulesetIds(repository: string): Promise<readonly number[]> 
   });
 }
 
-async function rulesetProtectionReady(repository: string, branch: string): Promise<boolean> {
-  const ids = await activeRulesetIds(repository);
+async function rulesetProtectionReady(
+  repository: string,
+  branch: string,
+  runner: CommandRunner,
+): Promise<boolean> {
+  const ids = await activeRulesetIds(repository, runner);
   const results = await Promise.all(
     ids.map(async (id: number): Promise<boolean> => {
-      const result = await run(["gh", "api", `repos/${repository}/rulesets/${id}`], {
+      const result = await run(runner, ["gh", "api", `repos/${repository}/rulesets/${id}`], {
         capture: true,
         check: false,
       });
@@ -188,11 +208,14 @@ async function rulesetProtectionReady(repository: string, branch: string): Promi
   return results.some(Boolean);
 }
 
-async function assertAutoMergeGateReady(branch: string): Promise<void> {
-  const repository = repositoryName();
+async function assertAutoMergeGateReady(
+  repository: string,
+  branch: string,
+  runner: CommandRunner,
+): Promise<void> {
   const ready =
-    (await classicProtectionReady(repository, branch)) ||
-    (await rulesetProtectionReady(repository, branch));
+    (await classicProtectionReady(repository, branch, runner)) ||
+    (await rulesetProtectionReady(repository, branch, runner));
   if (!ready) {
     throw new Error(
       `Auto-merge requires required status checks on ${branch}; configure branch protection before enabling auto-merge.`,
@@ -200,11 +223,12 @@ async function assertAutoMergeGateReady(branch: string): Promise<void> {
   }
 }
 
-async function ensureLabels(labels: readonly string[]): Promise<void> {
+async function ensureLabels(labels: readonly string[], runner: CommandRunner): Promise<void> {
   await Promise.all(
     labels.map(
       (label: string): Promise<unknown> =>
         run(
+          runner,
           [
             "gh",
             "label",
@@ -224,29 +248,37 @@ async function ensureLabels(labels: readonly string[]): Promise<void> {
   );
 }
 
-async function createOrUpdatePullRequest(config: PullRequestConfig): Promise<void> {
+async function createOrUpdatePullRequest(
+  config: PullRequestConfig,
+  runner: CommandRunner,
+  repository?: string,
+): Promise<void> {
+  if (config.autoMerge && (repository === undefined || repository.length === 0)) {
+    throw new Error("Repository is required to enable auto-merge");
+  }
+
   if (config.dryRun) {
     await writeStdout(JSON.stringify(config, null, 2));
     return;
   }
 
-  await run(["git", "add", "--update"], { capture: false });
-  const diff = await run(["git", "diff", "--cached", "--quiet"], {
+  await run(runner, ["git", "add", "--update"], { capture: false });
+  const diff = await run(runner, ["git", "diff", "--cached", "--quiet"], {
     check: false,
   });
   if (diff.code === 0) {
     return;
   }
 
-  await run(["git", "commit", "--signoff", "-m", config.title, "-m", config.body], {
+  await run(runner, ["git", "commit", "--signoff", "-m", config.title, "-m", config.body], {
     capture: false,
   });
-  await run(["git", "push", "--force-with-lease", "origin", `HEAD:${config.branch}`], {
+  await run(runner, ["git", "push", "--force-with-lease", "origin", `HEAD:${config.branch}`], {
     capture: false,
   });
 
-  const prNumber = await existingPrNumber(config.branch);
-  await ensureLabels(config.labels);
+  const prNumber = await existingPrNumber(config.branch, runner);
+  await ensureLabels(config.labels, runner);
   const prCommand =
     prNumber === undefined
       ? [
@@ -264,17 +296,24 @@ async function createOrUpdatePullRequest(config: PullRequestConfig): Promise<voi
           ...labelArgs(config.labels),
         ]
       : ["gh", "pr", "edit", prNumber, "--title", config.title, "--body", config.body];
-  await run(prCommand, { capture: false });
+  await run(runner, prCommand, { capture: false });
 
-  const updatedPrNumber = prNumber ?? (await existingPrNumber(config.branch));
-  if (config.autoMerge && updatedPrNumber !== undefined) {
-    await assertAutoMergeGateReady(BASE_BRANCH);
-    await run(["gh", "pr", "merge", updatedPrNumber, "--auto", "--squash"], { capture: false });
+  const updatedPrNumber = prNumber ?? (await existingPrNumber(config.branch, runner));
+  if (config.autoMerge && updatedPrNumber !== undefined && repository !== undefined) {
+    await assertAutoMergeGateReady(repository, BASE_BRANCH, runner);
+    await run(runner, ["gh", "pr", "merge", updatedPrNumber, "--auto", "--squash"], {
+      capture: false,
+    });
   }
 }
 
 async function main(args: readonly string[]): Promise<void> {
-  await createOrUpdatePullRequest(parseConfig(args));
+  const config = parseConfig(args);
+  await createOrUpdatePullRequest(
+    config,
+    denoCommandRunner,
+    config.autoMerge ? repositoryName() : undefined,
+  );
 }
 
 if (import.meta.main) {

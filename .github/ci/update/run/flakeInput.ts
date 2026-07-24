@@ -16,9 +16,11 @@ import {
   run,
   writeOutput,
 } from "coolheadedCi/process.ts";
+import type { CommandRunner } from "coolheaded/core/commandRunner.ts";
+import { denoCommandRunner } from "coolheaded/core/denoCommandRunner.ts";
 
-async function lockedRevision(name: string): Promise<string> {
-  const lock = await readJson("flake.lock");
+async function lockedRevision(name: string, lockFilePath: string): Promise<string> {
+  const lock = await readJson(lockFilePath);
   if (!isRecord(lock) || !isRecord(lock["nodes"])) {
     return "unknown";
   }
@@ -33,8 +35,12 @@ async function lockedRevision(name: string): Promise<string> {
   return typeof rev === "string" ? rev.slice(0, 8) : "unknown";
 }
 
-async function repairDenoSnapshotHashIfNeeded(system: string): Promise<void> {
-  const result = await buildDenoSnapshotCheck(system);
+async function repairDenoSnapshotHashIfNeeded(
+  system: string,
+  runner: CommandRunner,
+  snapshotFilePath: string,
+): Promise<void> {
+  const result = await buildDenoSnapshotCheck(system, runner);
 
   if (result.code === 0) {
     return;
@@ -45,25 +51,30 @@ async function repairDenoSnapshotHashIfNeeded(system: string): Promise<void> {
     throw new Error(output);
   }
 
-  await updateDenoSnapshotHash(system);
+  await updateDenoSnapshotHash(system, runner, snapshotFilePath);
 }
 
-async function runFlakeInput(name: string): Promise<void> {
-  await run(["nix", "flake", "update", name], { capture: false });
+async function runFlakeInput(
+  name: string,
+  runner: CommandRunner,
+  lockFilePath = "flake.lock",
+  snapshotFilePath = DENO_SNAPSHOT_HASH_FILE_PATH,
+): Promise<void> {
+  await run(runner, ["nix", "flake", "update", name], { capture: false });
 
-  if (!(await gitHasChanges(["flake.lock"]))) {
+  if (!(await gitHasChanges(runner, ["flake.lock"]))) {
     await writeOutput("updated", "false");
     return;
   }
 
-  await repairDenoSnapshotHashIfNeeded(await currentSystem());
+  await repairDenoSnapshotHashIfNeeded(await currentSystem(runner), runner, snapshotFilePath);
 
   assertOnlyChangedFiles(
-    await changedFiles(),
+    await changedFiles(runner),
     (file: string): boolean => file === "flake.lock" || file === DENO_SNAPSHOT_HASH_FILE_PATH,
   );
   await writeOutput("updated", "true");
-  await writeOutput("newVersion", await lockedRevision(name));
+  await writeOutput("newVersion", await lockedRevision(name, lockFilePath));
   await writeOutput("changelog", "");
 }
 
@@ -73,7 +84,7 @@ async function main(args: readonly string[]): Promise<void> {
     throw new Error("Usage: flakeInput.ts <name>");
   }
 
-  await runFlakeInput(name);
+  await runFlakeInput(name, denoCommandRunner);
 }
 
 if (import.meta.main) {

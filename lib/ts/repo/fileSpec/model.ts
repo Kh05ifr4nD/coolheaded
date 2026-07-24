@@ -28,10 +28,36 @@ type InternalInvariantError = Error &
     readonly kind: "internalInvariant";
   }>;
 
+type FileSpecCommand = "cue" | "git";
+
+type ToolIdentity = Readonly<{
+  readonly executable: string;
+  readonly sha256: string;
+  readonly version: string;
+}>;
+
+type RepositorySnapshot = Readonly<{
+  readonly enumerationSha256: string;
+  readonly fileSpecSha256: string;
+  readonly head: string;
+  readonly ignoreSourcesSha256: string;
+  readonly indexTree: string;
+  readonly tools: Readonly<Record<FileSpecCommand | "deno", ToolIdentity>>;
+}>;
+
+type SnapshotChangedComponent =
+  | "enumerationSha256"
+  | "fileSpecSha256"
+  | "head"
+  | "ignoreSourcesSha256"
+  | "indexTree"
+  | `tools.${FileSpecCommand | "deno"}.${keyof ToolIdentity}`;
+
 type SnapshotChangedError = Error &
   Readonly<{
     readonly afterFingerprint: string;
     readonly beforeFingerprint: string;
+    readonly changedComponents: readonly SnapshotChangedComponent[];
     readonly kind: "snapshotChanged";
   }>;
 
@@ -95,10 +121,12 @@ function internalInvariantError(message: string): InternalInvariantError {
 function snapshotChangedError(
   beforeFingerprint: string,
   afterFingerprint: string,
+  changedComponents: readonly SnapshotChangedComponent[],
 ): SnapshotChangedError {
   return Object.assign(new Error("repository changed while fileSpec was being checked"), {
     afterFingerprint,
     beforeFingerprint,
+    changedComponents,
     kind: "snapshotChanged" as const,
     name: "SnapshotChangedError",
   });
@@ -196,9 +224,13 @@ export {
 export type {
   ConformanceViolation,
   FileSpec,
+  FileSpecCommand,
   FileSpecError,
   InputDecodeError,
   InternalInvariantError,
+  RepositorySnapshot,
+  SnapshotChangedComponent,
   SnapshotChangedError,
+  ToolIdentity,
   ToolExecutionError,
 };

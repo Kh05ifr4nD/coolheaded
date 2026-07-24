@@ -14,6 +14,8 @@ import {
   run,
   writeOutput,
 } from "coolheadedCi/process.ts";
+import type { CommandRunner } from "coolheaded/core/commandRunner.ts";
+import { denoCommandRunner } from "coolheaded/core/denoCommandRunner.ts";
 
 function directSpecifierVersions(lock: unknown): Readonly<Record<string, string>> {
   if (!isRecord(lock) || !isRecord(lock["specifiers"])) {
@@ -45,29 +47,33 @@ function versionChanges(
   return changes.join("\n");
 }
 
-async function runDenoDependencyUpdate(): Promise<void> {
-  const before = directSpecifierVersions(await readJson("deno.lock"));
-  await run(["deno", "install", "--frozen=false"], { capture: false });
-  const lockChanged = await gitHasChanges(["deno.lock"]);
-  await updateDenoSnapshotHash(await currentSystem());
+async function runDenoDependencyUpdate(
+  runner: CommandRunner,
+  lockFilePath = "deno.lock",
+  snapshotFilePath = DENO_SNAPSHOT_HASH_FILE_PATH,
+): Promise<void> {
+  const before = directSpecifierVersions(await readJson(lockFilePath));
+  await run(runner, ["deno", "install", "--frozen=false"], { capture: false });
+  const lockChanged = await gitHasChanges(runner, ["deno.lock"]);
+  await updateDenoSnapshotHash(await currentSystem(runner), runner, snapshotFilePath);
 
-  if (!lockChanged && !(await gitHasChanges([DENO_SNAPSHOT_HASH_FILE_PATH]))) {
+  if (!lockChanged && !(await gitHasChanges(runner, [DENO_SNAPSHOT_HASH_FILE_PATH]))) {
     await writeOutput("updated", "false");
     return;
   }
 
   assertOnlyChangedFiles(
-    await changedFiles(),
+    await changedFiles(runner),
     (file: string): boolean => file === "deno.lock" || file === DENO_SNAPSHOT_HASH_FILE_PATH,
   );
-  const after = directSpecifierVersions(await readJson("deno.lock"));
+  const after = directSpecifierVersions(await readJson(lockFilePath));
   await writeOutput("updated", "true");
   await writeOutput("newVersion", "Deno dependencies");
   await writeOutput("changelog", versionChanges(before, after));
 }
 
 async function main(): Promise<void> {
-  await runDenoDependencyUpdate();
+  await runDenoDependencyUpdate(denoCommandRunner);
 }
 
 if (import.meta.main) {

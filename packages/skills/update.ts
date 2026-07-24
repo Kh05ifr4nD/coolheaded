@@ -1,21 +1,38 @@
+import type { CommandRunner } from "coolheaded/core/commandRunner.ts";
 import { Effect } from "effect";
+import type { JsonClient } from "coolheaded/core/httpClient.ts";
+import { fetchJsonClient } from "coolheaded/core/fetchHttpClient.ts";
 import { runUpdateScript } from "coolheaded/core/updateScript.ts";
 import { updateNpmTarballPackage } from "coolheaded/npm/tarball.ts";
 
 const NPM_PACKAGE_NAME = "skills";
 
-function updateProgram(args: readonly string[]): Effect.Effect<void, Error> {
+function updateProgram(
+  args: readonly string[],
+  runner: CommandRunner,
+  jsonClient: JsonClient,
+): Effect.Effect<void, Error> {
   return updateNpmTarballPackage({
     args,
     importMetaUrl: import.meta.url,
+    jsonClient,
     packageName: NPM_PACKAGE_NAME,
+    runner,
   });
 }
 
-async function main(args: readonly string[]): Promise<void> {
-  await Effect.runPromise(updateProgram(args));
+async function main(
+  args: readonly string[],
+  runner: CommandRunner,
+  jsonClient: JsonClient,
+): Promise<void> {
+  await Effect.runPromise(updateProgram(args, runner, jsonClient));
 }
 
-runUpdateScript(import.meta.url, updateProgram);
+function cliProgram(args: readonly string[], runner: CommandRunner): Effect.Effect<void, Error> {
+  return updateProgram(args, runner, fetchJsonClient);
+}
+
+runUpdateScript(import.meta.url, cliProgram);
 
 export { main };

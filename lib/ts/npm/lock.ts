@@ -1,4 +1,5 @@
 import { commandOutput, readTextFile } from "coolheaded/core/updateScript.ts";
+import type { CommandRunner } from "coolheaded/core/commandRunner.ts";
 import { Effect } from "effect";
 import { npmScopedTarballUrl } from "coolheaded/npm/registry.ts";
 import { withTemporaryDirectory } from "coolheaded/core/temporaryDirectory.ts";
@@ -13,17 +14,22 @@ interface GeneratedNpmPackageLock {
 interface NpmPackageLockUpdate {
   readonly prepareWorkspace: (workspacePath: string) => Effect.Effect<void, Error>;
   readonly repositoryRootPath: string;
+  readonly runner: CommandRunner;
 }
 
 interface NpmTarballWorkspace {
   readonly packageName: string;
+  readonly runner: CommandRunner;
   readonly tarballBaseName: string;
   readonly version: string;
   readonly workspacePath: string;
 }
 
-function prefetchNpmDepsOutPath(repositoryRootPath: string): Effect.Effect<string, Error> {
-  return commandOutput("nix", [
+function prefetchNpmDepsOutPath(
+  repositoryRootPath: string,
+  runner: CommandRunner,
+): Effect.Effect<string, Error> {
+  return commandOutput(runner, "nix", [
     "build",
     "--no-link",
     "--print-out-paths",
@@ -41,14 +47,19 @@ function prepareNpmTarballWorkspace(options: NpmTarballWorkspace): Effect.Effect
   const archivePath = `${options.workspacePath}/package.tgz`;
 
   return Effect.zipRight(
-    commandOutput("curl", [
+    commandOutput(options.runner, "curl", [
       "-fsSL",
       npmScopedTarballUrl(options.packageName, options.tarballBaseName, options.version),
       "-o",
       archivePath,
     ]),
     Effect.asVoid(
-      commandOutput("tar", ["-xzf", archivePath, "--strip-components=1"], options.workspacePath),
+      commandOutput(
+        options.runner,
+        "tar",
+        ["-xzf", archivePath, "--strip-components=1"],
+        options.workspacePath,
+      ),
     ),
   );
 }
@@ -57,6 +68,7 @@ function generatedNpmPackageLockFromWorkspace(
   prefetchNpmDepsPath: string,
   workspacePath: string,
   prepareWorkspace: (workspacePath: string) => Effect.Effect<void, Error>,
+  runner: CommandRunner,
 ): Effect.Effect<GeneratedNpmPackageLock, Error> {
   return Effect.gen(function* generatedNpmPackageLockFromWorkspaceSteps(): Effect.fn.Return<
     GeneratedNpmPackageLock,
@@ -68,7 +80,7 @@ function generatedNpmPackageLockFromWorkspace(
 
     const [packageLock, npmVendorHash] = yield* Effect.all([
       readTextFile(packageLockPath),
-      commandOutput(prefetchNpmDepsPath, [packageLockPath]),
+      commandOutput(runner, prefetchNpmDepsPath, [packageLockPath]),
     ]);
 
     return {
@@ -82,7 +94,7 @@ function generatedNpmPackageLock(
   options: NpmPackageLockUpdate,
 ): Effect.Effect<GeneratedNpmPackageLock, Error> {
   return Effect.flatMap(
-    prefetchNpmDepsOutPath(options.repositoryRootPath),
+    prefetchNpmDepsOutPath(options.repositoryRootPath, options.runner),
     (outPath: string): Effect.Effect<GeneratedNpmPackageLock, Error> => {
       const prefetchNpmDepsPath = `${outPath.trim()}/bin/prefetch-npm-deps`;
 
@@ -92,6 +104,7 @@ function generatedNpmPackageLock(
             prefetchNpmDepsPath,
             workspacePath,
             options.prepareWorkspace,
+            options.runner,
           ),
       );
     },

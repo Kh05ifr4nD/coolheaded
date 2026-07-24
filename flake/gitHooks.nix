@@ -19,14 +19,25 @@ let
         deno types > "$out/.generated/deno.d.ts"
       '';
 
-  denoTaskHook = task: extraPackages: {
-    enable = true;
-    package = packages.deno;
-    extraPackages = extraPackages ++ [ pkgs.git ];
-    entry = "${pkgs.coreutils}/bin/env COOLHEADED_CUE=${packages.cue}/bin/cue COOLHEADED_GIT=${pkgs.git}/bin/git ${packages.deno}/bin/deno task ${task}";
-    pass_filenames = false;
-    always_run = true;
-  };
+  denoTaskHook =
+    task: extraPackages:
+    let
+      command = pkgs.writeShellScript "coolheaded-deno-task" ''
+        export COOLHEADED_CUE=${packages.cue}/bin/cue
+        export COOLHEADED_DENO=${packages.deno}/libexec/deno/bin/deno
+        export COOLHEADED_GIT=${pkgs.git}/bin/git
+        export COOLHEADED_GIT_DIR="$(${pkgs.git}/bin/git rev-parse --path-format=absolute --git-common-dir)"
+        exec ${packages.deno}/bin/deno task ${task} "$@"
+      '';
+    in
+    {
+      enable = true;
+      package = packages.deno;
+      extraPackages = extraPackages ++ [ pkgs.git ];
+      entry = "${command}";
+      pass_filenames = false;
+      always_run = true;
+    };
 
   appendDco = pkgs.writeShellApplication {
     name = "append-dco";
@@ -61,7 +72,7 @@ in
     };
 
     denoCheck = denoTaskHook "check" [ packages.cue ];
-    denoTest = denoTaskHook "test" [ packages.cue ];
+    denoTest = denoTaskHook "test:runtime" [ packages.cue ];
 
     denolint = {
       enable = true;

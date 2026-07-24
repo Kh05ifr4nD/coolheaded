@@ -1,4 +1,5 @@
 import { UpdateError, commandOutput, updateNewerPinVersion } from "coolheaded/core/updateScript.ts";
+import type { CommandRunner } from "coolheaded/core/commandRunner.ts";
 import { Effect } from "effect";
 import { writePinJson } from "coolheaded/pin/json.ts";
 
@@ -19,14 +20,23 @@ interface GitHubSourcePinUpdate {
   readonly latestVersion: () => Effect.Effect<string, Error>;
   readonly pinFilePath: string;
   readonly repositoryRootPath: string;
+  readonly runner: CommandRunner;
   readonly source: VersionedGitHubSource;
 }
 
-function unpackedSourceHash(url: string): Effect.Effect<string, Error> {
+function unpackedSourceHash(url: string, runner: CommandRunner): Effect.Effect<string, Error> {
   return Effect.flatMap(
-    commandOutput("nix-prefetch-url", ["--unpack", url]),
+    commandOutput(runner, "nix-prefetch-url", ["--unpack", url]),
     (hash: string): Effect.Effect<string, Error> =>
-      commandOutput("nix", ["hash", "convert", "--hash-algo", "sha256", "--to", "sri", hash]),
+      commandOutput(runner, "nix", [
+        "hash",
+        "convert",
+        "--hash-algo",
+        "sha256",
+        "--to",
+        "sri",
+        hash,
+      ]),
   );
 }
 
@@ -73,12 +83,14 @@ function parseHashMismatch(error: Readonly<Error>): Effect.Effect<string, Error>
 function fetchFromGitHubHash(
   source: GitHubSource,
   repositoryRootPath: string,
+  runner: CommandRunner,
 ): Effect.Effect<string, Error> {
   const expression = fetchFromGitHubExpression(source, repositoryRootPath);
 
   return Effect.catchAll(
     Effect.flatMap(
       commandOutput(
+        runner,
         "nix",
         ["build", "--impure", "--no-link", "--expr", expression],
         repositoryRootPath,
@@ -94,24 +106,27 @@ function fetchGitHubSourceHash(
   source: VersionedGitHubSource,
   version: string,
   repositoryRootPath: string,
+  runner: CommandRunner,
 ): Effect.Effect<string, Error> {
-  return fetchFromGitHubHash(gitHubSourceVersion(source, version), repositoryRootPath);
+  return fetchFromGitHubHash(gitHubSourceVersion(source, version), repositoryRootPath, runner);
 }
 
 function prepareGitHubTagTarballWorkspace(
   source: VersionedGitHubSource,
   workspacePath: string,
   version: string,
+  runner: CommandRunner,
 ): Effect.Effect<void, Error> {
   const archivePath = `${workspacePath}/source.tgz`;
   const versionedSource = gitHubSourceVersion(source, version);
-  const download = commandOutput("curl", [
+  const download = commandOutput(runner, "curl", [
     "-fsSL",
     gitHubTagTarballUrl(versionedSource),
     "-o",
     archivePath,
   ]);
   const extract = commandOutput(
+    runner,
     "tar",
     ["-xzf", archivePath, "--strip-components=1"],
     workspacePath,
@@ -127,7 +142,7 @@ function updateGitHubSourcePin(options: GitHubSourcePinUpdate): Effect.Effect<vo
     options.pinFilePath,
     (version: string): Effect.Effect<void, Error> =>
       Effect.flatMap(
-        fetchGitHubSourceHash(options.source, version, options.repositoryRootPath),
+        fetchGitHubSourceHash(options.source, version, options.repositoryRootPath, options.runner),
         (hash: string): Effect.Effect<void> =>
           writePinJson(options.pinFilePath, {
             sourceHash: hash,

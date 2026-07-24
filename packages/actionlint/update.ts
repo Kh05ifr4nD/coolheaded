@@ -1,16 +1,21 @@
+import type { HttpClient, JsonClient } from "coolheaded/core/httpClient.ts";
+import { fetchHttpClient, fetchJsonClient } from "coolheaded/core/fetchHttpClient.ts";
 import { releaseHashUpdateProgram, releaseUrlsFromTargets } from "coolheaded/update/release.ts";
 import { runUpdateScript, scriptPath } from "coolheaded/core/updateScript.ts";
 import { Effect } from "effect";
-import { latestGitHubVersion } from "coolheaded/source/version.ts";
+import { latestGitHubVersion } from "coolheaded/source/githubVersion.ts";
 
 const PIN_FILE_PATH = scriptPath("pin.json", import.meta.url);
+type GitHubVersionError = Effect.Effect.Error<ReturnType<typeof latestGitHubVersion>>;
 type ReleaseTargets = Parameters<typeof releaseUrlsFromTargets>[0];
 
-function latestVersion(): Effect.Effect<string, Error> {
-  return latestGitHubVersion({
-    owner: "rhysd",
-    repo: "actionlint",
-  });
+interface UpdateDependencies {
+  readonly httpClient: HttpClient;
+  readonly jsonClient: JsonClient;
+}
+
+function latestVersion(jsonClient: JsonClient): ReturnType<typeof latestGitHubVersion> {
+  return latestGitHubVersion({ owner: "rhysd", repo: "actionlint" }, jsonClient);
 }
 
 const ACTIONLINT_RELEASE_TARGETS = {
@@ -28,10 +33,15 @@ function releaseAssetUrl(version: string, target: string): string {
   return `https://github.com/rhysd/actionlint/releases/download/v${version}/${asset}`;
 }
 
-function updateProgram(args: readonly string[]): Effect.Effect<void, Error> {
+function updateProgram(
+  args: readonly string[],
+  dependencies: UpdateDependencies,
+): ReturnType<typeof releaseHashUpdateProgram<GitHubVersionError>> {
   return releaseHashUpdateProgram({
     args,
-    latestVersion,
+    httpClient: dependencies.httpClient,
+    latestVersion: (): ReturnType<typeof latestGitHubVersion> =>
+      latestVersion(dependencies.jsonClient),
     pinFilePath: PIN_FILE_PATH,
     source: "sha256Digest",
     urlsForVersion: (version: string) =>
@@ -41,10 +51,16 @@ function updateProgram(args: readonly string[]): Effect.Effect<void, Error> {
   });
 }
 
-async function main(args: readonly string[]): Promise<void> {
-  await Effect.runPromise(updateProgram(args));
+async function main(args: readonly string[], dependencies: UpdateDependencies): Promise<void> {
+  await Effect.runPromise(updateProgram(args, dependencies));
 }
 
-runUpdateScript(import.meta.url, updateProgram);
+function cliProgram(
+  args: readonly string[],
+): ReturnType<typeof releaseHashUpdateProgram<GitHubVersionError>> {
+  return updateProgram(args, { httpClient: fetchHttpClient, jsonClient: fetchJsonClient });
+}
+
+runUpdateScript(import.meta.url, cliProgram);
 
 export { main };

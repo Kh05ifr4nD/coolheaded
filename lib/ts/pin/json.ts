@@ -57,11 +57,14 @@ function writePinJson(path: string, config: PinJsonConfig): Effect.Effect<void> 
   return writeTextFile(path, serializePinJson(config));
 }
 
-function serializePackageHashConfig(config: PackageHashConfig): string {
+function serializePackageHashConfig(config: Readonly<PackageHashConfig>): string {
   return serializePinJson(config);
 }
 
-function writePackageHashConfig(path: string, config: PackageHashConfig): Effect.Effect<void> {
+function writePackageHashConfig(
+  path: string,
+  config: Readonly<PackageHashConfig>,
+): Effect.Effect<void> {
   return writePinJson(path, config);
 }
 

@@ -1,33 +1,13 @@
+import { compareVersions, isSemver } from "coolheaded/core/version.ts";
+import type { CommandRunner } from "coolheaded/core/commandRunner.ts";
 import { Effect } from "effect";
-import { compareVersions } from "coolheaded/core/version.ts";
+import { denoCommandRunner } from "coolheaded/core/denoCommandRunner.ts";
 
 interface RuntimeWritable {
   readonly write: (bytes: unknown) => Promise<number>;
 }
 
-interface CommandOutput {
-  readonly code: number;
-  readonly stderr: Uint8Array;
-  readonly stdout: Uint8Array;
-  readonly success: boolean;
-}
-
-interface RuntimeCommand {
-  readonly output: () => Promise<CommandOutput>;
-}
-
-type RuntimeCommandConstructor = new (
-  command: string,
-  options: {
-    readonly args: readonly string[];
-    readonly cwd?: string;
-    readonly stderr: "piped";
-    readonly stdout: "piped";
-  },
-) => RuntimeCommand;
-
 interface DenoRuntime {
-  readonly Command: RuntimeCommandConstructor;
   readonly args: readonly string[];
   readonly exit: (code: number) => never;
   readonly mainModule: string;
@@ -37,9 +17,10 @@ interface DenoRuntime {
 }
 
 class UpdateError extends Error {
+  public override readonly name = "UpdateError";
+
   public constructor(message: string) {
     super(message);
-    this.name = "UpdateError";
   }
 }
 
@@ -54,7 +35,6 @@ function isDenoRuntime(value: unknown): value is DenoRuntime {
 
   return (
     Array.isArray(value["args"]) &&
-    typeof value["Command"] === "function" &&
     typeof value["mainModule"] === "string" &&
     typeof value["exit"] === "function" &&
     typeof value["readTextFile"] === "function" &&
@@ -89,10 +69,10 @@ function requestedVersion(
   return Effect.succeed(version);
 }
 
-function requestedOrLatestVersion(
+function requestedOrLatestVersion<LatestError extends Error>(
   args: readonly string[],
-  latestVersion: () => Effect.Effect<string, Error>,
-): Effect.Effect<string, Error> {
+  latestVersion: () => Effect.Effect<string, LatestError>,
+): Effect.Effect<string, LatestError> {
   const [version] = args;
 
   if (typeof version === "string" && version.length > 0) {
@@ -119,58 +99,73 @@ function readTextFile(path: string): Effect.Effect<string, UpdateError> {
   });
 }
 
-function currentPinVersion(pinPath: string): Effect.Effect<string, Error> {
+function semverVersion(version: string, source: string): Effect.Effect<string, UpdateError> {
+  return isSemver(version)
+    ? Effect.succeed(version)
+    : Effect.fail(new UpdateError(`${source} is not valid SemVer: ${version}`));
+}
+
+function currentPinVersion(pinPath: string): Effect.Effect<string, UpdateError> {
   return Effect.flatMap(
     readTextFile(pinPath),
-    (contents: string): Effect.Effect<string, Error> =>
+    (contents: string): Effect.Effect<string, UpdateError> =>
       Effect.flatMap(
         Effect.try({
           catch: (): UpdateError => new UpdateError(`Failed to parse ${pinPath}`),
           try: (): unknown => JSON.parse(contents),
         }),
-        (pin: unknown): Effect.Effect<string, Error> => {
+        (pin: unknown): Effect.Effect<string, UpdateError> => {
           if (!isRecord(pin) || typeof pin["version"] !== "string" || pin["version"].length === 0) {
             return Effect.fail(new UpdateError(`${pinPath} does not contain a string version`));
           }
 
-          return Effect.succeed(pin["version"]);
+          return semverVersion(pin["version"], `${pinPath} version`);
         },
       ),
   );
 }
 
-function requestedOrNewerPinVersion(
+function newerPinVersion(currentVersion: string, candidateVersion: string): string | undefined {
+  return compareVersions(currentVersion, candidateVersion) < 0 ? candidateVersion : undefined;
+}
+
+function requestedOrNewerPinVersion<LatestError extends Error>(
   args: readonly string[],
-  latestVersion: () => Effect.Effect<string, Error>,
+  latestVersion: () => Effect.Effect<string, LatestError>,
   pinPath: string,
-): Effect.Effect<string | undefined, Error> {
+): Effect.Effect<string | undefined, LatestError | UpdateError> {
   const [version] = args;
 
   if (typeof version === "string" && version.length > 0) {
-    return Effect.succeed(version);
+    return semverVersion(version, "Requested version");
   }
 
   return Effect.flatMap(currentPinVersion(pinPath), (currentVersion: string) =>
-    Effect.map(latestVersion(), (candidateVersion: string): string | undefined =>
-      compareVersions(currentVersion, candidateVersion) < 0 ? candidateVersion : undefined,
+    Effect.flatMap(latestVersion(), (candidateVersion: string) =>
+      Effect.map(
+        semverVersion(candidateVersion, "Latest version"),
+        (validCandidateVersion: string): string | undefined =>
+          newerPinVersion(currentVersion, validCandidateVersion),
+      ),
     ),
   );
 }
 
-function updateNewerPinVersion(
+function updateNewerPinVersion<LatestError extends Error, UpdateVersionError extends Error>(
   args: readonly string[],
-  latestVersion: () => Effect.Effect<string, Error>,
+  latestVersion: () => Effect.Effect<string, LatestError>,
   pinPath: string,
-  updateVersion: (version: string) => Effect.Effect<void, Error>,
-): Effect.Effect<void, Error> {
+  updateVersion: (version: string) => Effect.Effect<void, UpdateVersionError>,
+): Effect.Effect<void, LatestError | UpdateError | UpdateVersionError> {
   return Effect.flatMap(
     requestedOrNewerPinVersion(args, latestVersion, pinPath),
-    (version: string | undefined): Effect.Effect<void, Error> =>
+    (version: string | undefined): Effect.Effect<void, UpdateError | UpdateVersionError> =>
       version === undefined ? Effect.void : updateVersion(version),
   );
 }
 
 function commandOutput(
+  runner: CommandRunner,
   command: string,
   args: readonly string[],
   cwd?: string,
@@ -184,16 +179,13 @@ function commandOutput(
       return new UpdateError(`Failed to run ${command}`);
     },
     async try(): Promise<string> {
-      const options = {
-        args,
-        stderr: "piped",
-        stdout: "piped",
+      const output = await runner.run({
+        command: [command, ...args],
         ...(typeof cwd === "string" ? { cwd } : {}),
-      } as const;
-      const output = await new (denoRuntime().Command)(command, options).output();
+      });
 
-      if (!output.success) {
-        const stderr = new globalThis.TextDecoder().decode(output.stderr).trim();
+      if (output.code !== 0) {
+        const stderr = output.stderr.trim();
         throw new UpdateError(
           `Failed to run ${command}: exit ${output.code}${
             stderr.length === 0 ? "" : `: ${stderr}`
@@ -201,13 +193,13 @@ function commandOutput(
         );
       }
 
-      return new globalThis.TextDecoder().decode(output.stdout).trim();
+      return output.stdout.trim();
     },
   });
 }
 
-function formatNixFile(path: string): Effect.Effect<void, UpdateError> {
-  return Effect.asVoid(commandOutput("nix", ["fmt", "--", path]));
+function formatNixFile(runner: CommandRunner, path: string): Effect.Effect<void, UpdateError> {
+  return Effect.asVoid(commandOutput(runner, "nix", ["fmt", "--", path]));
 }
 
 function errorMessage(error: unknown): string {
@@ -232,10 +224,10 @@ function reportErrorEffect(error: unknown): Effect.Effect<void> {
 
 function runUpdateScript(
   moduleUrl: string,
-  program: (args: readonly string[]) => Effect.Effect<void, Error>,
+  program: (args: readonly string[], runner: CommandRunner) => Effect.Effect<void, Error>,
 ): void {
   if (denoRuntime().mainModule === moduleUrl) {
-    const updateEffect = program(denoRuntime().args);
+    const updateEffect = program(denoRuntime().args, denoCommandRunner);
     const reportedEffect = Effect.catchAll(updateEffect, reportErrorEffect);
 
     Effect.runFork(reportedEffect);
@@ -246,6 +238,7 @@ export {
   commandOutput,
   denoRuntime,
   formatNixFile,
+  newerPinVersion,
   readTextFile,
   requestedOrLatestVersion,
   requestedOrNewerPinVersion,

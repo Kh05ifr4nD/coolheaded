@@ -1,24 +1,38 @@
 import { checkedFileSpec } from "coolheaded/repo/fileSpec/check.ts";
 
-async function writeError(error: unknown): Promise<void> {
-  const message = error instanceof Error ? error.message : String(error);
-  const encodedMessage = new globalThis.TextEncoder().encode(`${message}\n`);
-  await Deno.stderr.write(encodedMessage);
-}
+type FileSpecRunOutcome =
+  | Readonly<{ readonly kind: "passed" }>
+  | Readonly<{ readonly kind: "skipped" }>
+  | Readonly<{ readonly exitCode: 1; readonly kind: "failed"; readonly stderr: string }>;
 
-async function main(moduleUrl: string): Promise<void> {
-  if (Deno.mainModule !== moduleUrl) {
-    return;
+async function fileSpecRun(
+  moduleUrl: string,
+  mainModule: string,
+  checker: () => Promise<void>,
+): Promise<FileSpecRunOutcome> {
+  if (mainModule !== moduleUrl) {
+    return { kind: "skipped" };
   }
 
   try {
-    await checkedFileSpec();
+    await checker();
+    return { kind: "passed" };
   } catch (error: unknown) {
-    await writeError(error);
-    Deno.exit(1);
+    const message = error instanceof Error ? error.message : String(error);
+    return { exitCode: 1, kind: "failed", stderr: `${message}\n` };
+  }
+}
+
+async function main(moduleUrl: string): Promise<void> {
+  const outcome = await fileSpecRun(moduleUrl, Deno.mainModule, checkedFileSpec);
+  if (outcome.kind === "failed") {
+    await Deno.stderr.write(new globalThis.TextEncoder().encode(outcome.stderr));
+    Deno.exit(outcome.exitCode);
   }
 }
 
 void main(import.meta.url);
 
 export { checkedFileSpec, checkFileSpec } from "coolheaded/repo/fileSpec/check.ts";
+export { fileSpecRun };
+export type { FileSpecRunOutcome };

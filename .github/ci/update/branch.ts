@@ -1,18 +1,20 @@
 #!/usr/bin/env -S deno run --allow-run
 
+import type { CommandRunner } from "coolheaded/core/commandRunner.ts";
+import { denoCommandRunner } from "coolheaded/core/denoCommandRunner.ts";
 import { run } from "coolheadedCi/process.ts";
 
-async function prepareBranch(branch: string): Promise<void> {
-  await run(["git", "fetch", "origin", "main"], { capture: false });
-  const existingBranch = await run(["git", "fetch", "origin", branch], {
+async function prepareBranch(branch: string, runner: CommandRunner): Promise<void> {
+  await run(runner, ["git", "fetch", "origin", "main"], { capture: false });
+  const existingBranch = await run(runner, ["git", "fetch", "origin", branch], {
     capture: false,
     check: false,
   });
   if (existingBranch.code === 0) {
-    await run(["git", "checkout", "-B", branch, `origin/${branch}`], {
+    await run(runner, ["git", "checkout", "-B", branch, `origin/${branch}`], {
       capture: false,
     });
-    const rebase = await run(["git", "rebase", "origin/main"], {
+    const rebase = await run(runner, ["git", "rebase", "origin/main"], {
       capture: false,
       check: false,
     });
@@ -20,13 +22,13 @@ async function prepareBranch(branch: string): Promise<void> {
       return;
     }
 
-    await run(["git", "rebase", "--abort"], {
+    await run(runner, ["git", "rebase", "--abort"], {
       capture: false,
       check: false,
     });
   }
 
-  await run(["git", "checkout", "-B", branch, "origin/main"], {
+  await run(runner, ["git", "checkout", "-B", branch, "origin/main"], {
     capture: false,
   });
 }
@@ -37,7 +39,7 @@ async function main(args: readonly string[]): Promise<void> {
     throw new Error("Usage: branch.ts <branch>");
   }
 
-  await prepareBranch(branch);
+  await prepareBranch(branch, denoCommandRunner);
 }
 
 if (import.meta.main) {

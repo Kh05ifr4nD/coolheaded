@@ -2,9 +2,10 @@ import { npmPlatformPackageVersion, npmVersionIntegrity } from "coolheaded/npm/r
 import { Effect } from "effect";
 import type { InvalidNpmMetadataError } from "coolheaded/npm/metadataError.ts";
 import type { NpmPackageMetadata } from "coolheaded/npm/metadata.ts";
-import { parsePackageHashConfig } from "coolheaded/pin/packageHashConfig.ts";
+import { packageHashConfig } from "coolheaded/pin/packageHashConfig.ts";
 
-type PackageHashConfig = ReturnType<typeof parsePackageHashConfig>;
+type InvalidPackageHashConfigError = Effect.Effect.Error<ReturnType<typeof packageHashConfig>>;
+type PackageHashConfig = Effect.Effect.Success<ReturnType<typeof packageHashConfig>>;
 type NpmPlatformSuffixes<System extends string = string> = Readonly<Record<System, string>>;
 
 function entryHashEffect(
@@ -59,11 +60,11 @@ function npmHashConfigForSystems(
   metadata: NpmPackageMetadata,
   version: string,
   suffixes: NpmPlatformSuffixes,
-): Effect.Effect<PackageHashConfig, InvalidNpmMetadataError> {
-  return Effect.map(
+): Effect.Effect<PackageHashConfig, InvalidNpmMetadataError | InvalidPackageHashConfigError> {
+  return Effect.flatMap(
     npmHashesForSystems(metadata, version, suffixes),
-    (platformPackageHashes: Readonly<Record<string, string>>): PackageHashConfig =>
-      parsePackageHashConfig({
+    (platformPackageHashes: Readonly<Record<string, string>>) =>
+      packageHashConfig({
         platformPackageHashes,
         version,
       }),
