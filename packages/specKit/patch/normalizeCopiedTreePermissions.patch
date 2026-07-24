@@ -76,14 +76,15 @@ index 05aa35f..572bd18 100644
  from ..catalogs import CatalogEntry as BaseCatalogEntry
  from ..catalogs import CatalogStackBase
  from ..shared_infra import verify_archive_sha256
-@@ -1434,6 +1434,7 @@ class ExtensionManager:
+@@ -1930,6 +1930,8 @@ class ExtensionManager:
+             raise
  
-         ignore_fn = self._load_extensionignore(source_dir)
-         shutil.copytree(source_dir, dest_dir, ignore=ignore_fn)
 +        ensure_owner_writable(dest_dir)
- 
-         # Register commands with AI agents
-         registered_commands = {}
++
+         # Restore stranded configs rescued before the rmtree above.
+         for filename, (content, mode) in stranded_configs.items():
+             target = dest_dir / filename
+             _restore_stranded_config_file(target, content, mode)
 diff --git a/src/specify_cli/integrations/base.py b/src/specify_cli/integrations/base.py
 index a425d4e..71b5ace 100644
 --- a/src/specify_cli/integrations/base.py
