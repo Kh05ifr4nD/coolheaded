@@ -177,13 +177,21 @@ package fileSpec
 			"packageHash.ts"?: #RegularFile
 		}
 		pin?: {
+			"jsonOrder.ts"?:         #RegularFile
 			"packageHashConfig.ts"?: #RegularFile
 			"sriHash.ts"?:           #RegularFile
 		}
 		repo?: {
 			"pathProperty.ts"?: #RegularFile
 			fileSpec?: {
-				"packageStructure.ts"?: #RegularFile
+				"conformance.ts"?:     #RegularFile
+				"fixture.ts"?:         #RegularFile
+				"ignoredPath.ts"?:     #RegularFile
+				"index.ts"?:           #RegularFile
+				"process.ts"?:         #RegularFile
+				"snapshot.ts"?:        #RegularFile
+				"snapshotFixture.ts"?: #RegularFile
+				"toolIdentity.ts"?:    #RegularFile
 			}
 		}
 		source?: {
@@ -357,13 +365,21 @@ package fileSpec
 			"packageHash.ts"!: #RegularFile
 		}
 		pin!: {
+			"jsonOrder.ts"!:         #RegularFile
 			"packageHashConfig.ts"!: #RegularFile
 			"sriHash.ts"!:           #RegularFile
 		}
 		repo!: {
 			"pathProperty.ts"!: #RegularFile
 			fileSpec!: {
-				"packageStructure.ts"!: #RegularFile
+				"conformance.ts"!:     #RegularFile
+				"fixture.ts"!:         #RegularFile
+				"ignoredPath.ts"!:     #RegularFile
+				"index.ts"!:           #RegularFile
+				"process.ts"!:         #RegularFile
+				"snapshot.ts"!:        #RegularFile
+				"snapshotFixture.ts"!: #RegularFile
+				"toolIdentity.ts"!:    #RegularFile
 			}
 		}
 		source!: {

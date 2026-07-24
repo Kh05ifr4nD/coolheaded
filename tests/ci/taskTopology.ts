@@ -48,7 +48,7 @@ describe("Deno task topology", (): void => {
     );
     assertEquals(
       tasks["test:integration:read"],
-      "deno test --allow-read=deno.jsonc,flake.nix,flake/gitHooks.nix,lib/nix/base.nix,lib/ts/system/targets.json tests/ci/taskTopology.ts tests/nix/systems.ts",
+      "deno test --allow-read=deno.jsonc,flake.nix,flake/gitHooks.nix,lib/nix/base.nix,lib/ts/system/targets.json tests/ci/taskTopology.ts tests/nix/systems.ts tests/pin/jsonOrder.ts",
     );
     assertEquals(
       tasks["test:integration:write"],

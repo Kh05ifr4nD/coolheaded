@@ -33,8 +33,6 @@ const CUE_CONFORMANCE_MARKERS = [
 
 type GitIndexEntry = Awaited<ReturnType<typeof gitIndexEntriesFrom>>[number];
 type RepositoryEnumeration = Parameters<typeof repositorySnapshot>[1];
-type RepositorySnapshot = Awaited<ReturnType<typeof repositorySnapshot>>;
-
 type CUECommandError = Readonly<{
   readonly command: string;
   readonly exitCode: number | undefined;
@@ -168,12 +166,11 @@ async function validateIgnoredPathsNotAdmittedByFileSpec(
     return;
   }
 
-  const batchCount = Math.ceil(ignoredPaths.length / MAX_CONCURRENT_FILE_SPEC_PROCESSES);
   throw conformanceViolation(
     [
       "current ignore rules hide paths admitted by fileSpec.cue:",
       ...admittedIgnoredPaths.map((path: string): string => `- ${path}`),
-      `ignored files checked: ${ignoredPaths.length}; CUE batches: ${batchCount}; max concurrency: ${MAX_CONCURRENT_FILE_SPEC_PROCESSES}`,
+      `ignored files checked: ${ignoredPaths.length}; max concurrent CUE checks: ${MAX_CONCURRENT_FILE_SPEC_PROCESSES}`,
     ].join("\n"),
   );
 }
@@ -204,11 +201,44 @@ function snapshotFingerprint(snapshot: RepositorySnapshot): string {
   return JSON.stringify(snapshot);
 }
 
+const SNAPSHOT_FIELDS = [
+  "enumerationSha256",
+  "fileSpecSha256",
+  "head",
+  "ignoreSourcesSha256",
+  "indexTree",
+] as const;
+const TOOL_COMMANDS = ["cue", "deno", "git"] as const;
+const TOOL_IDENTITY_FIELDS = ["executable", "version", "sha256"] as const;
+type RepositorySnapshot = Awaited<ReturnType<typeof repositorySnapshot>>;
+type SnapshotChangedComponent =
+  | Exclude<keyof RepositorySnapshot, "tools">
+  | `tools.${keyof RepositorySnapshot["tools"]}.${keyof RepositorySnapshot["tools"]["cue"]}`;
+type ToolIdentity = RepositorySnapshot["tools"]["cue"];
+
+function changedSnapshotComponents(
+  before: RepositorySnapshot,
+  after: RepositorySnapshot,
+): readonly SnapshotChangedComponent[] {
+  const repositoryComponents = SNAPSHOT_FIELDS.filter(
+    (field): boolean => before[field] !== after[field],
+  );
+  const toolComponents = TOOL_COMMANDS.flatMap((command): readonly SnapshotChangedComponent[] =>
+    TOOL_IDENTITY_FIELDS.filter(
+      (field: keyof ToolIdentity): boolean =>
+        before.tools[command][field] !== after.tools[command][field],
+    ).map((field: keyof ToolIdentity): SnapshotChangedComponent => `tools.${command}.${field}`),
+  );
+
+  return [...repositoryComponents, ...toolComponents];
+}
+
 function assertSnapshotUnchanged(before: RepositorySnapshot, after: RepositorySnapshot): void {
   const beforeFingerprint = snapshotFingerprint(before);
   const afterFingerprint = snapshotFingerprint(after);
-  if (beforeFingerprint !== afterFingerprint) {
-    throw snapshotChangedError(beforeFingerprint, afterFingerprint);
+  const changedComponents = changedSnapshotComponents(before, after);
+  if (changedComponents.length > 0) {
+    throw snapshotChangedError(beforeFingerprint, afterFingerprint, changedComponents);
   }
 }
 
@@ -260,4 +290,4 @@ async function checkedFileSpec(): Promise<void> {
   await checkFileSpec(await repositoryRoot());
 }
 
-export { checkedFileSpec, checkFileSpec };
+export { changedSnapshotComponents, checkedFileSpec, checkFileSpec };
