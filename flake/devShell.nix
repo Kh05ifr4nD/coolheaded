@@ -14,7 +14,9 @@ pkgs.mkShellNoCC {
 
   shellHook = ''
     export COOLHEADED_CUE="${config.packages.cue}/bin/cue"
+    export COOLHEADED_DENO="${config.packages.deno}/libexec/deno/bin/deno"
     export COOLHEADED_GIT="${pkgs.git}/bin/git"
+    export COOLHEADED_GIT_DIR="$(${pkgs.git}/bin/git rev-parse --path-format=absolute --git-common-dir)"
 
     ${config.pre-commit.shellHook}
 

@@ -23,7 +23,8 @@
     "noUnusedParameters": true,
     "paths": {
       "coolheaded/*": ["./lib/ts/*"],
-      "coolheadedCi/*": ["./.github/ci/*"]
+      "coolheadedCi/*": ["./.github/ci/*"],
+      "coolheadedTestSupport/*": ["./tests/support/*"]
     },
     "resolveJsonModule": true,
     "skipLibCheck": true,

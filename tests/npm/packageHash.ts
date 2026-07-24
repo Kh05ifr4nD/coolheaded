@@ -11,7 +11,7 @@ import {
   npmScopedTarballUrl,
 } from "coolheaded/npm/registry.ts";
 import { Effect } from "effect";
-import { withMockedJsonFetch } from "./fetchMock.ts";
+import { withMockedJsonFetch } from "coolheadedTestSupport/fetchMock.ts";
 
 describe("npm registry URL helpers", (): void => {
   it("builds scoped package tarball URLs", (): void => {

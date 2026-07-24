@@ -2,7 +2,7 @@ import { SUPPORTED_SYSTEMS, SYSTEM_TARGETS } from "coolheaded/system/target.ts";
 import { describe, it } from "@jsr/std__testing/bdd";
 import { assertEquals } from "@jsr/std__assert";
 
-const REPOSITORY_ROOT = new globalThis.URL("../", import.meta.url).pathname;
+const REPOSITORY_ROOT = new globalThis.URL("../../", import.meta.url).pathname;
 
 async function readRepositoryFile(path: string): Promise<string> {
   return await Deno.readTextFile(`${REPOSITORY_ROOT}${path}`);

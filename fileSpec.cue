@@ -155,19 +155,46 @@ package fileSpec
 	}
 
 	tests?: {
-		"changeImpact.ts"?:      #RegularFile
-		"denoDependencies.ts"?:  #RegularFile
-		"denoSnapshot.ts"?:      #RegularFile
-		"fetchMock.ts"?:         #RegularFile
-		"latestVersion.ts"?:     #RegularFile
-		"npmPackageHash.ts"?:    #RegularFile
-		"packageHashConfig.ts"?: #RegularFile
-		"packageHashTypes.ts"?:  #RegularFile
-		"packageStructure.ts"?:  #RegularFile
-		"releaseHash.ts"?:       #RegularFile
-		"pullRequest.ts"?:       #RegularFile
-		"systems.ts"?:           #RegularFile
-		"testingTypes.ts"?:      #RegularFile
+		ci?: {
+			"changeImpact.ts"?:          #RegularFile
+			"fileSystemPermissions.ts"?: #RegularFile
+			"pullRequest.ts"?:           #RegularFile
+			"runtimePermissions.ts"?:    #RegularFile
+			"taskTopology.ts"?:          #RegularFile
+			"updatePackage.ts"?:         #RegularFile
+		}
+		core?: {
+			"version.ts"?: #RegularFile
+		}
+		nix?: {
+			"denoDependencies.ts"?: #RegularFile
+			"denoSnapshot.ts"?:     #RegularFile
+			"systems.ts"?:          #RegularFile
+		}
+		npm?: {
+			"packageHash.ts"?: #RegularFile
+		}
+		pin?: {
+			"packageHashConfig.ts"?: #RegularFile
+		}
+		repo?: {
+			fileSpec?: {
+				"packageStructure.ts"?: #RegularFile
+			}
+		}
+		source?: {
+			"version.ts"?: #RegularFile
+		}
+		support?: {
+			"fetchMock.ts"?: #RegularFile
+		}
+		type?: {
+			"packageHashTypes.ts"?: #RegularFile
+			"testingTypes.ts"?:     #RegularFile
+		}
+		update?: {
+			"releaseHash.ts"?: #RegularFile
+		}
 	}
 }
 
@@ -301,18 +328,45 @@ package fileSpec
 	}
 
 	tests!: {
-		"changeImpact.ts"!:      #RegularFile
-		"denoDependencies.ts"!:  #RegularFile
-		"denoSnapshot.ts"!:      #RegularFile
-		"fetchMock.ts"!:         #RegularFile
-		"latestVersion.ts"!:     #RegularFile
-		"npmPackageHash.ts"!:    #RegularFile
-		"packageHashConfig.ts"!: #RegularFile
-		"packageHashTypes.ts"!:  #RegularFile
-		"packageStructure.ts"!:  #RegularFile
-		"releaseHash.ts"!:       #RegularFile
-		"pullRequest.ts"!:       #RegularFile
-		"systems.ts"!:           #RegularFile
-		"testingTypes.ts"!:      #RegularFile
+		ci!: {
+			"changeImpact.ts"!:          #RegularFile
+			"fileSystemPermissions.ts"!: #RegularFile
+			"pullRequest.ts"!:           #RegularFile
+			"runtimePermissions.ts"!:    #RegularFile
+			"taskTopology.ts"!:          #RegularFile
+			"updatePackage.ts"!:         #RegularFile
+		}
+		core!: {
+			"version.ts"!: #RegularFile
+		}
+		nix!: {
+			"denoDependencies.ts"!: #RegularFile
+			"denoSnapshot.ts"!:     #RegularFile
+			"systems.ts"!:          #RegularFile
+		}
+		npm!: {
+			"packageHash.ts"!: #RegularFile
+		}
+		pin!: {
+			"packageHashConfig.ts"!: #RegularFile
+		}
+		repo!: {
+			fileSpec!: {
+				"packageStructure.ts"!: #RegularFile
+			}
+		}
+		source!: {
+			"version.ts"!: #RegularFile
+		}
+		support!: {
+			"fetchMock.ts"!: #RegularFile
+		}
+		type!: {
+			"packageHashTypes.ts"!: #RegularFile
+			"testingTypes.ts"!:     #RegularFile
+		}
+		update!: {
+			"releaseHash.ts"!: #RegularFile
+		}
 	}
 }

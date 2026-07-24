@@ -6,14 +6,13 @@ import {
 import { assertEquals, assertRejects } from "@jsr/std__assert";
 import { describe, it } from "@jsr/std__testing/bdd";
 import { checkFileSpec } from "coolheaded/repo/fileSpec/check.ts";
-import { checkedFileSpec } from "coolheaded/repo/fileSpec.ts";
 import { join } from "@jsr/std__path";
 import { serializePinJson } from "coolheaded/pin/json.ts";
 
 type PinJsonConfig = Parameters<typeof serializePinJson>[0];
 
-const PACKAGES_DIRECTORY_PATH = new globalThis.URL("../packages/", import.meta.url).pathname;
-const REPOSITORY_ROOT_PATH = new globalThis.URL("../", import.meta.url).pathname;
+const PACKAGES_DIRECTORY_PATH = new globalThis.URL("../../../packages/", import.meta.url).pathname;
+const REPOSITORY_ROOT_PATH = new globalThis.URL("../../../", import.meta.url).pathname;
 const CONCURRENCY_TEST_ITEM_COUNT = 17;
 const EXECUTABLE_MODE = 0o755;
 
@@ -39,8 +38,17 @@ async function fileExists(path: string): Promise<boolean> {
   }
 }
 
+function requiredToolPath(environmentVariable: string): string {
+  const value = Deno.env.get(environmentVariable);
+  if (typeof value !== "string" || value.length === 0) {
+    throw new Error(`${environmentVariable} is not set; run tests in nix develop`);
+  }
+
+  return value;
+}
+
 async function runGit(repositoryRoot: string, args: readonly string[]): Promise<void> {
-  const output = await new Deno.Command("git", {
+  const output = await new Deno.Command(requiredToolPath("COOLHEADED_GIT"), {
     args: [...args],
     clearEnv: true,
     cwd: repositoryRoot,
@@ -60,7 +68,7 @@ async function runGitWithInput(
   args: readonly string[],
   input: string,
 ): Promise<string> {
-  const process = new Deno.Command("git", {
+  const process = new Deno.Command(requiredToolPath("COOLHEADED_GIT"), {
     args: [...args],
     clearEnv: true,
     cwd: repositoryRoot,
@@ -82,15 +90,6 @@ async function runGitWithInput(
   return new globalThis.TextDecoder().decode(output.stdout);
 }
 
-function requiredToolPath(environmentVariable: string): string {
-  const value = Deno.env.get(environmentVariable);
-  if (typeof value !== "string" || value.length === 0) {
-    throw new Error(`${environmentVariable} is not set; run tests in nix develop`);
-  }
-
-  return value;
-}
-
 type FileSpecCheckerOutput = Readonly<{
   readonly stderr: string;
   readonly success: boolean;
@@ -103,6 +102,7 @@ async function runFileSpecChecker(
   const command = new Deno.Command(Deno.execPath(), {
     args: [
       "run",
+      "--no-check",
       "--allow-env=PATH,COOLHEADED_CUE,COOLHEADED_GIT",
       "--allow-read",
       "--allow-run",
@@ -187,35 +187,48 @@ async function invalidPinOrder(name: string): Promise<string | undefined> {
 }
 
 describe("package structure", (): void => {
-  it("keeps git ls-files fully conformant to fileSpec.cue", async (): Promise<void> => {
-    await checkedFileSpec();
+  it("denies repository writes outside temporary fixtures", async (): Promise<void> => {
+    await assertRejects(
+      (): Promise<void> => Deno.writeTextFile(join(REPOSITORY_ROOT_PATH, ".permissionProbe"), ""),
+      Deno.errors.NotCapable,
+    );
   });
 
   it("isolates fileSpec subprocesses from loader environment variables", async (): Promise<void> => {
-    const command = new Deno.Command(Deno.execPath(), {
-      args: [
-        "run",
-        "--allow-env=PATH,COOLHEADED_CUE,COOLHEADED_GIT",
-        "--allow-read",
-        `--allow-run=${requiredToolPath("COOLHEADED_CUE")},${requiredToolPath("COOLHEADED_GIT")}`,
-        "--allow-write",
-        "lib/ts/repo/fileSpec.ts",
-      ],
-      clearEnv: true,
-      cwd: REPOSITORY_ROOT_PATH,
-      env: {
-        COOLHEADED_CUE: requiredToolPath("COOLHEADED_CUE"),
-        COOLHEADED_GIT: requiredToolPath("COOLHEADED_GIT"),
-        LD_DYLD_PATH: "/tmp/coolheaded-file-spec-loader-path",
-        PATH: Deno.env.get("PATH") ?? "",
-      },
-      stderr: "piped",
-      stdout: "piped",
-    });
+    const environmentPath = await Deno.makeTempFile();
+    try {
+      await Deno.writeTextFile(
+        environmentPath,
+        "LD_DYLD_PATH=/tmp/coolheaded-file-spec-loader-path\n",
+      );
+      const command = new Deno.Command(Deno.execPath(), {
+        args: [
+          "run",
+          "--no-check",
+          `--env-file=${environmentPath}`,
+          "--allow-env=PATH,COOLHEADED_CUE,COOLHEADED_GIT",
+          "--allow-read",
+          `--allow-run=${requiredToolPath("COOLHEADED_CUE")},${requiredToolPath("COOLHEADED_GIT")}`,
+          "--allow-write",
+          "lib/ts/repo/fileSpec.ts",
+        ],
+        clearEnv: true,
+        cwd: REPOSITORY_ROOT_PATH,
+        env: {
+          COOLHEADED_CUE: requiredToolPath("COOLHEADED_CUE"),
+          COOLHEADED_GIT: requiredToolPath("COOLHEADED_GIT"),
+          PATH: Deno.env.get("PATH") ?? "",
+        },
+        stderr: "piped",
+        stdout: "piped",
+      });
 
-    const output = await command.output();
+      const output = await command.output();
 
-    assertEquals(output.success, true, new globalThis.TextDecoder().decode(output.stderr).trim());
+      assertEquals(output.success, true, new globalThis.TextDecoder().decode(output.stderr).trim());
+    } finally {
+      await Deno.remove(environmentPath);
+    }
   });
 
   it("rejects ignored directories hiding fileSpec-admitted files", async (): Promise<void> => {
@@ -479,8 +492,18 @@ describe("Git index hardening", (): void => {
       await runGit(repositoryRoot, ["add", ".gitignore", "fileSpec.cue", "executable"]);
       await checkFileSpec(repositoryRoot);
 
-      await Deno.symlink(".gitignore", join(repositoryRoot, "link"));
-      await runGit(repositoryRoot, ["add", "link"]);
+      const linkBlobOutput = await runGitWithInput(
+        repositoryRoot,
+        ["hash-object", "-w", "--stdin"],
+        ".gitignore",
+      );
+      const linkBlob = linkBlobOutput.trim();
+      await runGit(repositoryRoot, [
+        "update-index",
+        "--add",
+        "--cacheinfo",
+        `120000,${linkBlob},link`,
+      ]);
 
       await assertRejects(
         (): Promise<void> => checkFileSpec(repositoryRoot),
