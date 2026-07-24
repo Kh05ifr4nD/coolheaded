@@ -10,7 +10,7 @@
    try {
      await copyDirectory(input.sourcePath, tempPath);
 +    await normalizeCopiedPluginCachePermissions(tempPath);
-     await rewriteCachedPackageLocalFileDependencies(tempPath, input.sourcePath);
+     const rewroteLocalFileDependencies = await rewriteCachedPackageLocalFileDependencies(tempPath, input.sourcePath);
      await copyBundledMcpRuntimeDists({ pluginRoot: tempPath, sourceRoot: input.sourcePath });
      await copyRootRuntimeDists({ pluginRoot: tempPath, sourcePath: input.sourcePath });
 @@ -7541,8 +7542,10 @@
@@ -35,7 +35,7 @@
 +function shouldSkipNixCacheNpmCommand(args) {
 +  if (process.env.LAZYCODEX_AI_NIX_SKIP_CACHE_NPM !== "1")
 +    return false;
-+  return args.length === 2 && (args[0] === "ci" && args[1] === "--omit=dev" || args[0] === "run" && args[1] === "sync:skills");
++  return args.length === 2 && (args[0] === "ci" && args[1] === "--omit=dev" || args[0] === "run" && args[1] === "sync:skills") || args.length === 4 && args[0] === "install" && args[1] === "--omit=dev" && args[2] === "--no-audit" && args[3] === "--no-fund";
  }
  async function maybeRunNpmBuild(cwd, runCommand, env) {
    if (!await fileExistsStrict(join12(cwd, "package.json")))
