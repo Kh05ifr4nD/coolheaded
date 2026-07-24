@@ -6,16 +6,19 @@ import type {
 
 type ExpectedCommand = Readonly<
   {
-    readonly effect?: () => Promise<void> | void;
-    readonly request: CommandRequest;
+    readonly effect?: (request: CommandRequest) => Promise<void> | void;
   } & (
-    | { readonly result: CommandResult; readonly runner?: never }
-    | {
-        readonly delegateRequest?: CommandRequest;
-        readonly result?: never;
-        readonly runner: CommandRunner;
-      }
-  )
+    | { readonly assertRequest: (request: CommandRequest) => void; readonly request?: never }
+    | { readonly assertRequest?: never; readonly request: CommandRequest }
+  ) &
+    (
+      | { readonly result: CommandResult; readonly runner?: never }
+      | {
+          readonly delegateRequest?: CommandRequest;
+          readonly result?: never;
+          readonly runner: CommandRunner;
+        }
+    )
 >;
 
 function isRecord(value: unknown): value is Readonly<Record<string, unknown>> {
@@ -61,14 +64,18 @@ class FakeCommandRunner implements CommandRunner {
     if (expected === undefined) {
       throw new Error(`unexpected command: ${JSON.stringify(request)}`);
     }
-    if (!structurallyEqual(request, expected.request)) {
-      throw new Error(
-        `command mismatch: expected ${JSON.stringify(expected.request)}, received ${JSON.stringify(
-          request,
-        )}`,
-      );
+    if (expected.assertRequest === undefined) {
+      if (!structurallyEqual(request, expected.request)) {
+        throw new Error(
+          `command mismatch: expected ${JSON.stringify(
+            expected.request,
+          )}, received ${JSON.stringify(request)}`,
+        );
+      }
+    } else {
+      expected.assertRequest(request);
     }
-    await expected.effect?.();
+    await expected.effect?.(request);
     const result =
       expected.runner === undefined
         ? expected.result

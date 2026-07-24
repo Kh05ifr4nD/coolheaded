@@ -27,17 +27,25 @@ const GITHUB_SOURCE = {
   tag: (version: string): string => `v${version}`,
 };
 
+interface UpdateDependencies {
+  readonly generatedPackageFilePath: string;
+  readonly jsonClient: JsonClient;
+  readonly pinFilePath: string;
+  readonly repositoryRootPath: string;
+  readonly runner: CommandRunner;
+}
+
 function latestVersion(jsonClient: JsonClient): ReturnType<typeof latestGitHubVersion> {
   return latestGitHubVersion({ owner: GITHUB_SOURCE.owner, repo: GITHUB_SOURCE.repo }, jsonClient);
 }
 
-function bun2nixOutPath(runner: CommandRunner): Effect.Effect<string, Error> {
-  return commandOutput(runner, "nix", [
+function bun2nixOutPath(dependencies: Readonly<UpdateDependencies>): Effect.Effect<string, Error> {
+  return commandOutput(dependencies.runner, "nix", [
     "build",
     "--no-link",
     "--print-out-paths",
     "--inputs-from",
-    REPOSITORY_ROOT_PATH,
+    dependencies.repositoryRootPath,
     "bun2nix#bun2nix",
   ]);
 }
@@ -46,73 +54,99 @@ function generatedBunNixFromWorkspace(
   bun2nixPath: string,
   workspacePath: string,
   version: string,
-  runner: CommandRunner,
+  dependencies: Readonly<UpdateDependencies>,
 ): Effect.Effect<string, Error> {
   return Effect.gen(function* generatedBunNixFromWorkspaceSteps(): Effect.fn.Return<string, Error> {
-    yield* prepareGitHubTagTarballWorkspace(GITHUB_SOURCE, workspacePath, version, runner);
+    yield* prepareGitHubTagTarballWorkspace(
+      GITHUB_SOURCE,
+      workspacePath,
+      version,
+      dependencies.runner,
+    );
     yield* commandOutput(
-      runner,
+      dependencies.runner,
       bun2nixPath,
       ["-o", `${workspacePath}/generatedPackage.nix`],
       workspacePath,
     );
 
-    return yield* commandOutput(runner, "cat", [`${workspacePath}/generatedPackage.nix`]);
+    return yield* commandOutput(dependencies.runner, "cat", [
+      `${workspacePath}/generatedPackage.nix`,
+    ]);
   });
 }
 
-function generatedBunNix(version: string, runner: CommandRunner): Effect.Effect<string, Error> {
-  return Effect.flatMap(bun2nixOutPath(runner), (outPath: string): Effect.Effect<string, Error> => {
-    const bun2nixPath = `${outPath.trim()}/bin/bun2nix`;
+function generatedBunNix(
+  version: string,
+  dependencies: Readonly<UpdateDependencies>,
+): Effect.Effect<string, Error> {
+  return Effect.flatMap(
+    bun2nixOutPath(dependencies),
+    (outPath: string): Effect.Effect<string, Error> => {
+      const bun2nixPath = `${outPath.trim()}/bin/bun2nix`;
 
-    return withTemporaryDirectory(
-      (workspacePath: string): Effect.Effect<string, Error> =>
-        generatedBunNixFromWorkspace(bun2nixPath, workspacePath, version, runner),
-    );
-  });
+      return withTemporaryDirectory(
+        (workspacePath: string): Effect.Effect<string, Error> =>
+          generatedBunNixFromWorkspace(bun2nixPath, workspacePath, version, dependencies),
+      );
+    },
+  );
 }
 
-function writeUpdatedFiles(version: string, runner: CommandRunner): Effect.Effect<void, Error> {
+function writeUpdatedFiles(
+  version: string,
+  dependencies: Readonly<UpdateDependencies>,
+): Effect.Effect<void, Error> {
   return Effect.gen(function* writeUpdatedFilesSteps(): Effect.fn.Return<void, Error> {
     const { bunNix, hash } = yield* Effect.all({
-      bunNix: generatedBunNix(version, runner),
-      hash: fetchGitHubSourceHash(GITHUB_SOURCE, version, REPOSITORY_ROOT_PATH, runner),
+      bunNix: generatedBunNix(version, dependencies),
+      hash: fetchGitHubSourceHash(
+        GITHUB_SOURCE,
+        version,
+        dependencies.repositoryRootPath,
+        dependencies.runner,
+      ),
     });
 
-    yield* writePinJson(PIN_FILE_PATH, {
+    yield* writePinJson(dependencies.pinFilePath, {
       sourceHash: hash.trim(),
       version,
     });
-    yield* writeTextFile(GENERATED_PACKAGE_FILE_PATH, `${bunNix.trim()}\n`);
-    yield* formatNixFile(runner, GENERATED_PACKAGE_FILE_PATH);
+    yield* writeTextFile(dependencies.generatedPackageFilePath, `${bunNix.trim()}\n`);
+    yield* formatNixFile(dependencies.runner, dependencies.generatedPackageFilePath);
   });
 }
 
 function updateProgram(
   args: readonly string[],
-  runner: CommandRunner,
-  jsonClient: JsonClient,
+  dependencies: Readonly<UpdateDependencies>,
 ): Effect.Effect<void, Error> {
   return updateNewerPinVersion(
     args,
-    (): ReturnType<typeof latestVersion> => latestVersion(jsonClient),
-    PIN_FILE_PATH,
-    (version: string): Effect.Effect<void, Error> => writeUpdatedFiles(version, runner),
+    (): ReturnType<typeof latestVersion> => latestVersion(dependencies.jsonClient),
+    dependencies.pinFilePath,
+    (version: string): Effect.Effect<void, Error> => writeUpdatedFiles(version, dependencies),
   );
 }
 
 async function main(
   args: readonly string[],
-  runner: CommandRunner,
-  jsonClient: JsonClient,
+  dependencies: Readonly<UpdateDependencies>,
 ): Promise<void> {
-  await Effect.runPromise(updateProgram(args, runner, jsonClient));
+  await Effect.runPromise(updateProgram(args, dependencies));
 }
 
 function cliProgram(args: readonly string[], runner: CommandRunner): Effect.Effect<void, Error> {
-  return updateProgram(args, runner, fetchJsonClient);
+  return updateProgram(args, {
+    generatedPackageFilePath: GENERATED_PACKAGE_FILE_PATH,
+    jsonClient: fetchJsonClient,
+    pinFilePath: PIN_FILE_PATH,
+    repositoryRootPath: REPOSITORY_ROOT_PATH,
+    runner,
+  });
 }
 
 runUpdateScript(import.meta.url, cliProgram);
 
-export { main };
+export { main, updateProgram };
+export type { UpdateDependencies };

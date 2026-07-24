@@ -24,6 +24,7 @@ const OXFMT_RELEASE_TARGETS = {
 interface UpdateDependencies {
   readonly httpClient: HttpClient;
   readonly jsonClient: JsonClient;
+  readonly pinFilePath: string;
 }
 
 type GitHubReleaseError = Effect.Effect.Error<ReturnType<typeof gitHubRelease>>;
@@ -73,17 +74,17 @@ function packageHashConfig(
   const urls = releaseUrlsFromTargets(OXFMT_RELEASE_TARGETS, (target: string): string =>
     releaseAssetUrl(version, target),
   );
-  const hashConfig = releaseHashConfig(version, urls, "sha256Digest", dependencies.httpClient);
 
-  return Effect.map(
-    Effect.all({
-      binaryVersion: oxfmtBinaryVersion(version, dependencies.jsonClient),
-      hashConfig,
-    }),
-    ({ binaryVersion: resolvedBinaryVersion, hashConfig: config }): PackageHashConfig => ({
-      ...config,
-      binaryVersion: resolvedBinaryVersion,
-    }),
+  return Effect.flatMap(
+    oxfmtBinaryVersion(version, dependencies.jsonClient),
+    (resolvedBinaryVersion): Effect.Effect<PackageHashConfig, ReleaseHashError> =>
+      Effect.map(
+        releaseHashConfig(version, urls, "sha256Digest", dependencies.httpClient),
+        (config): PackageHashConfig => ({
+          ...config,
+          binaryVersion: resolvedBinaryVersion,
+        }),
+      ),
   );
 }
 
@@ -94,11 +95,11 @@ function updateProgram(
   return updateNewerPinVersion(
     args,
     (): ReturnType<typeof latestVersion> => latestVersion(dependencies.jsonClient),
-    PIN_FILE_PATH,
+    dependencies.pinFilePath,
     (version: string): Effect.Effect<void, UpdateVersionError> =>
       Effect.flatMap(
         packageHashConfig(version, dependencies),
-        (config): Effect.Effect<void> => writePackageHashConfig(PIN_FILE_PATH, config),
+        (config): Effect.Effect<void> => writePackageHashConfig(dependencies.pinFilePath, config),
       ),
   );
 }
@@ -110,9 +111,14 @@ async function main(args: readonly string[], dependencies: UpdateDependencies): 
 function cliProgram(
   args: readonly string[],
 ): ReturnType<typeof updateNewerPinVersion<LatestVersionError, UpdateVersionError>> {
-  return updateProgram(args, { httpClient: fetchHttpClient, jsonClient: fetchJsonClient });
+  return updateProgram(args, {
+    httpClient: fetchHttpClient,
+    jsonClient: fetchJsonClient,
+    pinFilePath: PIN_FILE_PATH,
+  });
 }
 
 runUpdateScript(import.meta.url, cliProgram);
 
-export { main };
+export { main, updateProgram };
+export type { UpdateDependencies };

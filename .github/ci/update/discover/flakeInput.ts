@@ -46,12 +46,12 @@ function filteredNames(): readonly string[] | null {
   return inputs === undefined || inputs.length === 0 ? null : inputs.split(/\s+/u);
 }
 
-async function discoverFlakeInput(): Promise<readonly MatrixItem[]> {
-  const nodes = lockNodes(await readJson("flake.lock"));
+function flakeInputUpdates(lock: unknown, names: readonly string[] | null): readonly MatrixItem[] {
+  const nodes = lockNodes(lock);
   const inputs = rootInputs(nodes);
-  const names = filteredNames() ?? Object.keys(inputs).toSorted();
+  const selectedNames = names ?? Object.keys(inputs).toSorted();
 
-  return names.flatMap((name: string): readonly MatrixItem[] => {
+  return selectedNames.flatMap((name: string): readonly MatrixItem[] => {
     const nodeName = inputs[name];
     const node = nodeName === undefined ? undefined : nodes[nodeName];
     if (node === undefined) {
@@ -67,6 +67,10 @@ async function discoverFlakeInput(): Promise<readonly MatrixItem[]> {
   });
 }
 
+async function discoverFlakeInput(): Promise<readonly MatrixItem[]> {
+  return flakeInputUpdates(await readJson("flake.lock"), filteredNames());
+}
+
 async function main(): Promise<void> {
   const include = await discoverFlakeInput();
   await writeOutput("matrix", JSON.stringify({ include }));
@@ -77,4 +81,5 @@ if (import.meta.main) {
   void main();
 }
 
-export { discoverFlakeInput };
+export { discoverFlakeInput, flakeInputUpdates };
+export type { MatrixItem };

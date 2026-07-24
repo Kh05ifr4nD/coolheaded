@@ -23,6 +23,11 @@ interface OhMyOpenagentPin {
   readonly version: string;
 }
 
+interface UpdateDependencies {
+  readonly jsonClient: JsonClient;
+  readonly pinFilePath: string;
+}
+
 const PLATFORM_PACKAGES = {
   "aarch64-darwin": "oh-my-openagent-darwin-arm64",
   "aarch64-linux": "oh-my-openagent-linux-arm64",
@@ -66,30 +71,34 @@ function packagePin(
 
 function updateProgram(
   args: readonly string[],
-  jsonClient: JsonClient,
+  dependencies: Readonly<UpdateDependencies>,
 ): ReturnType<typeof updateNewerPinVersion<LatestVersionError, PackageHashError>> {
   return updateNewerPinVersion(
     args,
-    (): ReturnType<typeof latestNpmVersion> => latestVersion(jsonClient),
-    PIN_FILE_PATH,
+    (): ReturnType<typeof latestNpmVersion> => latestVersion(dependencies.jsonClient),
+    dependencies.pinFilePath,
     (version: string): Effect.Effect<void, PackageHashError> =>
       Effect.flatMap(
-        packagePin(version, jsonClient),
-        (pin): Effect.Effect<void> => writePinJson(PIN_FILE_PATH, pin),
+        packagePin(version, dependencies.jsonClient),
+        (pin): Effect.Effect<void> => writePinJson(dependencies.pinFilePath, pin),
       ),
   );
 }
 
-async function main(args: readonly string[], jsonClient: JsonClient): Promise<void> {
-  await Effect.runPromise(updateProgram(args, jsonClient));
+async function main(
+  args: readonly string[],
+  dependencies: Readonly<UpdateDependencies>,
+): Promise<void> {
+  await Effect.runPromise(updateProgram(args, dependencies));
 }
 
 function cliProgram(
   args: readonly string[],
 ): ReturnType<typeof updateNewerPinVersion<LatestVersionError, PackageHashError>> {
-  return updateProgram(args, fetchJsonClient);
+  return updateProgram(args, { jsonClient: fetchJsonClient, pinFilePath: PIN_FILE_PATH });
 }
 
 runUpdateScript(import.meta.url, cliProgram);
 
-export { main };
+export { main, updateProgram };
+export type { UpdateDependencies };

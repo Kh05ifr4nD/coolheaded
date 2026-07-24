@@ -23,6 +23,13 @@ const GITHUB_SOURCE = {
   tag: (version: string): string => `v${version}`,
 };
 
+interface UpdateDependencies {
+  readonly jsonClient: JsonClient;
+  readonly pinFilePath: string;
+  readonly repositoryRootPath: string;
+  readonly runner: CommandRunner;
+}
+
 function latestVersion(jsonClient: JsonClient): ReturnType<typeof latestGitHubVersion> {
   return latestGitHubVersion({ owner: GITHUB_SOURCE.owner, repo: GITHUB_SOURCE.repo }, jsonClient);
 }
@@ -35,19 +42,27 @@ function prepareSourceWorkspace(
   return prepareGitHubTagTarballWorkspace(GITHUB_SOURCE, workspacePath, version, runner);
 }
 
-function writeUpdatedPin(version: string, runner: CommandRunner): Effect.Effect<void, Error> {
+function writeUpdatedPin(
+  version: string,
+  dependencies: Readonly<UpdateDependencies>,
+): Effect.Effect<void, Error> {
   return Effect.gen(function* writeUpdatedPinSteps(): Effect.fn.Return<void, Error> {
     const { npmLock, sourceHash } = yield* Effect.all({
       npmLock: generatedNpmPackageLock({
         prepareWorkspace: (workspacePath: string): Effect.Effect<void, Error> =>
-          prepareSourceWorkspace(workspacePath, version, runner),
-        repositoryRootPath: REPOSITORY_ROOT_PATH,
-        runner,
+          prepareSourceWorkspace(workspacePath, version, dependencies.runner),
+        repositoryRootPath: dependencies.repositoryRootPath,
+        runner: dependencies.runner,
       }),
-      sourceHash: fetchGitHubSourceHash(GITHUB_SOURCE, version, REPOSITORY_ROOT_PATH, runner),
+      sourceHash: fetchGitHubSourceHash(
+        GITHUB_SOURCE,
+        version,
+        dependencies.repositoryRootPath,
+        dependencies.runner,
+      ),
     });
 
-    yield* writePinJson(PIN_FILE_PATH, {
+    yield* writePinJson(dependencies.pinFilePath, {
       npmVendorHash: npmLock.npmVendorHash,
       sourceHash: sourceHash.trim(),
       version,
@@ -57,29 +72,33 @@ function writeUpdatedPin(version: string, runner: CommandRunner): Effect.Effect<
 
 function updateProgram(
   args: readonly string[],
-  runner: CommandRunner,
-  jsonClient: JsonClient,
+  dependencies: Readonly<UpdateDependencies>,
 ): Effect.Effect<void, Error> {
   return updateNewerPinVersion(
     args,
-    (): ReturnType<typeof latestVersion> => latestVersion(jsonClient),
-    PIN_FILE_PATH,
-    (version: string): Effect.Effect<void, Error> => writeUpdatedPin(version, runner),
+    (): ReturnType<typeof latestVersion> => latestVersion(dependencies.jsonClient),
+    dependencies.pinFilePath,
+    (version: string): Effect.Effect<void, Error> => writeUpdatedPin(version, dependencies),
   );
 }
 
 async function main(
   args: readonly string[],
-  runner: CommandRunner,
-  jsonClient: JsonClient,
+  dependencies: Readonly<UpdateDependencies>,
 ): Promise<void> {
-  await Effect.runPromise(updateProgram(args, runner, jsonClient));
+  await Effect.runPromise(updateProgram(args, dependencies));
 }
 
 function cliProgram(args: readonly string[], runner: CommandRunner): Effect.Effect<void, Error> {
-  return updateProgram(args, runner, fetchJsonClient);
+  return updateProgram(args, {
+    jsonClient: fetchJsonClient,
+    pinFilePath: PIN_FILE_PATH,
+    repositoryRootPath: REPOSITORY_ROOT_PATH,
+    runner,
+  });
 }
 
 runUpdateScript(import.meta.url, cliProgram);
 
-export { main };
+export { main, updateProgram };
+export type { UpdateDependencies };

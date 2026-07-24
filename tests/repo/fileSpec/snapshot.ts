@@ -5,16 +5,16 @@ import {
   withTemporaryDirectory,
   writeRepositoryFixture,
 } from "./fixture.ts";
-import type {
-  RepositorySnapshot,
-  SnapshotChangedComponent,
-  ToolIdentity,
-} from "coolheaded/repo/fileSpec/model.ts";
+import { assertEquals, assertInstanceOf, assertStrictEquals } from "@jsr/std__assert";
 import { describe, it } from "@jsr/std__testing/bdd";
-import { assertEquals } from "@jsr/std__assert";
 import { assertType } from "@jsr/std__testing/types";
 import { changedSnapshotComponents } from "coolheaded/repo/fileSpec/check.ts";
 import { repositorySnapshot } from "coolheaded/repo/fileSpec/git.ts";
+import { snapshotChangedError } from "coolheaded/repo/fileSpec/model.ts";
+
+type RepositorySnapshot = Parameters<typeof changedSnapshotComponents>[0];
+type SnapshotChangedComponent = ReturnType<typeof changedSnapshotComponents>[number];
+type ToolIdentity = RepositorySnapshot["tools"]["cue"];
 
 const COMPONENTS = [
   "enumerationSha256",
@@ -104,6 +104,19 @@ async function executableVersion(executable: string, args: readonly string[]): P
 }
 
 describe("snapshot identity", (): void => {
+  it("constructs exact snapshot change errors", (): void => {
+    const changedComponents: readonly SnapshotChangedComponent[] = ["head"];
+    const error = snapshotChangedError("before", "after", changedComponents);
+
+    assertInstanceOf(error, Error);
+    assertEquals(error.message, "repository changed while fileSpec was being checked");
+    assertEquals(error.kind, "snapshotChanged");
+    assertEquals(error.name, "SnapshotChangedError");
+    assertEquals(error.beforeFingerprint, "before");
+    assertEquals(error.afterFingerprint, "after");
+    assertStrictEquals(error.changedComponents, changedComponents);
+  });
+
   it("attributes every changed component exactly", (): void => {
     for (const component of COMPONENTS) {
       assertEquals(changedSnapshotComponents(SNAPSHOT, changedSnapshot(component)), [component]);

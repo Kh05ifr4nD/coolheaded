@@ -38,10 +38,12 @@ package fileSpec
 		".gitignore"?:     #RegularFile
 		"actionlint.yml"?: #RegularFile
 		ci?: {
-			".gitignore"?: #RegularFile
-			"impact.ts"?:  #RegularFile
-			"model.ts"?:   #RegularFile
-			"process.ts"?: #RegularFile
+			".gitignore"?:        #RegularFile
+			"coverage.ts"?:       #RegularFile
+			"coveragePolicy.ts"?: #RegularFile
+			"impact.ts"?:         #RegularFile
+			"model.ts"?:          #RegularFile
+			"process.ts"?:        #RegularFile
 			update?: {
 				"branch.ts"?:      #RegularFile
 				"discover.ts"?:    #RegularFile
@@ -164,6 +166,8 @@ package fileSpec
 	tests?: {
 		ci?: {
 			"changeImpact.ts"?:          #RegularFile
+			"coverage.ts"?:              #RegularFile
+			"coveragePolicy.ts"?:        #RegularFile
 			"denoDependenciesRun.ts"?:   #RegularFile
 			"fileSystemPermissions.ts"?: #RegularFile
 			"flakeInputRun.ts"?:         #RegularFile
@@ -174,6 +178,7 @@ package fileSpec
 			"runtimePermissions.ts"?:    #RegularFile
 			"taskTopology.ts"?:          #RegularFile
 			"updateControl.ts"?:         #RegularFile
+			"updateDiscovery.ts"?:       #RegularFile
 			"updateGit.ts"?:             #RegularFile
 			"updateGitBranch.ts"?:       #RegularFile
 			"updateGitFixture.ts"?:      #RegularFile
@@ -200,6 +205,7 @@ package fileSpec
 			"packageHashUpdate.ts"?: #RegularFile
 			"platformHash.ts"?:      #RegularFile
 			"registry.ts"?:          #RegularFile
+			"tarball.ts"?:           #RegularFile
 		}
 		pin?: {
 			"jsonOrder.ts"?:         #RegularFile
@@ -207,6 +213,7 @@ package fileSpec
 			"sriHash.ts"?:           #RegularFile
 		}
 		repo?: {
+			"fileSpecCli.ts"?:  #RegularFile
 			"pathProperty.ts"?: #RegularFile
 			fileSpec?: {
 				"conformance.ts"?:     #RegularFile
@@ -241,10 +248,18 @@ package fileSpec
 			"checksumPackage.ts"?:        #RegularFile
 			"checksumPackageFixture.ts"?: #RegularFile
 			"checksumPackageHttp.ts"?:    #RegularFile
+			"deno.ts"?:                   #RegularFile
+			"grokBuild.ts"?:              #RegularFile
 			"httpPassThrough.ts"?:        #RegularFile
+			"nixfmt.ts"?:                 #RegularFile
+			"ohMyOpenAgent.ts"?:          #RegularFile
+			"oxfmt.ts"?:                  #RegularFile
+			"paseo.ts"?:                  #RegularFile
+			"qmd.ts"?:                    #RegularFile
 			"releaseHash.ts"?:            #RegularFile
 			"rustPackage.ts"?:            #RegularFile
 			"stateProperty.ts"?:          #RegularFile
+			"uvLock.ts"?:                 #RegularFile
 		}
 	}
 }
@@ -262,10 +277,12 @@ package fileSpec
 		".gitignore"!:     #RegularFile
 		"actionlint.yml"!: #RegularFile
 		ci!: {
-			".gitignore"!: #RegularFile
-			"impact.ts"!:  #RegularFile
-			"model.ts"!:   #RegularFile
-			"process.ts"!: #RegularFile
+			".gitignore"!:        #RegularFile
+			"coverage.ts"!:       #RegularFile
+			"coveragePolicy.ts"!: #RegularFile
+			"impact.ts"!:         #RegularFile
+			"model.ts"!:          #RegularFile
+			"process.ts"!:        #RegularFile
 			update!: {
 				"branch.ts"!:      #RegularFile
 				"discover.ts"!:    #RegularFile
@@ -388,6 +405,8 @@ package fileSpec
 	tests!: {
 		ci!: {
 			"changeImpact.ts"!:          #RegularFile
+			"coverage.ts"!:              #RegularFile
+			"coveragePolicy.ts"!:        #RegularFile
 			"denoDependenciesRun.ts"!:   #RegularFile
 			"fileSystemPermissions.ts"!: #RegularFile
 			"flakeInputRun.ts"!:         #RegularFile
@@ -398,6 +417,7 @@ package fileSpec
 			"runtimePermissions.ts"!:    #RegularFile
 			"taskTopology.ts"!:          #RegularFile
 			"updateControl.ts"!:         #RegularFile
+			"updateDiscovery.ts"!:       #RegularFile
 			"updateGit.ts"!:             #RegularFile
 			"updateGitBranch.ts"!:       #RegularFile
 			"updateGitFixture.ts"!:      #RegularFile
@@ -424,6 +444,7 @@ package fileSpec
 			"packageHashUpdate.ts"!: #RegularFile
 			"platformHash.ts"!:      #RegularFile
 			"registry.ts"!:          #RegularFile
+			"tarball.ts"!:           #RegularFile
 		}
 		pin!: {
 			"jsonOrder.ts"!:         #RegularFile
@@ -431,6 +452,7 @@ package fileSpec
 			"sriHash.ts"!:           #RegularFile
 		}
 		repo!: {
+			"fileSpecCli.ts"!:  #RegularFile
 			"pathProperty.ts"!: #RegularFile
 			fileSpec!: {
 				"conformance.ts"!:     #RegularFile
@@ -465,10 +487,18 @@ package fileSpec
 			"checksumPackage.ts"!:        #RegularFile
 			"checksumPackageFixture.ts"!: #RegularFile
 			"checksumPackageHttp.ts"!:    #RegularFile
+			"deno.ts"!:                   #RegularFile
+			"grokBuild.ts"!:              #RegularFile
 			"httpPassThrough.ts"!:        #RegularFile
+			"nixfmt.ts"!:                 #RegularFile
+			"ohMyOpenAgent.ts"!:          #RegularFile
+			"oxfmt.ts"!:                  #RegularFile
+			"paseo.ts"!:                  #RegularFile
+			"qmd.ts"!:                    #RegularFile
 			"releaseHash.ts"!:            #RegularFile
 			"rustPackage.ts"!:            #RegularFile
 			"stateProperty.ts"!:          #RegularFile
+			"uvLock.ts"!:                 #RegularFile
 		}
 	}
 }

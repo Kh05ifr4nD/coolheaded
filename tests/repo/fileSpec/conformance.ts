@@ -1,9 +1,24 @@
+import { assertRejects, assertThrows } from "@jsr/std__assert";
 import { describe, it } from "@jsr/std__testing/bdd";
 import { runGit, withTemporaryDirectory, writeRepositoryFixture } from "./fixture.ts";
-import { assertRejects } from "@jsr/std__assert";
 import { checkFileSpec } from "coolheaded/repo/fileSpec/check.ts";
+import { fileSpec } from "coolheaded/repo/fileSpec/model.ts";
 
 describe("tree conformance boundaries", (): void => {
+  it("rejects invalid and conflicting git paths", (): void => {
+    assertThrows((): void => void fileSpec([""]), Error, "Invalid git path");
+    assertThrows(
+      (): void => void fileSpec(["tree/leaf.ts", "tree"]),
+      Error,
+      "Git path conflicts with directory",
+    );
+    assertThrows(
+      (): void => void fileSpec(["leaf.ts", "leaf.ts/child"]),
+      Error,
+      "Git path conflicts with file",
+    );
+  });
+
   it("rejects tracked paths hidden by ignore rules", async (): Promise<void> => {
     await withTemporaryDirectory(async (repositoryRoot: string): Promise<void> => {
       await writeRepositoryFixture(repositoryRoot, {

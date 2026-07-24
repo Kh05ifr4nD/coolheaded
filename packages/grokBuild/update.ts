@@ -10,6 +10,11 @@ const REQUEST_TIMEOUT_MS = 30_000;
 const STABLE_URL = "https://x.ai/cli/stable";
 type ReleaseTargets = Parameters<typeof releaseUrlsFromTargets>[0];
 
+interface UpdateDependencies {
+  readonly httpClient: HttpClient;
+  readonly pinFilePath: string;
+}
+
 const GROK_RELEASE_TARGETS = {
   "aarch64-darwin": "macos-aarch64",
   "aarch64-linux": "linux-aarch64",
@@ -50,15 +55,15 @@ function latestVersion(
 
 function updateProgram(
   args: readonly string[],
-  httpClient: HttpClient,
+  dependencies: Readonly<UpdateDependencies>,
 ): ReturnType<
   typeof releaseHashUpdateProgram<Effect.Effect.Error<ReturnType<typeof latestVersion>>>
 > {
   return releaseHashUpdateProgram({
     args,
-    httpClient,
-    latestVersion: (): ReturnType<typeof latestVersion> => latestVersion(httpClient),
-    pinFilePath: PIN_FILE_PATH,
+    httpClient: dependencies.httpClient,
+    latestVersion: (): ReturnType<typeof latestVersion> => latestVersion(dependencies.httpClient),
+    pinFilePath: dependencies.pinFilePath,
     source: "sha256Digest",
     urlsForVersion: (version: string) =>
       releaseUrlsFromTargets(
@@ -68,8 +73,11 @@ function updateProgram(
   });
 }
 
-async function main(args: readonly string[], httpClient: HttpClient): Promise<void> {
-  await Effect.runPromise(updateProgram(args, httpClient));
+async function main(
+  args: readonly string[],
+  dependencies: Readonly<UpdateDependencies>,
+): Promise<void> {
+  await Effect.runPromise(updateProgram(args, dependencies));
 }
 
 function cliProgram(
@@ -77,9 +85,10 @@ function cliProgram(
 ): ReturnType<
   typeof releaseHashUpdateProgram<Effect.Effect.Error<ReturnType<typeof latestVersion>>>
 > {
-  return updateProgram(args, fetchHttpClient);
+  return updateProgram(args, { httpClient: fetchHttpClient, pinFilePath: PIN_FILE_PATH });
 }
 
 runUpdateScript(import.meta.url, cliProgram);
 
-export { main };
+export { main, updateProgram };
+export type { UpdateDependencies };

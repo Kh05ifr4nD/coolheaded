@@ -1,3 +1,7 @@
+import {
+  DENO_SNAPSHOT_HASH_FILE_PATH,
+  updateDenoSnapshotHash,
+} from "coolheaded/repo/denoSnapshot.ts";
 import type { HttpClient, JsonClient } from "coolheaded/core/httpClient.ts";
 import {
   commandOutput,
@@ -10,7 +14,6 @@ import { releaseHashConfig, releaseUrlsFromTargets } from "coolheaded/update/rel
 import type { CommandRunner } from "coolheaded/core/commandRunner.ts";
 import { Effect } from "effect";
 import { latestGitHubVersion } from "coolheaded/source/githubVersion.ts";
-import { updateDenoSnapshotHash } from "coolheaded/repo/denoSnapshot.ts";
 import { writePackageHashConfig } from "coolheaded/pin/json.ts";
 
 const DENO_RELEASE_VERSION_PREFIX = "v";
@@ -18,6 +21,7 @@ const PIN_FILE_PATH = scriptPath("pin.json", import.meta.url);
 type ReleaseTargets = Parameters<typeof releaseUrlsFromTargets>[0];
 
 interface UpdateDependencies {
+  readonly denoSnapshotFilePath: string;
   readonly httpClient: HttpClient;
   readonly jsonClient: JsonClient;
   readonly pinFilePath: string;
@@ -76,7 +80,12 @@ function updateProgram(
                   catch(error: unknown): Error {
                     return error instanceof Error ? error : new Error(String(error));
                   },
-                  try: (): Promise<void> => updateDenoSnapshotHash(system, dependencies.runner),
+                  try: (): Promise<void> =>
+                    updateDenoSnapshotHash(
+                      system,
+                      dependencies.runner,
+                      dependencies.denoSnapshotFilePath,
+                    ),
                 }),
             ),
           ),
@@ -90,6 +99,7 @@ async function main(args: readonly string[], dependencies: UpdateDependencies): 
 
 function cliProgram(args: readonly string[], runner: CommandRunner): Effect.Effect<void, Error> {
   return updateProgram(args, {
+    denoSnapshotFilePath: DENO_SNAPSHOT_HASH_FILE_PATH,
     httpClient: fetchHttpClient,
     jsonClient: fetchJsonClient,
     pinFilePath: PIN_FILE_PATH,

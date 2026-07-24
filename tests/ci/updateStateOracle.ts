@@ -10,7 +10,12 @@ import type { ExpectedCommand } from "coolheadedTestSupport/commandRunner.ts";
 const success = { code: 0, stderr: "", stdout: "" };
 
 function requests(commands: readonly ExpectedCommand[]): readonly CommandRequest[] {
-  return commands.map((command: ExpectedCommand): CommandRequest => command.request);
+  return commands.map((command: ExpectedCommand): CommandRequest => {
+    if (command.request === undefined) {
+      throw new Error("expected fixed command request");
+    }
+    return command.request;
+  });
 }
 
 function branchCommands(branch: string, scenario: BranchScenario): readonly ExpectedCommand[] {

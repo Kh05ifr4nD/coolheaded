@@ -27,6 +27,12 @@
       "coolheadedPackageCodeGraph": ["./packages/codeGraph/update.ts"],
       "coolheadedPackageDeno": ["./packages/deno/update.ts"],
       "coolheadedPackageEntire": ["./packages/entire/update.ts"],
+      "coolheadedPackageGrokBuild": ["./packages/grokBuild/update.ts"],
+      "coolheadedPackageNixfmt": ["./packages/nixfmt/update.ts"],
+      "coolheadedPackageOhMyOpenAgent": ["./packages/oh-my-openAgent/update.ts"],
+      "coolheadedPackageOxfmt": ["./packages/oxfmt/update.ts"],
+      "coolheadedPackagePaseo": ["./packages/paseo/update.ts"],
+      "coolheadedPackageQmd": ["./packages/qmd/update.ts"],
       "coolheadedTestSupport/*": ["./tests/support/*"]
     },
     "resolveJsonModule": true,

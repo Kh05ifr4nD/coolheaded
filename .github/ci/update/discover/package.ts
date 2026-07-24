@@ -38,21 +38,12 @@ function filteredNames(): readonly string[] | null {
   return packages === undefined || packages.length === 0 ? null : packages.split(/\s+/u);
 }
 
-async function discoverPackage(runner: CommandRunner): Promise<readonly MatrixItem[]> {
-  const config = JSON.stringify({
-    filter: filteredNames(),
-    system: await currentSystem(runner),
-  });
-  const result = await run(runner, ["nix", "eval", "--json", "--impure", "--expr", NIX_EXPR], {
-    capture: true,
-    env: { DISCOVERY_CONFIG: config },
-  });
-  const parsedVersions: unknown = JSON.parse(result.stdout);
-  if (!isRecord(parsedVersions)) {
+function packageUpdates(value: unknown): readonly MatrixItem[] {
+  if (!isRecord(value)) {
     throw new Error("Invalid package discovery JSON");
   }
 
-  return Object.entries(parsedVersions)
+  return Object.entries(value)
     .flatMap((entry: readonly [string, unknown]): readonly MatrixItem[] => {
       const [name, currentVersion] = entry;
       return typeof currentVersion === "string" ? [{ currentVersion, name }] : [];
@@ -62,8 +53,23 @@ async function discoverPackage(runner: CommandRunner): Promise<readonly MatrixIt
     );
 }
 
+async function discoverPackage(
+  runner: CommandRunner,
+  filter: readonly string[] | null,
+): Promise<readonly MatrixItem[]> {
+  const config = JSON.stringify({
+    filter,
+    system: await currentSystem(runner),
+  });
+  const result = await run(runner, ["nix", "eval", "--json", "--impure", "--expr", NIX_EXPR], {
+    capture: true,
+    env: { DISCOVERY_CONFIG: config },
+  });
+  return packageUpdates(JSON.parse(result.stdout));
+}
+
 async function main(): Promise<void> {
-  const include = await discoverPackage(denoCommandRunner);
+  const include = await discoverPackage(denoCommandRunner, filteredNames());
   await writeOutput("matrix", JSON.stringify({ include }));
   await writeOutput("hasUpdates", String(include.length > 0));
 }
@@ -72,4 +78,5 @@ if (import.meta.main) {
   void main();
 }
 
-export { discoverPackage };
+export { NIX_EXPR, discoverPackage, packageUpdates };
+export type { MatrixItem };

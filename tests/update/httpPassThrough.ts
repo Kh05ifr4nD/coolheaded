@@ -206,6 +206,7 @@ Deno.test("Deno update preserves release HTTP error before snapshot work", async
     await assertFailure(
       (): ReturnType<typeof updateDeno> =>
         updateDeno(["1.0.1"], {
+          denoSnapshotFilePath: `${pin.directory}/snapshot.nix`,
           httpClient: http.client,
           jsonClient: json.client,
           pinFilePath: pin.path,
