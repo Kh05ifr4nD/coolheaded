@@ -40,7 +40,7 @@ describe("Deno task topology", (): void => {
     assertEquals(tasks["check"], "deno task check:types && deno task check:fileSpec");
     assertEquals(
       tasks["test:pure"],
-      "deno test --allow-env=FAST_CHECK_SEED,FAST_CHECK_PATH,FAST_CHECK_RUNS tests/ci/changeImpact.ts tests/ci/pullRequest.ts tests/ci/runtimePermissions.ts tests/core/version.ts tests/nix/denoDependencies.ts tests/nix/denoSnapshot.ts tests/pin/packageHashConfig.ts",
+      "deno test --allow-env=FAST_CHECK_SEED,FAST_CHECK_PATH,FAST_CHECK_RUNS tests/ci/changeImpact.ts tests/ci/pullRequest.ts tests/ci/runtimePermissions.ts tests/core/fastCheck.ts tests/core/version.ts tests/nix/denoDependencies.ts tests/nix/denoSnapshot.ts tests/pin/packageHashConfig.ts tests/pin/sriHash.ts tests/repo/pathProperty.ts tests/update/stateProperty.ts",
     );
     assertEquals(
       tasks["test:integration:env"],

@@ -1,5 +1,6 @@
 import { UpdateError, updateNewerPinVersion } from "coolheaded/core/updateScript.ts";
 import { Effect } from "effect";
+import { formatSriHash } from "coolheaded/pin/sriHash.ts";
 import { parsePackageHashConfig } from "coolheaded/pin/packageHashConfig.ts";
 import { systemRecord } from "coolheaded/system/target.ts";
 import { writePackageHashConfig } from "coolheaded/pin/json.ts";
@@ -8,6 +9,7 @@ const HEX_BYTE_WIDTH = 2;
 const HEX_RADIX = 16;
 
 type ReleaseHashSource = "sha256Digest" | "sha256Sum";
+type SriHash = ReturnType<typeof formatSriHash>;
 type SupportedSystem = Parameters<Parameters<typeof systemRecord>[0]>[0];
 type PackageHashConfig = ReturnType<typeof parsePackageHashConfig>;
 type ReleaseTargets = Readonly<Record<SupportedSystem, string>>;
@@ -60,11 +62,11 @@ function hexToBytes(hex: string): Uint8Array {
   return Uint8Array.from(bytes);
 }
 
-function bytesToSha256SRI(bytes: readonly number[]): string {
-  return `sha256-${globalThis.btoa(String.fromCodePoint(...bytes))}`;
+function bytesToSha256SRI(bytes: readonly number[]): SriHash {
+  return formatSriHash("sha256", bytes);
 }
 
-function hexSha256ToSRI(hex: string): string {
+function hexSha256ToSRI(hex: string): SriHash {
   return bytesToSha256SRI([...hexToBytes(hex)]);
 }
 
@@ -75,15 +77,15 @@ function releaseUrlsFromTargets(
   return systemRecord((system: SupportedSystem): string => urlForTarget(targets[system]));
 }
 
-function fetchSha256SumHash(url: string): Effect.Effect<string, UpdateError> {
+function fetchSha256SumHash(url: string): Effect.Effect<SriHash, UpdateError> {
   return Effect.flatMap(
     fetchText(url),
-    (text: string): Effect.Effect<string, UpdateError> =>
+    (text: string): Effect.Effect<SriHash, UpdateError> =>
       Effect.map(parseSha256Hex(text, url), hexSha256ToSRI),
   );
 }
 
-function fetchSha256DigestHash(url: string): Effect.Effect<string, UpdateError> {
+function fetchSha256DigestHash(url: string): Effect.Effect<SriHash, UpdateError> {
   return Effect.tryPromise({
     catch(error: unknown): UpdateError {
       if (error instanceof UpdateError) {
@@ -92,7 +94,7 @@ function fetchSha256DigestHash(url: string): Effect.Effect<string, UpdateError> 
 
       return new UpdateError(`Failed to fetch ${url}`);
     },
-    async try(): Promise<string> {
+    async try(): Promise<SriHash> {
       const response = await globalThis.fetch(url);
       if (!response.ok) {
         throw new UpdateError(`Failed to fetch ${url}: HTTP ${response.status}`);
@@ -104,7 +106,7 @@ function fetchSha256DigestHash(url: string): Effect.Effect<string, UpdateError> 
   });
 }
 
-function hashForUrl(source: ReleaseHashSource, url: string): Effect.Effect<string, UpdateError> {
+function hashForUrl(source: ReleaseHashSource, url: string): Effect.Effect<SriHash, UpdateError> {
   switch (source) {
     case "sha256Digest": {
       return fetchSha256DigestHash(url);
@@ -121,10 +123,10 @@ function hashForUrl(source: ReleaseHashSource, url: string): Effect.Effect<strin
 function releaseHashes(
   urls: ReleaseUrls,
   source: ReleaseHashSource,
-): Effect.Effect<Readonly<Record<SupportedSystem, string>>, UpdateError> {
+): Effect.Effect<Readonly<Record<SupportedSystem, SriHash>>, UpdateError> {
   return Effect.all(
     systemRecord(
-      (system: SupportedSystem): Effect.Effect<string, UpdateError> =>
+      (system: SupportedSystem): Effect.Effect<SriHash, UpdateError> =>
         hashForUrl(source, urls[system]),
     ),
   );
@@ -137,7 +139,7 @@ function releaseHashConfig(
 ): Effect.Effect<PackageHashConfig, UpdateError> {
   return Effect.map(
     releaseHashes(urls, source),
-    (platformPackageHashes: Readonly<Record<SupportedSystem, string>>): PackageHashConfig =>
+    (platformPackageHashes: Readonly<Record<SupportedSystem, SriHash>>): PackageHashConfig =>
       parsePackageHashConfig({ platformPackageHashes, version }),
   );
 }

@@ -1,5 +1,5 @@
+import { compareVersions, isSemver } from "coolheaded/core/version.ts";
 import { Effect } from "effect";
-import { compareVersions } from "coolheaded/core/version.ts";
 
 interface RuntimeWritable {
   readonly write: (bytes: unknown) => Promise<number>;
@@ -119,6 +119,12 @@ function readTextFile(path: string): Effect.Effect<string, UpdateError> {
   });
 }
 
+function semverVersion(version: string, source: string): Effect.Effect<string, UpdateError> {
+  return isSemver(version)
+    ? Effect.succeed(version)
+    : Effect.fail(new UpdateError(`${source} is not valid SemVer: ${version}`));
+}
+
 function currentPinVersion(pinPath: string): Effect.Effect<string, Error> {
   return Effect.flatMap(
     readTextFile(pinPath),
@@ -133,10 +139,14 @@ function currentPinVersion(pinPath: string): Effect.Effect<string, Error> {
             return Effect.fail(new UpdateError(`${pinPath} does not contain a string version`));
           }
 
-          return Effect.succeed(pin["version"]);
+          return semverVersion(pin["version"], `${pinPath} version`);
         },
       ),
   );
+}
+
+function newerPinVersion(currentVersion: string, candidateVersion: string): string | undefined {
+  return compareVersions(currentVersion, candidateVersion) < 0 ? candidateVersion : undefined;
 }
 
 function requestedOrNewerPinVersion(
@@ -147,12 +157,16 @@ function requestedOrNewerPinVersion(
   const [version] = args;
 
   if (typeof version === "string" && version.length > 0) {
-    return Effect.succeed(version);
+    return semverVersion(version, "Requested version");
   }
 
   return Effect.flatMap(currentPinVersion(pinPath), (currentVersion: string) =>
-    Effect.map(latestVersion(), (candidateVersion: string): string | undefined =>
-      compareVersions(currentVersion, candidateVersion) < 0 ? candidateVersion : undefined,
+    Effect.flatMap(latestVersion(), (candidateVersion: string) =>
+      Effect.map(
+        semverVersion(candidateVersion, "Latest version"),
+        (validCandidateVersion: string): string | undefined =>
+          newerPinVersion(currentVersion, validCandidateVersion),
+      ),
     ),
   );
 }
@@ -246,6 +260,7 @@ export {
   commandOutput,
   denoRuntime,
   formatNixFile,
+  newerPinVersion,
   readTextFile,
   requestedOrLatestVersion,
   requestedOrNewerPinVersion,

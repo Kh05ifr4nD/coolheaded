@@ -1,15 +1,25 @@
+import type {
+  InvalidPackageHashConfigError,
+  PackageHashConfig,
+} from "coolheaded/pin/packageHashConfig.ts";
 import type { IsAny, IsExact, IsUnknown } from "./testingTypes.ts";
+import type { SriHash, parseSriHash } from "coolheaded/pin/sriHash.ts";
 import type { npmHashConfigForSystems, npmHashesForSystems } from "coolheaded/npm/platformHash.ts";
 import type { Effect } from "effect";
 import type { InvalidNpmMetadataError } from "coolheaded/npm/registry.ts";
-import type { PackageHashConfig } from "coolheaded/pin/packageHashConfig.ts";
 import type { SupportedSystem } from "coolheaded/system/target.ts";
 import { assertType } from "@jsr/std__testing/types";
 
-type ReadonlyHashes = Readonly<Record<SupportedSystem, string>>;
+type ReadonlyHashes = Readonly<Record<SupportedSystem, SriHash>>;
 type NpmHashesEffect = ReturnType<typeof npmHashesForSystems>;
 type NpmHashConfigEffect = ReturnType<typeof npmHashConfigForSystems>;
 
+assertType<"sha256-invalid" extends SriHash ? true : false>(false);
+assertType<"sha256-AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA=" extends SriHash ? true : false>(
+  false,
+);
+assertType<string extends SriHash ? true : false>(false);
+assertType<IsExact<ReturnType<typeof parseSriHash>, SriHash>>(true);
 assertType<
   IsExact<
     PackageHashConfig,
@@ -27,6 +37,9 @@ assertType<
 >(true);
 assertType<IsAny<NpmHashesEffect>>(false);
 assertType<IsUnknown<NpmHashesEffect>>(false);
-assertType<IsExact<NpmHashConfigEffect, Effect.Effect<PackageHashConfig, InvalidNpmMetadataError>>>(
-  true,
-);
+assertType<
+  IsExact<
+    NpmHashConfigEffect,
+    Effect.Effect<PackageHashConfig, InvalidNpmMetadataError | InvalidPackageHashConfigError>
+  >
+>(true);

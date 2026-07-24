@@ -1,3 +1,4 @@
+import { assertProperty, defineReplayTarget } from "coolheadedTestSupport/fastCheck.ts";
 import { compareVersions, isSemver } from "coolheaded/core/version.ts";
 import { describe, it } from "@jsr/std__testing/bdd";
 import { assertEquals } from "@jsr/std__assert";
@@ -17,13 +18,19 @@ const nonnumericPrereleaseIdentifier = fc.stringMatching(
   /^(?:[A-Za-z-][0-9A-Za-z-]{0,15}|[0-9][0-9A-Za-z-]{0,14}[A-Za-z-][0-9A-Za-z-]*)$/u,
 );
 const prereleaseIdentifier = fc.oneof(numericPrereleaseIdentifier, nonnumericPrereleaseIdentifier);
+const prerelease = fc
+  .array(prereleaseIdentifier, { maxLength: 4, minLength: 1 })
+  .map((identifiers: readonly string[]): string => identifiers.join("."));
+const buildMetadata = fc
+  .array(buildIdentifier, { maxLength: 4, minLength: 1 })
+  .map((identifiers: readonly string[]): string => identifiers.join("."));
 const precedenceVersion = fc
-  .tuple(coreVersion, fc.option(prereleaseIdentifier, { nil: undefined }))
-  .map(([core, prerelease]: readonly [string, string | undefined]): string =>
-    prerelease === undefined ? core : `${core}-${prerelease}`,
+  .tuple(coreVersion, fc.option(prerelease, { nil: undefined }))
+  .map(([core, prereleaseValue]: readonly [string, string | undefined]): string =>
+    prereleaseValue === undefined ? core : `${core}-${prereleaseValue}`,
   );
 const fullVersion = fc
-  .tuple(precedenceVersion, fc.option(buildIdentifier, { nil: undefined }))
+  .tuple(precedenceVersion, fc.option(buildMetadata, { nil: undefined }))
   .map(([precedence, build]: readonly [string, string | undefined]): string =>
     build === undefined ? precedence : `${precedence}+${build}`,
   );
@@ -99,81 +106,91 @@ describe("SemVer", (): void => {
   it("orders nonnumeric prerelease identifiers lexically", (): void => {
     assertEquals(compareVersions("1.0.0-0E-0", "1.0.0-0E-1") < 0, true);
   });
+});
 
-  it("accepts all generated valid versions", (): void => {
-    fc.assert(
-      fc.property(fullVersion, (version: string): void => {
-        assertEquals(isSemver(version), true);
-      }),
-    );
-  });
+const validName = "SemVer accepts all generated valid versions";
+Deno.test(validName, (): void => {
+  assertProperty(
+    defineReplayTarget("tests/core/version.ts", validName),
+    fc.property(fullVersion, (version: string): void => {
+      assertEquals(isSemver(version), true);
+    }),
+  );
+});
 
-  it("is reflexive and antisymmetric", (): void => {
-    fc.assert(
-      fc.property(fullVersion, fullVersion, (left: string, right: string): void => {
-        assertEquals(compareVersions(left, left), 0);
-        assertEquals(
-          Math.sign(compareVersions(left, right)),
-          -Math.sign(compareVersions(right, left)),
-        );
-      }),
-    );
-  });
+const symmetryName = "SemVer comparison is reflexive and antisymmetric";
+Deno.test(symmetryName, (): void => {
+  assertProperty(
+    defineReplayTarget("tests/core/version.ts", symmetryName),
+    fc.property(fullVersion, fullVersion, (left: string, right: string): void => {
+      assertEquals(compareVersions(left, left), 0);
+      assertEquals(
+        Math.sign(compareVersions(left, right)),
+        -Math.sign(compareVersions(right, left)),
+      );
+    }),
+  );
+});
 
-  it("is transitive", (): void => {
-    fc.assert(
-      fc.property(
-        fullVersion,
-        fullVersion,
-        fullVersion,
-        (left: string, middle: string, right: string): void => {
-          if (compareVersions(left, middle) <= 0 && compareVersions(middle, right) <= 0) {
-            assertEquals(compareVersions(left, middle) <= 0, true);
-            assertEquals(compareVersions(middle, right) <= 0, true);
-            assertEquals(compareVersions(left, right) <= 0, true);
-          }
-          if (compareVersions(left, middle) >= 0 && compareVersions(middle, right) >= 0) {
-            assertEquals(compareVersions(left, right) >= 0, true);
-          }
-        },
-      ),
-    );
-  });
+const transitiveName = "SemVer comparison is transitive";
+Deno.test(transitiveName, (): void => {
+  assertProperty(
+    defineReplayTarget("tests/core/version.ts", transitiveName),
+    fc.property(
+      fullVersion,
+      fullVersion,
+      fullVersion,
+      (left: string, middle: string, right: string): void => {
+        if (compareVersions(left, middle) <= 0 && compareVersions(middle, right) <= 0) {
+          assertEquals(compareVersions(left, right) <= 0, true);
+        }
+        if (compareVersions(left, middle) >= 0 && compareVersions(middle, right) >= 0) {
+          assertEquals(compareVersions(left, right) >= 0, true);
+        }
+      },
+    ),
+  );
+});
 
-  it("ignores arbitrary build metadata", (): void => {
-    fc.assert(
-      fc.property(
-        precedenceVersion,
-        buildIdentifier,
-        buildIdentifier,
-        (version: string, leftBuild: string, rightBuild: string): void => {
-          assertEquals(compareVersions(`${version}+${leftBuild}`, `${version}+${rightBuild}`), 0);
-        },
-      ),
-    );
-  });
+const buildName = "SemVer comparison ignores generated build metadata";
+Deno.test(buildName, (): void => {
+  assertProperty(
+    defineReplayTarget("tests/core/version.ts", buildName),
+    fc.property(
+      precedenceVersion,
+      buildMetadata,
+      buildMetadata,
+      (version: string, leftBuild: string, rightBuild: string): void => {
+        assertEquals(compareVersions(`${version}+${leftBuild}`, `${version}+${rightBuild}`), 0);
+      },
+    ),
+  );
+});
 
-  it("parses independently formatted versions without changing precedence", (): void => {
-    fc.assert(
-      fc.property(precedenceVersion, buildIdentifier, (version: string, build: string): void => {
-        const formatted = `${version}+${build}`;
+const formatName = "SemVer parses independently formatted generated versions";
+Deno.test(formatName, (): void => {
+  assertProperty(
+    defineReplayTarget("tests/core/version.ts", formatName),
+    fc.property(precedenceVersion, buildMetadata, (version: string, build: string): void => {
+      const formatted = `${version}+${build}`;
 
-        assertEquals(isSemver(formatted), true);
-        assertEquals(compareVersions(formatted, formatted), 0);
-        assertEquals(compareVersions(formatted, version), 0);
-      }),
-    );
-  });
+      assertEquals(isSemver(formatted), true);
+      assertEquals(compareVersions(formatted, formatted), 0);
+      assertEquals(compareVersions(formatted, version), 0);
+    }),
+  );
+});
 
-  it("orders prerelease before corresponding release", (): void => {
-    fc.assert(
-      fc.property(
-        coreVersion,
-        prereleaseIdentifier,
-        (version: string, prerelease: string): void => {
-          assertEquals(compareVersions(`${version}-${prerelease}`, version) < 0, true);
-        },
-      ),
-    );
-  });
+const prereleaseName = "SemVer orders generated prereleases before releases";
+Deno.test(prereleaseName, (): void => {
+  assertProperty(
+    defineReplayTarget("tests/core/version.ts", prereleaseName),
+    fc.property(
+      coreVersion,
+      prereleaseIdentifier,
+      (version: string, prereleaseValue: string): void => {
+        assertEquals(compareVersions(`${version}-${prereleaseValue}`, version) < 0, true);
+      },
+    ),
+  );
 });

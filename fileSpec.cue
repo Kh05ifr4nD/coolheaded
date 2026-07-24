@@ -123,6 +123,7 @@ package fileSpec
 			pin?: {
 				"json.ts"?:              #RegularFile
 				"packageHashConfig.ts"?: #RegularFile
+				"sriHash.ts"?:           #RegularFile
 			}
 			repo?: {
 				"denoSnapshot.ts"?: #RegularFile
@@ -164,7 +165,8 @@ package fileSpec
 			"updatePackage.ts"?:         #RegularFile
 		}
 		core?: {
-			"version.ts"?: #RegularFile
+			"fastCheck.ts"?: #RegularFile
+			"version.ts"?:   #RegularFile
 		}
 		nix?: {
 			"denoDependencies.ts"?: #RegularFile
@@ -176,8 +178,10 @@ package fileSpec
 		}
 		pin?: {
 			"packageHashConfig.ts"?: #RegularFile
+			"sriHash.ts"?:           #RegularFile
 		}
 		repo?: {
+			"pathProperty.ts"?: #RegularFile
 			fileSpec?: {
 				"packageStructure.ts"?: #RegularFile
 			}
@@ -186,14 +190,17 @@ package fileSpec
 			"version.ts"?: #RegularFile
 		}
 		support?: {
-			"fetchMock.ts"?: #RegularFile
+			"fastCheck.ts"?:      #RegularFile
+			"fastCheckError.ts"?: #RegularFile
+			"fetchMock.ts"?:      #RegularFile
 		}
 		type?: {
 			"packageHashTypes.ts"?: #RegularFile
 			"testingTypes.ts"?:     #RegularFile
 		}
 		update?: {
-			"releaseHash.ts"?: #RegularFile
+			"releaseHash.ts"?:   #RegularFile
+			"stateProperty.ts"?: #RegularFile
 		}
 	}
 }
@@ -296,6 +303,7 @@ package fileSpec
 			pin!: {
 				"json.ts"!:              #RegularFile
 				"packageHashConfig.ts"!: #RegularFile
+				"sriHash.ts"!:           #RegularFile
 			}
 			repo!: {
 				"denoSnapshot.ts"!: #RegularFile
@@ -337,7 +345,8 @@ package fileSpec
 			"updatePackage.ts"!:         #RegularFile
 		}
 		core!: {
-			"version.ts"!: #RegularFile
+			"fastCheck.ts"!: #RegularFile
+			"version.ts"!:   #RegularFile
 		}
 		nix!: {
 			"denoDependencies.ts"!: #RegularFile
@@ -349,8 +358,10 @@ package fileSpec
 		}
 		pin!: {
 			"packageHashConfig.ts"!: #RegularFile
+			"sriHash.ts"!:           #RegularFile
 		}
 		repo!: {
+			"pathProperty.ts"!: #RegularFile
 			fileSpec!: {
 				"packageStructure.ts"!: #RegularFile
 			}
@@ -359,14 +370,17 @@ package fileSpec
 			"version.ts"!: #RegularFile
 		}
 		support!: {
-			"fetchMock.ts"!: #RegularFile
+			"fastCheck.ts"!:      #RegularFile
+			"fastCheckError.ts"!: #RegularFile
+			"fetchMock.ts"!:      #RegularFile
 		}
 		type!: {
 			"packageHashTypes.ts"!: #RegularFile
 			"testingTypes.ts"!:     #RegularFile
 		}
 		update!: {
-			"releaseHash.ts"!: #RegularFile
+			"releaseHash.ts"!:   #RegularFile
+			"stateProperty.ts"!: #RegularFile
 		}
 	}
 }

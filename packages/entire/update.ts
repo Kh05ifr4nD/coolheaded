@@ -4,6 +4,7 @@ import {
   updateNewerPinVersion,
 } from "coolheaded/core/updateScript.ts";
 import { Effect } from "effect";
+import type { SriHash } from "coolheaded/pin/sriHash.ts";
 import { hexSha256ToSRI } from "coolheaded/update/release.ts";
 import { latestGitHubVersion } from "coolheaded/source/version.ts";
 import { systemRecord } from "coolheaded/system/target.ts";
@@ -47,7 +48,7 @@ function fetchChecksums(version: string): Effect.Effect<string, Error> {
   });
 }
 
-function assetHash(checksums: string, asset: string): Effect.Effect<string, Error> {
+function assetHash(checksums: string, asset: string): Effect.Effect<SriHash, Error> {
   const line = checksums
     .split("\n")
     .find((entry: string): boolean => entry.trim().endsWith(` ${asset}`));
@@ -66,10 +67,10 @@ function assetHash(checksums: string, asset: string): Effect.Effect<string, Erro
 
 function platformPackageHashes(
   checksums: string,
-): Effect.Effect<Readonly<Record<SupportedSystem, string>>, Error> {
+): Effect.Effect<Readonly<Record<SupportedSystem, SriHash>>, Error> {
   return Effect.all(
     systemRecord(
-      (system: SupportedSystem): Effect.Effect<string, Error> =>
+      (system: SupportedSystem): Effect.Effect<SriHash, Error> =>
         assetHash(checksums, RELEASE_ASSETS[system]),
     ),
   );

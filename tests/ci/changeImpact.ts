@@ -7,10 +7,12 @@ import {
   checksFromInput,
   comparesCheckedOutBase,
 } from "coolheadedCi/impact.ts";
+import { assertProperty, defineReplayTarget } from "coolheadedTestSupport/fastCheck.ts";
 import { describe, it } from "@jsr/std__testing/bdd";
 import { SUPPORTED_SYSTEMS } from "coolheaded/system/target.ts";
 import { activatedCheckKind } from "coolheadedCi/model.ts";
 import { assertEquals } from "@jsr/std__assert";
+import fc from "fast-check";
 
 describe("CI change impact discovery", (): void => {
   it("keeps CI runner targets aligned with supported systems", (): void => {
@@ -187,4 +189,67 @@ describe("CI change impact discovery", (): void => {
     ]);
     assertEquals(checksFromChangedFiles([".github/ci/impact.ts"], available), []);
   });
+});
+
+const MAX_CHECK_IDENTIFIER = 1_000_000;
+const checkIdentifiers = fc.uniqueArray(fc.integer({ max: MAX_CHECK_IDENTIFIER, min: 0 }), {
+  minLength: 1,
+});
+const derivationName = "change impact selects exactly generated changed derivations";
+Deno.test(derivationName, (): void => {
+  assertProperty(
+    defineReplayTarget("tests/ci/changeImpact.ts", derivationName),
+    fc.property(
+      checkIdentifiers,
+      fc.nat(),
+      (identifiers: readonly number[], selectedIndex: number): void => {
+        const names = identifiers.map((identifier: number): string => `check${identifier}`);
+        const changedName = names.at(selectedIndex % names.length);
+        if (changedName === undefined) {
+          throw new TypeError("Generated check names must not be empty");
+        }
+        const before = Object.fromEntries(
+          names.map((name: string): readonly [string, string] => [name, `/old/${name}`]),
+        );
+        const after = {
+          ...before,
+          added: "/new/added",
+          [changedName]: `/new/${changedName}`,
+        };
+
+        assertEquals(changedDerivationChecks(before, after), ["added", changedName].toSorted());
+      },
+    ),
+  );
+});
+
+const pathImpactName = "change impact classifies generated package home and global paths";
+Deno.test(pathImpactName, (): void => {
+  assertProperty(
+    defineReplayTarget("tests/ci/changeImpact.ts", pathImpactName),
+    fc.property(fc.stringMatching(/^[a-z][a-z0-9]{0,15}$/u), (prefix: string): void => {
+      const owned = [prefix, `${prefix}Full`].toSorted();
+      const unrelated = `unrelated-${prefix}`;
+      const all = [...owned, unrelated].toSorted();
+      const available = {
+        "aarch64-darwin": [prefix, `${prefix}Full`, unrelated],
+        "aarch64-linux": [`${prefix}Full`, unrelated],
+        "x86_64-linux": [prefix, unrelated],
+      };
+
+      assertEquals(
+        checksFromChangedFiles(
+          [`packages/${prefix}/package.nix`, `homeModules/${prefix}.nix`],
+          available,
+        ),
+        owned,
+      );
+      assertEquals(checksFromChangedFiles([`unknown/${prefix}.nix`], available), all);
+      assertEquals(checksFromChangedFiles([`lib/ts/${prefix}.ts`], available), all);
+      assertEquals(
+        checksFromChangedFiles([`.github/ci/${prefix}.ts`, `tests/ci/${prefix}.ts`], available),
+        [],
+      );
+    }),
+  );
 });

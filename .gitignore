@@ -27,6 +27,7 @@
 !/tests/pin/
 !/tests/pin/*.ts
 !/tests/repo/
+!/tests/repo/pathProperty.ts
 !/tests/repo/fileSpec/
 !/tests/repo/fileSpec/*.ts
 !/tests/source/

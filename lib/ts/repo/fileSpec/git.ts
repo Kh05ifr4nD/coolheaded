@@ -559,6 +559,7 @@ export {
   MAX_CONCURRENT_FILE_SPEC_PROCESSES,
   commandOutput,
   gitIndexEntriesFrom,
+  gitPaths,
   gitPathsFrom,
   ignoredFilePaths,
   ignoredIndexPathDetails,

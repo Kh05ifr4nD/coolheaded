@@ -4,12 +4,12 @@ import { Effect } from "effect";
 import type { NpmPackageMetadata } from "coolheaded/npm/metadata.ts";
 import { latestNpmVersion } from "coolheaded/source/version.ts";
 import { npmHashConfigForSystems } from "coolheaded/npm/platformHash.ts";
-import { parsePackageHashConfig } from "coolheaded/pin/packageHashConfig.ts";
+import { packageHashConfig } from "coolheaded/pin/packageHashConfig.ts";
 import { systemRecord } from "coolheaded/system/target.ts";
 import { writePackageHashConfig } from "coolheaded/pin/json.ts";
 
+type PackageHashConfig = Effect.Effect.Success<ReturnType<typeof packageHashConfig>>;
 type SupportedSystem = Parameters<Parameters<typeof systemRecord>[0]>[0];
-type PackageHashConfig = ReturnType<typeof parsePackageHashConfig>;
 type PlatformPackageSuffixes = Readonly<Record<SupportedSystem, string>>;
 
 interface NpmPackageHashUpdateOptions {
@@ -81,10 +81,10 @@ function npmPackageHashConfig(
   packageName: string,
   version: string,
 ): Effect.Effect<PackageHashConfig, Error> {
-  return Effect.map(
+  return Effect.flatMap(
     npmPackageHash(packageName, version),
-    (hash: string): PackageHashConfig =>
-      parsePackageHashConfig({
+    (hash: string): Effect.Effect<PackageHashConfig, Error> =>
+      packageHashConfig({
         platformPackageHashes: systemRecord((_system: SupportedSystem): string => hash),
         version,
       }),
