@@ -1,6 +1,8 @@
 import { runUpdateScript, scriptPath } from "coolheaded/core/updateScript.ts";
 import type { CommandRunner } from "coolheaded/core/commandRunner.ts";
 import { Effect } from "effect";
+import type { JsonClient } from "coolheaded/core/httpClient.ts";
+import { fetchJsonClient } from "coolheaded/core/fetchHttpClient.ts";
 import { latestPyPiVersion } from "coolheaded/source/version.ts";
 import { updateVersionedNixpkgsPythonUvLock } from "coolheaded/update/uvLock.ts";
 
@@ -11,8 +13,8 @@ const REPOSITORY_ROOT_PATH = scriptPath("../../", import.meta.url);
 const UV_LOCK_FILE_PATH = scriptPath("uv.lock", import.meta.url);
 type UvProject = ReturnType<Parameters<typeof updateVersionedNixpkgsPythonUvLock>[0]["project"]>;
 
-function latestVersion(): Effect.Effect<string, Error> {
-  return latestPyPiVersion(PYPI_PACKAGE_NAME);
+function latestVersion(jsonClient: JsonClient): ReturnType<typeof latestPyPiVersion> {
+  return latestPyPiVersion(PYPI_PACKAGE_NAME, jsonClient);
 }
 
 function project(version: string, pythonMinorVersion: string): UvProject {
@@ -25,10 +27,14 @@ function project(version: string, pythonMinorVersion: string): UvProject {
   };
 }
 
-function updateProgram(args: readonly string[], runner: CommandRunner): Effect.Effect<void, Error> {
+function updateProgram(
+  args: readonly string[],
+  runner: CommandRunner,
+  jsonClient: JsonClient,
+): Effect.Effect<void, Error> {
   return updateVersionedNixpkgsPythonUvLock({
     args,
-    latestVersion,
+    latestVersion: (): Effect.Effect<string, Error> => latestVersion(jsonClient),
     pinFilePath: PIN_FILE_PATH,
     project,
     pythonPackage: PYTHON_PACKAGE,
@@ -38,10 +44,18 @@ function updateProgram(args: readonly string[], runner: CommandRunner): Effect.E
   });
 }
 
-async function main(args: readonly string[], runner: CommandRunner): Promise<void> {
-  await Effect.runPromise(updateProgram(args, runner));
+async function main(
+  args: readonly string[],
+  runner: CommandRunner,
+  jsonClient: JsonClient,
+): Promise<void> {
+  await Effect.runPromise(updateProgram(args, runner, jsonClient));
 }
 
-runUpdateScript(import.meta.url, updateProgram);
+function cliProgram(args: readonly string[], runner: CommandRunner): Effect.Effect<void, Error> {
+  return updateProgram(args, runner, fetchJsonClient);
+}
+
+runUpdateScript(import.meta.url, cliProgram);
 
 export { main };

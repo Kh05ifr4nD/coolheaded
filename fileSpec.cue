@@ -109,6 +109,8 @@ package fileSpec
 			core?: {
 				"commandRunner.ts"?:      #RegularFile
 				"denoCommandRunner.ts"?:  #RegularFile
+				"fetchHttpClient.ts"?:    #RegularFile
+				"httpClient.ts"?:         #RegularFile
 				"temporaryDirectory.ts"?: #RegularFile
 				"updateScript.ts"?:       #RegularFile
 				"version.ts"?:            #RegularFile
@@ -137,17 +139,19 @@ package fileSpec
 				}
 			}
 			source?: {
-				"github.ts"?:  #RegularFile
-				"version.ts"?: #RegularFile
+				"github.ts"?:        #RegularFile
+				"githubVersion.ts"?: #RegularFile
+				"version.ts"?:       #RegularFile
 			}
 			system?: {
 				"target.ts"?:    #RegularFile
 				"targets.json"?: #RegularFile
 			}
 			update?: {
-				"release.ts"?:     #RegularFile
-				"rustPackage.ts"?: #RegularFile
-				"uvLock.ts"?:      #RegularFile
+				"checksumManifest.ts"?: #RegularFile
+				"release.ts"?:          #RegularFile
+				"rustPackage.ts"?:      #RegularFile
+				"uvLock.ts"?:           #RegularFile
 			}
 		}
 	}
@@ -192,7 +196,10 @@ package fileSpec
 			"systems.ts"?:          #RegularFile
 		}
 		npm?: {
-			"packageHash.ts"?: #RegularFile
+			"packageHash.ts"?:       #RegularFile
+			"packageHashUpdate.ts"?: #RegularFile
+			"platformHash.ts"?:      #RegularFile
+			"registry.ts"?:          #RegularFile
 		}
 		pin?: {
 			"jsonOrder.ts"?:         #RegularFile
@@ -213,22 +220,31 @@ package fileSpec
 			}
 		}
 		source?: {
-			"version.ts"?: #RegularFile
+			"githubVersion.ts"?: #RegularFile
+			"httpClient.ts"?:    #RegularFile
+			"jsonClient.ts"?:    #RegularFile
+			"version.ts"?:       #RegularFile
 		}
 		support?: {
 			"commandRunner.ts"?:  #RegularFile
 			"fastCheck.ts"?:      #RegularFile
 			"fastCheckError.ts"?: #RegularFile
-			"fetchMock.ts"?:      #RegularFile
+			"httpClient.ts"?:     #RegularFile
 		}
 		type?: {
-			"packageHashTypes.ts"?: #RegularFile
-			"testingTypes.ts"?:     #RegularFile
+			"packageHashTypes.ts"?:  #RegularFile
+			"testingTypes.ts"?:      #RegularFile
+			"updateScriptTypes.ts"?: #RegularFile
 		}
 		update?: {
-			"releaseHash.ts"?:   #RegularFile
-			"rustPackage.ts"?:   #RegularFile
-			"stateProperty.ts"?: #RegularFile
+			"checksumManifest.ts"?:       #RegularFile
+			"checksumPackage.ts"?:        #RegularFile
+			"checksumPackageFixture.ts"?: #RegularFile
+			"checksumPackageHttp.ts"?:    #RegularFile
+			"httpPassThrough.ts"?:        #RegularFile
+			"releaseHash.ts"?:            #RegularFile
+			"rustPackage.ts"?:            #RegularFile
+			"stateProperty.ts"?:          #RegularFile
 		}
 	}
 }
@@ -317,6 +333,8 @@ package fileSpec
 			core!: {
 				"commandRunner.ts"!:      #RegularFile
 				"denoCommandRunner.ts"!:  #RegularFile
+				"fetchHttpClient.ts"!:    #RegularFile
+				"httpClient.ts"!:         #RegularFile
 				"temporaryDirectory.ts"!: #RegularFile
 				"updateScript.ts"!:       #RegularFile
 				"version.ts"!:            #RegularFile
@@ -345,17 +363,19 @@ package fileSpec
 				}
 			}
 			source!: {
-				"github.ts"!:  #RegularFile
-				"version.ts"!: #RegularFile
+				"github.ts"!:        #RegularFile
+				"githubVersion.ts"!: #RegularFile
+				"version.ts"!:       #RegularFile
 			}
 			system!: {
 				"target.ts"!:    #RegularFile
 				"targets.json"!: #RegularFile
 			}
 			update!: {
-				"release.ts"!:     #RegularFile
-				"rustPackage.ts"!: #RegularFile
-				"uvLock.ts"!:      #RegularFile
+				"checksumManifest.ts"!: #RegularFile
+				"release.ts"!:          #RegularFile
+				"rustPackage.ts"!:      #RegularFile
+				"uvLock.ts"!:           #RegularFile
 			}
 		}
 	}
@@ -400,7 +420,10 @@ package fileSpec
 			"systems.ts"!:          #RegularFile
 		}
 		npm!: {
-			"packageHash.ts"!: #RegularFile
+			"packageHash.ts"!:       #RegularFile
+			"packageHashUpdate.ts"!: #RegularFile
+			"platformHash.ts"!:      #RegularFile
+			"registry.ts"!:          #RegularFile
 		}
 		pin!: {
 			"jsonOrder.ts"!:         #RegularFile
@@ -421,22 +444,31 @@ package fileSpec
 			}
 		}
 		source!: {
-			"version.ts"!: #RegularFile
+			"githubVersion.ts"!: #RegularFile
+			"httpClient.ts"!:    #RegularFile
+			"jsonClient.ts"!:    #RegularFile
+			"version.ts"!:       #RegularFile
 		}
 		support!: {
 			"commandRunner.ts"!:  #RegularFile
 			"fastCheck.ts"!:      #RegularFile
 			"fastCheckError.ts"!: #RegularFile
-			"fetchMock.ts"!:      #RegularFile
+			"httpClient.ts"!:     #RegularFile
 		}
 		type!: {
-			"packageHashTypes.ts"!: #RegularFile
-			"testingTypes.ts"!:     #RegularFile
+			"packageHashTypes.ts"!:  #RegularFile
+			"testingTypes.ts"!:      #RegularFile
+			"updateScriptTypes.ts"!: #RegularFile
 		}
 		update!: {
-			"releaseHash.ts"!:   #RegularFile
-			"rustPackage.ts"!:   #RegularFile
-			"stateProperty.ts"!: #RegularFile
+			"checksumManifest.ts"!:       #RegularFile
+			"checksumPackage.ts"!:        #RegularFile
+			"checksumPackageFixture.ts"!: #RegularFile
+			"checksumPackageHttp.ts"!:    #RegularFile
+			"httpPassThrough.ts"!:        #RegularFile
+			"releaseHash.ts"!:            #RegularFile
+			"rustPackage.ts"!:            #RegularFile
+			"stateProperty.ts"!:          #RegularFile
 		}
 	}
 }

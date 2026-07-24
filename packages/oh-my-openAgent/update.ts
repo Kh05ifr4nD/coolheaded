@@ -4,6 +4,8 @@ import {
   updateNewerPinVersion,
 } from "coolheaded/core/updateScript.ts";
 import { Effect } from "effect";
+import type { JsonClient } from "coolheaded/core/httpClient.ts";
+import { fetchJsonClient } from "coolheaded/core/fetchHttpClient.ts";
 import { latestNpmVersion } from "coolheaded/source/version.ts";
 import { npmPackageHash } from "coolheaded/npm/packageHash.ts";
 import { systemRecord } from "coolheaded/system/target.ts";
@@ -11,6 +13,8 @@ import { writePinJson } from "coolheaded/pin/json.ts";
 
 const NPM_PACKAGE_NAME = "oh-my-openagent";
 const PIN_FILE_PATH = scriptPath("pin.json", import.meta.url);
+type LatestVersionError = Effect.Effect.Error<ReturnType<typeof latestNpmVersion>>;
+type PackageHashError = Effect.Effect.Error<ReturnType<typeof npmPackageHash>>;
 type SupportedSystem = Parameters<Parameters<typeof systemRecord>[0]>[0];
 
 interface OhMyOpenagentPin {
@@ -25,50 +29,67 @@ const PLATFORM_PACKAGES = {
   "x86_64-linux": "oh-my-openagent-linux-x64",
 } as const satisfies Readonly<Record<SupportedSystem, string>>;
 
-function latestVersion(): Effect.Effect<string, Error> {
-  return latestNpmVersion(NPM_PACKAGE_NAME);
+function latestVersion(jsonClient: JsonClient): ReturnType<typeof latestNpmVersion> {
+  return latestNpmVersion(NPM_PACKAGE_NAME, jsonClient);
 }
 
-function packageHash(packageName: string, version: string): Effect.Effect<string, Error> {
-  return npmPackageHash(packageName, version);
+function packageHash(
+  packageName: string,
+  version: string,
+  jsonClient: JsonClient,
+): ReturnType<typeof npmPackageHash> {
+  return npmPackageHash(packageName, version, jsonClient);
 }
 
 function platformHashes(
   version: string,
-): Effect.Effect<Readonly<Record<SupportedSystem, string>>, Error> {
+  jsonClient: JsonClient,
+): Effect.Effect<Readonly<Record<SupportedSystem, string>>, PackageHashError> {
   return Effect.all(
     systemRecord(
-      (system: SupportedSystem): Effect.Effect<string, Error> =>
-        packageHash(PLATFORM_PACKAGES[system], version),
+      (system: SupportedSystem): ReturnType<typeof npmPackageHash> =>
+        packageHash(PLATFORM_PACKAGES[system], version, jsonClient),
     ),
   );
 }
 
-function packagePin(version: string): Effect.Effect<OhMyOpenagentPin, Error> {
+function packagePin(
+  version: string,
+  jsonClient: JsonClient,
+): Effect.Effect<OhMyOpenagentPin, PackageHashError> {
   return Effect.all({
-    packageHash: packageHash(NPM_PACKAGE_NAME, version),
-    platformPackageHashes: platformHashes(version),
+    packageHash: packageHash(NPM_PACKAGE_NAME, version, jsonClient),
+    platformPackageHashes: platformHashes(version, jsonClient),
     version: Effect.succeed(version),
   });
 }
 
-function updateProgram(args: readonly string[]): Effect.Effect<void, Error> {
+function updateProgram(
+  args: readonly string[],
+  jsonClient: JsonClient,
+): ReturnType<typeof updateNewerPinVersion<LatestVersionError, PackageHashError>> {
   return updateNewerPinVersion(
     args,
-    latestVersion,
+    (): ReturnType<typeof latestNpmVersion> => latestVersion(jsonClient),
     PIN_FILE_PATH,
-    (version: string): Effect.Effect<void, Error> =>
+    (version: string): Effect.Effect<void, PackageHashError> =>
       Effect.flatMap(
-        packagePin(version),
+        packagePin(version, jsonClient),
         (pin): Effect.Effect<void> => writePinJson(PIN_FILE_PATH, pin),
       ),
   );
 }
 
-async function main(args: readonly string[]): Promise<void> {
-  await Effect.runPromise(updateProgram(args));
+async function main(args: readonly string[], jsonClient: JsonClient): Promise<void> {
+  await Effect.runPromise(updateProgram(args, jsonClient));
 }
 
-runUpdateScript(import.meta.url, updateProgram);
+function cliProgram(
+  args: readonly string[],
+): ReturnType<typeof updateNewerPinVersion<LatestVersionError, PackageHashError>> {
+  return updateProgram(args, fetchJsonClient);
+}
+
+runUpdateScript(import.meta.url, cliProgram);
 
 export { main };

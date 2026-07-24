@@ -24,6 +24,9 @@
     "paths": {
       "coolheaded/*": ["./lib/ts/*"],
       "coolheadedCi/*": ["./.github/ci/*"],
+      "coolheadedPackageCodeGraph": ["./packages/codeGraph/update.ts"],
+      "coolheadedPackageDeno": ["./packages/deno/update.ts"],
+      "coolheadedPackageEntire": ["./packages/entire/update.ts"],
       "coolheadedTestSupport/*": ["./tests/support/*"]
     },
     "resolveJsonModule": true,

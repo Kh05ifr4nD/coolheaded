@@ -1,9 +1,12 @@
+import type { HttpClient, HttpClientError, HttpResponse } from "coolheaded/core/httpClient.ts";
 import { UpdateError, runUpdateScript, scriptPath } from "coolheaded/core/updateScript.ts";
 import { releaseHashUpdateProgram, releaseUrlsFromTargets } from "coolheaded/update/release.ts";
 import { Effect } from "effect";
+import { fetchHttpClient } from "coolheaded/core/fetchHttpClient.ts";
 import { isSemver } from "coolheaded/core/version.ts";
 
 const PIN_FILE_PATH = scriptPath("pin.json", import.meta.url);
+const REQUEST_TIMEOUT_MS = 30_000;
 const STABLE_URL = "https://x.ai/cli/stable";
 type ReleaseTargets = Parameters<typeof releaseUrlsFromTargets>[0];
 
@@ -13,32 +16,48 @@ const GROK_RELEASE_TARGETS = {
   "x86_64-linux": "linux-x86_64",
 } as const satisfies ReleaseTargets;
 
-function latestVersion(): Effect.Effect<string, Error> {
-  return Effect.tryPromise({
-    catch(error: unknown): Error {
-      return error instanceof UpdateError ? error : new UpdateError(String(error));
-    },
-    async try(): Promise<string> {
-      const response = await globalThis.fetch(STABLE_URL);
-      if (!response.ok) {
-        throw new UpdateError(`Failed to fetch ${STABLE_URL}: HTTP ${response.status}`);
-      }
+function latestVersion(
+  httpClient: Readonly<HttpClient>,
+): Effect.Effect<string, HttpClientError | UpdateError> {
+  return Effect.flatMap(
+    httpClient.request({
+      headers: {},
+      method: "GET",
+      timeoutMs: REQUEST_TIMEOUT_MS,
+      url: STABLE_URL,
+    }),
+    <Response extends HttpResponse>(
+      response: Readonly<Response>,
+    ): Effect.Effect<string, UpdateError> =>
+      Effect.flatMap(
+        Effect.try({
+          catch: (): UpdateError => new UpdateError(`Invalid UTF-8 response from ${STABLE_URL}`),
+          try: (): string =>
+            new globalThis.TextDecoder("utf8", { fatal: true }).decode(response.body).trim(),
+        }),
+        (version: string): Effect.Effect<string, UpdateError> => {
+          if (!isSemver(version)) {
+            return Effect.fail(
+              new UpdateError(`Invalid stable Grok version: ${JSON.stringify(version)}`),
+            );
+          }
 
-      const responseText = await response.text();
-      const version = responseText.trim();
-      if (!isSemver(version)) {
-        throw new UpdateError(`Invalid stable Grok version: ${JSON.stringify(version)}`);
-      }
-
-      return version;
-    },
-  });
+          return Effect.succeed(version);
+        },
+      ),
+  );
 }
 
-function updateProgram(args: readonly string[]): Effect.Effect<void, Error> {
+function updateProgram(
+  args: readonly string[],
+  httpClient: HttpClient,
+): ReturnType<
+  typeof releaseHashUpdateProgram<Effect.Effect.Error<ReturnType<typeof latestVersion>>>
+> {
   return releaseHashUpdateProgram({
     args,
-    latestVersion,
+    httpClient,
+    latestVersion: (): ReturnType<typeof latestVersion> => latestVersion(httpClient),
     pinFilePath: PIN_FILE_PATH,
     source: "sha256Digest",
     urlsForVersion: (version: string) =>
@@ -49,10 +68,18 @@ function updateProgram(args: readonly string[]): Effect.Effect<void, Error> {
   });
 }
 
-async function main(args: readonly string[]): Promise<void> {
-  await Effect.runPromise(updateProgram(args));
+async function main(args: readonly string[], httpClient: HttpClient): Promise<void> {
+  await Effect.runPromise(updateProgram(args, httpClient));
 }
 
-runUpdateScript(import.meta.url, updateProgram);
+function cliProgram(
+  args: readonly string[],
+): ReturnType<
+  typeof releaseHashUpdateProgram<Effect.Effect.Error<ReturnType<typeof latestVersion>>>
+> {
+  return updateProgram(args, fetchHttpClient);
+}
+
+runUpdateScript(import.meta.url, cliProgram);
 
 export { main };

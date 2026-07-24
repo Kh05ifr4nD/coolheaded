@@ -7,17 +7,16 @@ import {
 } from "coolheaded/core/updateScript.ts";
 import type { CommandRunner } from "coolheaded/core/commandRunner.ts";
 import { Effect } from "effect";
-import { latestGitHubVersion } from "coolheaded/source/version.ts";
+import type { JsonClient } from "coolheaded/core/httpClient.ts";
+import { fetchJsonClient } from "coolheaded/core/fetchHttpClient.ts";
+import { latestGitHubVersion } from "coolheaded/source/githubVersion.ts";
 
 const NIXFMT_RELEASE_VERSION_PREFIX = "v";
 const GENERATED_PACKAGE_FILE_PATH = scriptPath("generatedPackage.nix", import.meta.url);
 const REPOSITORY_ROOT_PATH = scriptPath("../../", import.meta.url);
 const GENERATED_PACKAGE_RELATIVE_PATH = "packages/nixfmt/generatedPackage.nix";
-function latestVersion(): Effect.Effect<string, Error> {
-  return latestGitHubVersion({
-    owner: "NixOS",
-    repo: "nixfmt",
-  });
+function latestVersion(jsonClient: JsonClient): ReturnType<typeof latestGitHubVersion> {
+  return latestGitHubVersion({ owner: "NixOS", repo: "nixfmt" }, jsonClient);
 }
 
 function sourceUrl(version: string): string {
@@ -58,9 +57,16 @@ function formatGeneratedPackage(runner: CommandRunner): Effect.Effect<void, Erro
   );
 }
 
-function updateProgram(args: readonly string[], runner: CommandRunner): Effect.Effect<void, Error> {
+function updateProgram(
+  args: readonly string[],
+  runner: CommandRunner,
+  jsonClient: JsonClient,
+): Effect.Effect<void, Error> {
   return Effect.flatMap(
-    requestedOrLatestVersion(args, latestVersion),
+    requestedOrLatestVersion(
+      args,
+      (): ReturnType<typeof latestVersion> => latestVersion(jsonClient),
+    ),
     (version: string): Effect.Effect<void, Error> =>
       Effect.flatMap(
         generatedPackageContents(version, runner),
@@ -73,10 +79,18 @@ function updateProgram(args: readonly string[], runner: CommandRunner): Effect.E
   );
 }
 
-async function main(args: readonly string[], runner: CommandRunner): Promise<void> {
-  await Effect.runPromise(updateProgram(args, runner));
+async function main(
+  args: readonly string[],
+  runner: CommandRunner,
+  jsonClient: JsonClient,
+): Promise<void> {
+  await Effect.runPromise(updateProgram(args, runner, jsonClient));
 }
 
-runUpdateScript(import.meta.url, updateProgram);
+function cliProgram(args: readonly string[], runner: CommandRunner): Effect.Effect<void, Error> {
+  return updateProgram(args, runner, fetchJsonClient);
+}
+
+runUpdateScript(import.meta.url, cliProgram);
 
 export { main };

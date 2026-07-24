@@ -17,9 +17,10 @@ interface DenoRuntime {
 }
 
 class UpdateError extends Error {
+  public override readonly name = "UpdateError";
+
   public constructor(message: string) {
     super(message);
-    this.name = "UpdateError";
   }
 }
 
@@ -68,10 +69,10 @@ function requestedVersion(
   return Effect.succeed(version);
 }
 
-function requestedOrLatestVersion(
+function requestedOrLatestVersion<LatestError extends Error>(
   args: readonly string[],
-  latestVersion: () => Effect.Effect<string, Error>,
-): Effect.Effect<string, Error> {
+  latestVersion: () => Effect.Effect<string, LatestError>,
+): Effect.Effect<string, LatestError> {
   const [version] = args;
 
   if (typeof version === "string" && version.length > 0) {
@@ -104,16 +105,16 @@ function semverVersion(version: string, source: string): Effect.Effect<string, U
     : Effect.fail(new UpdateError(`${source} is not valid SemVer: ${version}`));
 }
 
-function currentPinVersion(pinPath: string): Effect.Effect<string, Error> {
+function currentPinVersion(pinPath: string): Effect.Effect<string, UpdateError> {
   return Effect.flatMap(
     readTextFile(pinPath),
-    (contents: string): Effect.Effect<string, Error> =>
+    (contents: string): Effect.Effect<string, UpdateError> =>
       Effect.flatMap(
         Effect.try({
           catch: (): UpdateError => new UpdateError(`Failed to parse ${pinPath}`),
           try: (): unknown => JSON.parse(contents),
         }),
-        (pin: unknown): Effect.Effect<string, Error> => {
+        (pin: unknown): Effect.Effect<string, UpdateError> => {
           if (!isRecord(pin) || typeof pin["version"] !== "string" || pin["version"].length === 0) {
             return Effect.fail(new UpdateError(`${pinPath} does not contain a string version`));
           }
@@ -128,11 +129,11 @@ function newerPinVersion(currentVersion: string, candidateVersion: string): stri
   return compareVersions(currentVersion, candidateVersion) < 0 ? candidateVersion : undefined;
 }
 
-function requestedOrNewerPinVersion(
+function requestedOrNewerPinVersion<LatestError extends Error>(
   args: readonly string[],
-  latestVersion: () => Effect.Effect<string, Error>,
+  latestVersion: () => Effect.Effect<string, LatestError>,
   pinPath: string,
-): Effect.Effect<string | undefined, Error> {
+): Effect.Effect<string | undefined, LatestError | UpdateError> {
   const [version] = args;
 
   if (typeof version === "string" && version.length > 0) {
@@ -150,15 +151,15 @@ function requestedOrNewerPinVersion(
   );
 }
 
-function updateNewerPinVersion(
+function updateNewerPinVersion<LatestError extends Error, UpdateVersionError extends Error>(
   args: readonly string[],
-  latestVersion: () => Effect.Effect<string, Error>,
+  latestVersion: () => Effect.Effect<string, LatestError>,
   pinPath: string,
-  updateVersion: (version: string) => Effect.Effect<void, Error>,
-): Effect.Effect<void, Error> {
+  updateVersion: (version: string) => Effect.Effect<void, UpdateVersionError>,
+): Effect.Effect<void, LatestError | UpdateError | UpdateVersionError> {
   return Effect.flatMap(
     requestedOrNewerPinVersion(args, latestVersion, pinPath),
-    (version: string | undefined): Effect.Effect<void, Error> =>
+    (version: string | undefined): Effect.Effect<void, UpdateError | UpdateVersionError> =>
       version === undefined ? Effect.void : updateVersion(version),
   );
 }

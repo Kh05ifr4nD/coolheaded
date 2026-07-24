@@ -1,3 +1,9 @@
+import type {
+  HttpClient,
+  HttpClientError,
+  HttpRequest,
+  HttpResponse,
+} from "coolheaded/core/httpClient.ts";
 import { UpdateError, updateNewerPinVersion } from "coolheaded/core/updateScript.ts";
 import { Effect } from "effect";
 import { formatSriHash } from "coolheaded/pin/sriHash.ts";
@@ -7,6 +13,7 @@ import { writePackageHashConfig } from "coolheaded/pin/json.ts";
 
 const HEX_BYTE_WIDTH = 2;
 const HEX_RADIX = 16;
+const REQUEST_TIMEOUT_MS = 30_000;
 
 type ReleaseHashSource = "sha256Digest" | "sha256Sum";
 type SriHash = ReturnType<typeof formatSriHash>;
@@ -15,32 +22,33 @@ type PackageHashConfig = ReturnType<typeof parsePackageHashConfig>;
 type ReleaseTargets = Readonly<Record<SupportedSystem, string>>;
 type ReleaseUrls = Readonly<Record<SupportedSystem, string>>;
 
-interface ReleaseHashUpdateOptions {
+interface ReleaseHashUpdateOptions<LatestVersionError extends Error> {
   readonly args: readonly string[];
-  readonly latestVersion: () => Effect.Effect<string, Error>;
+  readonly httpClient: HttpClient;
+  readonly latestVersion: () => Effect.Effect<string, LatestVersionError>;
   readonly pinFilePath: string;
   readonly source: ReleaseHashSource;
   readonly urlsForVersion: (version: string) => ReleaseUrls;
 }
 
-function fetchText(url: string): Effect.Effect<string, UpdateError> {
-  return Effect.tryPromise({
-    catch(error: unknown): UpdateError {
-      if (error instanceof UpdateError) {
-        return error;
-      }
+function httpRequest(url: string): HttpRequest {
+  return { headers: {}, method: "GET", timeoutMs: REQUEST_TIMEOUT_MS, url };
+}
 
-      return new UpdateError(`Failed to fetch ${url}`);
-    },
-    async try(): Promise<string> {
-      const response = await globalThis.fetch(url);
-      if (!response.ok) {
-        throw new UpdateError(`Failed to fetch ${url}: HTTP ${response.status}`);
-      }
-
-      return await response.text();
-    },
+function responseText<Response extends HttpResponse>(
+  response: Response,
+): Effect.Effect<string, UpdateError> & Readonly<{ readonly response?: Response }> {
+  return Effect.try({
+    catch: (): UpdateError => new UpdateError(`Invalid UTF-8 response from ${response.url}`),
+    try: (): string => new globalThis.TextDecoder("utf8", { fatal: true }).decode(response.body),
   });
+}
+
+function fetchText(
+  url: string,
+  httpClient: Readonly<HttpClient>,
+): Effect.Effect<string, HttpClientError | UpdateError> {
+  return Effect.flatMap(httpClient.request(httpRequest(url)), responseText);
 }
 
 function parseSha256Hex(text: string, url: string): Effect.Effect<string, UpdateError> {
@@ -77,42 +85,50 @@ function releaseUrlsFromTargets(
   return systemRecord((system: SupportedSystem): string => urlForTarget(targets[system]));
 }
 
-function fetchSha256SumHash(url: string): Effect.Effect<SriHash, UpdateError> {
+function fetchSha256SumHash(
+  url: string,
+  httpClient: Readonly<HttpClient>,
+): Effect.Effect<SriHash, HttpClientError | UpdateError> {
   return Effect.flatMap(
-    fetchText(url),
+    fetchText(url, httpClient),
     (text: string): Effect.Effect<SriHash, UpdateError> =>
       Effect.map(parseSha256Hex(text, url), hexSha256ToSRI),
   );
 }
 
-function fetchSha256DigestHash(url: string): Effect.Effect<SriHash, UpdateError> {
-  return Effect.tryPromise({
-    catch(error: unknown): UpdateError {
-      if (error instanceof UpdateError) {
-        return error;
-      }
-
-      return new UpdateError(`Failed to fetch ${url}`);
-    },
-    async try(): Promise<SriHash> {
-      const response = await globalThis.fetch(url);
-      if (!response.ok) {
-        throw new UpdateError(`Failed to fetch ${url}: HTTP ${response.status}`);
-      }
-
-      const digest = await globalThis.crypto.subtle.digest("SHA-256", await response.arrayBuffer());
-      return bytesToSha256SRI([...new Uint8Array(digest)]);
-    },
-  });
+function fetchSha256DigestHash(
+  url: string,
+  httpClient: Readonly<HttpClient>,
+): Effect.Effect<SriHash, HttpClientError> {
+  return Effect.flatMap(
+    httpClient.request(httpRequest(url)),
+    <Response extends HttpResponse>(
+      response: Response,
+    ): Effect.Effect<SriHash> & Readonly<{ readonly response?: Response }> =>
+      Effect.map(
+        Effect.promise(
+          async (): Promise<readonly number[]> => [
+            ...new Uint8Array(
+              await globalThis.crypto.subtle.digest("SHA-256", Uint8Array.from(response.body)),
+            ),
+          ],
+        ),
+        bytesToSha256SRI,
+      ),
+  );
 }
 
-function hashForUrl(source: ReleaseHashSource, url: string): Effect.Effect<SriHash, UpdateError> {
+function hashForUrl(
+  source: ReleaseHashSource,
+  url: string,
+  httpClient: Readonly<HttpClient>,
+): Effect.Effect<SriHash, HttpClientError | UpdateError> {
   switch (source) {
     case "sha256Digest": {
-      return fetchSha256DigestHash(url);
+      return fetchSha256DigestHash(url, httpClient);
     }
     case "sha256Sum": {
-      return fetchSha256SumHash(url);
+      return fetchSha256SumHash(url, httpClient);
     }
     default: {
       return Effect.fail(new UpdateError("Unsupported release hash source"));
@@ -123,11 +139,12 @@ function hashForUrl(source: ReleaseHashSource, url: string): Effect.Effect<SriHa
 function releaseHashes(
   urls: ReleaseUrls,
   source: ReleaseHashSource,
-): Effect.Effect<Readonly<Record<SupportedSystem, SriHash>>, UpdateError> {
+  httpClient: Readonly<HttpClient>,
+): Effect.Effect<Readonly<Record<SupportedSystem, SriHash>>, HttpClientError | UpdateError> {
   return Effect.all(
     systemRecord(
-      (system: SupportedSystem): Effect.Effect<SriHash, UpdateError> =>
-        hashForUrl(source, urls[system]),
+      (system: SupportedSystem): Effect.Effect<SriHash, HttpClientError | UpdateError> =>
+        hashForUrl(source, urls[system], httpClient),
     ),
   );
 }
@@ -136,22 +153,30 @@ function releaseHashConfig(
   version: string,
   urls: ReleaseUrls,
   source: ReleaseHashSource,
-): Effect.Effect<PackageHashConfig, UpdateError> {
+  httpClient: Readonly<HttpClient>,
+): Effect.Effect<PackageHashConfig, HttpClientError | UpdateError> {
   return Effect.map(
-    releaseHashes(urls, source),
+    releaseHashes(urls, source, httpClient),
     (platformPackageHashes: Readonly<Record<SupportedSystem, SriHash>>): PackageHashConfig =>
       parsePackageHashConfig({ platformPackageHashes, version }),
   );
 }
 
-function releaseHashUpdateProgram(options: ReleaseHashUpdateOptions): Effect.Effect<void, Error> {
+function releaseHashUpdateProgram<LatestVersionError extends Error>(
+  options: ReleaseHashUpdateOptions<LatestVersionError>,
+): Effect.Effect<void, HttpClientError | LatestVersionError | UpdateError> {
   return updateNewerPinVersion(
     options.args,
     options.latestVersion,
     options.pinFilePath,
-    (version: string): Effect.Effect<void, Error> =>
+    (version: string): Effect.Effect<void, HttpClientError | UpdateError> =>
       Effect.flatMap(
-        releaseHashConfig(version, options.urlsForVersion(version), options.source),
+        releaseHashConfig(
+          version,
+          options.urlsForVersion(version),
+          options.source,
+          options.httpClient,
+        ),
         (config): Effect.Effect<void> => writePackageHashConfig(options.pinFilePath, config),
       ),
   );

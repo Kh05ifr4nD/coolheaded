@@ -9,6 +9,7 @@ import {
 import { generatedNpmPackageLock, prepareNpmTarballWorkspace } from "coolheaded/npm/lock.ts";
 import type { CommandRunner } from "coolheaded/core/commandRunner.ts";
 import { Effect } from "effect";
+import type { JsonClient } from "coolheaded/core/httpClient.ts";
 import { latestNpmVersion } from "coolheaded/source/version.ts";
 import { npmPackageHashConfig } from "coolheaded/npm/packageHash.ts";
 import { writePinJson } from "coolheaded/pin/json.ts";
@@ -16,6 +17,7 @@ import { writePinJson } from "coolheaded/pin/json.ts";
 interface NpmTarballPackageUpdate {
   readonly args: readonly string[];
   readonly importMetaUrl: string;
+  readonly jsonClient: JsonClient;
   readonly packageName: string;
   readonly runner: CommandRunner;
   readonly tarballBaseName?: string;
@@ -122,7 +124,7 @@ function updateNpmTarballPackage(options: NpmTarballPackageUpdate): Effect.Effec
 
   return updateNewerPinVersion(
     options.args,
-    (): Effect.Effect<string, Error> => latestNpmVersion(options.packageName),
+    (): Effect.Effect<string, Error> => latestNpmVersion(options.packageName, options.jsonClient),
     pinFilePath,
     (version: string): Effect.Effect<void, Error> =>
       Effect.flatMap(
@@ -133,7 +135,7 @@ function updateNpmTarballPackage(options: NpmTarballPackageUpdate): Effect.Effec
             repositoryRootPath,
             runner: options.runner,
           }),
-          packageConfig: npmPackageHashConfig(options.packageName, version),
+          packageConfig: npmPackageHashConfig(options.packageName, version, options.jsonClient),
         }),
         ({ npmLock, packageConfig }): Effect.Effect<void, Error> =>
           Effect.zipRight(

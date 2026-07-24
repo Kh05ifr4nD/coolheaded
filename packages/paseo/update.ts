@@ -9,8 +9,10 @@ import {
 } from "coolheaded/core/updateScript.ts";
 import type { CommandRunner } from "coolheaded/core/commandRunner.ts";
 import { Effect } from "effect";
+import type { JsonClient } from "coolheaded/core/httpClient.ts";
+import { fetchJsonClient } from "coolheaded/core/fetchHttpClient.ts";
 import { generatedNpmPackageLock } from "coolheaded/npm/lock.ts";
-import { latestGitHubVersion } from "coolheaded/source/version.ts";
+import { latestGitHubVersion } from "coolheaded/source/githubVersion.ts";
 import { writePinJson } from "coolheaded/pin/json.ts";
 
 const PIN_FILE_PATH = scriptPath("pin.json", import.meta.url);
@@ -21,11 +23,8 @@ const GITHUB_SOURCE = {
   tag: (version: string): string => `v${version}`,
 };
 
-function latestVersion(): Effect.Effect<string, Error> {
-  return latestGitHubVersion({
-    owner: GITHUB_SOURCE.owner,
-    repo: GITHUB_SOURCE.repo,
-  });
+function latestVersion(jsonClient: JsonClient): ReturnType<typeof latestGitHubVersion> {
+  return latestGitHubVersion({ owner: GITHUB_SOURCE.owner, repo: GITHUB_SOURCE.repo }, jsonClient);
 }
 
 function prepareSourceWorkspace(
@@ -56,19 +55,31 @@ function writeUpdatedPin(version: string, runner: CommandRunner): Effect.Effect<
   });
 }
 
-function updateProgram(args: readonly string[], runner: CommandRunner): Effect.Effect<void, Error> {
+function updateProgram(
+  args: readonly string[],
+  runner: CommandRunner,
+  jsonClient: JsonClient,
+): Effect.Effect<void, Error> {
   return updateNewerPinVersion(
     args,
-    latestVersion,
+    (): ReturnType<typeof latestVersion> => latestVersion(jsonClient),
     PIN_FILE_PATH,
     (version: string): Effect.Effect<void, Error> => writeUpdatedPin(version, runner),
   );
 }
 
-async function main(args: readonly string[], runner: CommandRunner): Promise<void> {
-  await Effect.runPromise(updateProgram(args, runner));
+async function main(
+  args: readonly string[],
+  runner: CommandRunner,
+  jsonClient: JsonClient,
+): Promise<void> {
+  await Effect.runPromise(updateProgram(args, runner, jsonClient));
 }
 
-runUpdateScript(import.meta.url, updateProgram);
+function cliProgram(args: readonly string[], runner: CommandRunner): Effect.Effect<void, Error> {
+  return updateProgram(args, runner, fetchJsonClient);
+}
+
+runUpdateScript(import.meta.url, cliProgram);
 
 export { main };

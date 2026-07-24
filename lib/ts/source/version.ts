@@ -1,204 +1,118 @@
-import { compareVersions, isSemver } from "coolheaded/core/version.ts";
+import type { JsonClient, JsonClientError, JsonResponse } from "coolheaded/core/httpClient.ts";
 import { Effect } from "effect";
-import { UpdateError } from "coolheaded/core/updateScript.ts";
+import { isSemver } from "coolheaded/core/version.ts";
+import { npmRegistryPackageUrl } from "coolheaded/npm/registry.ts";
 
-interface LatestGitHubVersionOptions {
-  readonly owner: string;
-  readonly repo: string;
-  readonly source?: GitHubVersionSource;
-  readonly versionPattern?: Readonly<RegExp>;
+const REQUEST_TIMEOUT_MS = 30_000;
+
+type VersionSourceErrorKind = "invalidMetadata" | "missingVersion" | "pagination";
+
+class VersionSourceError extends Error {
+  public readonly kind: VersionSourceErrorKind;
+  public readonly url: string;
+
+  public constructor(kind: VersionSourceErrorKind, url: string, message: string) {
+    super(message);
+    this.kind = kind;
+    this.name = "VersionSourceError";
+    this.url = url;
+  }
 }
-
-interface GitHubRelease {
-  readonly name: string;
-  readonly tagName: string;
-}
-
-type GitHubVersionSource = "releases" | "tags";
-
-interface RuntimeEnv {
-  readonly get: (name: string) => string | undefined;
-}
-
-interface RuntimeWithEnv {
-  readonly env: RuntimeEnv;
-}
-
-type FetchHeaders = Readonly<Record<string, string>>;
 
 function isRecord(value: unknown): value is Readonly<Record<string, unknown>> {
   return typeof value === "object" && value !== null && !Array.isArray(value);
 }
 
-function isRuntimeWithEnv(value: unknown): value is RuntimeWithEnv {
-  if (typeof value !== "object" || value === null || !("env" in value)) {
-    return false;
-  }
-
-  const { env } = value;
-  return typeof env === "object" && env !== null && "get" in env && typeof env.get === "function";
+function responseValue<Response extends JsonResponse>(response: Response): Response["value"] {
+  return response.value;
 }
 
-function envValue(name: string): string | undefined {
-  const runtime = Reflect.get(globalThis, "Deno");
-
-  return isRuntimeWithEnv(runtime) ? runtime.env.get(name) : undefined;
-}
-
-function gitHubHeaders(): FetchHeaders {
-  const token = envValue("GH_TOKEN") ?? envValue("GITHUB_TOKEN");
-
-  return token === undefined || token.length === 0
-    ? { accept: "application/vnd.github+json" }
-    : {
-        accept: "application/vnd.github+json",
-        authorization: `Bearer ${token}`,
-      };
-}
-
-function parseJsonResponse(
+function jsonValue(
   url: string,
-  headers?: FetchHeaders,
-): Effect.Effect<unknown, UpdateError> {
-  return Effect.tryPromise({
-    catch(error: unknown): UpdateError {
-      if (error instanceof UpdateError) {
-        return error;
-      }
-
-      return new UpdateError(`Failed to fetch ${url}`);
-    },
-    async try(): Promise<unknown> {
-      const response = await globalThis.fetch(url, headers === undefined ? undefined : { headers });
-      if (!response.ok) {
-        throw new UpdateError(`Failed to fetch ${url}: HTTP ${response.status}`);
-      }
-
-      return await response.json();
-    },
-  });
+  jsonClient: Readonly<JsonClient>,
+): Effect.Effect<unknown, JsonClientError> {
+  return Effect.map(
+    jsonClient.request({
+      headers: {},
+      method: "GET",
+      timeoutMs: REQUEST_TIMEOUT_MS,
+      url,
+    }),
+    responseValue,
+  );
 }
 
-function latestNpmVersion(packageName: string): Effect.Effect<string, Error> {
-  const encodedName = packageName.startsWith("@")
-    ? `@${packageName
-        .slice(1)
-        .split("/")
-        .map((part: string): string => encodeURIComponent(part))
-        .join("/")}`
-    : encodeURIComponent(packageName);
-  const url = `https://registry.npmjs.org/${encodedName}`;
+function latestNpmVersion(
+  packageName: string,
+  jsonClient: Readonly<JsonClient>,
+): Effect.Effect<string, JsonClientError | VersionSourceError> {
+  const url = npmRegistryPackageUrl(packageName);
 
   return Effect.flatMap(
-    parseJsonResponse(url),
-    (metadata: unknown): Effect.Effect<string, Error> => {
+    jsonValue(url, jsonClient),
+    (metadata: unknown): Effect.Effect<string, VersionSourceError> => {
       if (!isRecord(metadata)) {
-        return Effect.fail(new UpdateError(`Invalid npm metadata for ${url}`));
+        return Effect.fail(
+          new VersionSourceError("invalidMetadata", url, `Invalid npm metadata for ${url}`),
+        );
       }
 
       const distTags = metadata["dist-tags"];
       const version = isRecord(distTags) ? distTags["latest"] : undefined;
-      return typeof version === "string" && version.length > 0
-        ? Effect.succeed(version)
-        : Effect.fail(new UpdateError(`Missing npm latest version for ${url}`));
-    },
-  );
-}
-
-function latestPyPiVersion(projectName: string): Effect.Effect<string, Error> {
-  const url = `https://pypi.org/pypi/${encodeURIComponent(projectName)}/json`;
-
-  return Effect.flatMap(
-    parseJsonResponse(url),
-    (metadata: unknown): Effect.Effect<string, Error> => {
-      if (!isRecord(metadata)) {
-        return Effect.fail(new UpdateError(`Invalid PyPI metadata for ${url}`));
+      if (typeof version !== "string" || version.length === 0) {
+        return Effect.fail(
+          new VersionSourceError("missingVersion", url, `Missing npm latest version for ${url}`),
+        );
       }
 
-      const { info } = metadata;
-      const version = isRecord(info) ? info["version"] : undefined;
-      return typeof version === "string" && version.length > 0
-        ? Effect.succeed(version)
-        : Effect.fail(new UpdateError(`Missing PyPI latest version for ${url}`));
-    },
-  );
-}
-
-function normalizeGitHubVersion(name: string, pattern: Readonly<RegExp>): string | undefined {
-  const match = pattern.exec(name);
-  const version = match?.groups?.["version"];
-
-  return typeof version === "string" && isSemver(version) ? version : undefined;
-}
-
-function refNames(value: unknown): readonly string[] {
-  if (!Array.isArray(value)) {
-    return [];
-  }
-
-  return value.flatMap((entry: unknown): readonly string[] => {
-    if (!isRecord(entry)) {
-      return [];
-    }
-
-    const { name: plainName, tag_name: tagName } = entry;
-    const name = typeof tagName === "string" ? tagName : plainName;
-    return typeof name === "string" ? [name] : [];
-  });
-}
-
-function gitHubRelease(
-  owner: string,
-  repo: string,
-  tag: string,
-): Effect.Effect<GitHubRelease, Error> {
-  const releaseUrl = `https://api.github.com/repos/${owner}/${repo}/releases/tags/${encodeURIComponent(
-    tag,
-  )}`;
-
-  return Effect.flatMap(
-    parseJsonResponse(releaseUrl, gitHubHeaders()),
-    (release: unknown): Effect.Effect<GitHubRelease, Error> => {
-      if (!isRecord(release)) {
-        return Effect.fail(new UpdateError(`Invalid GitHub release metadata for ${owner}/${repo}`));
-      }
-
-      const { name, tag_name: tagName } = release;
-      return typeof name === "string" &&
-        name.length > 0 &&
-        typeof tagName === "string" &&
-        tagName.length > 0
-        ? Effect.succeed({ name, tagName })
-        : Effect.fail(new UpdateError(`Missing GitHub release name for ${owner}/${repo} ${tag}`));
-    },
-  );
-}
-
-function latestGitHubVersion(
-  options: Readonly<LatestGitHubVersionOptions>,
-): Effect.Effect<string, Error> {
-  const pattern = options.versionPattern ?? /^v(?<version>\d+\.\d+\.\d+)$/u;
-  const source = options.source ?? "tags";
-  const endpoint = source === "releases" ? "releases" : "tags";
-  const refsUrl = `https://api.github.com/repos/${options.owner}/${options.repo}/${endpoint}?per_page=100`;
-
-  return Effect.flatMap(
-    parseJsonResponse(refsUrl, gitHubHeaders()),
-    (refs: unknown): Effect.Effect<string, Error> => {
-      const versions = refNames(refs)
-        .map((name: string): string | undefined => normalizeGitHubVersion(name, pattern))
-        .filter((version: string | undefined): version is string => version !== undefined)
-        .toSorted(compareVersions);
-      const version = versions.at(-1);
-
-      return typeof version === "string"
+      return isSemver(version)
         ? Effect.succeed(version)
         : Effect.fail(
-            new UpdateError(`Missing GitHub latest version for ${options.owner}/${options.repo}`),
+            new VersionSourceError(
+              "invalidMetadata",
+              url,
+              `Invalid npm latest version for ${url}: ${version}`,
+            ),
           );
     },
   );
 }
 
-export { gitHubRelease, latestGitHubVersion, latestNpmVersion, latestPyPiVersion };
-export type { GitHubRelease };
+function latestPyPiVersion(
+  projectName: string,
+  jsonClient: Readonly<JsonClient>,
+): Effect.Effect<string, JsonClientError | VersionSourceError> {
+  const url = `https://pypi.org/pypi/${encodeURIComponent(projectName)}/json`;
+
+  return Effect.flatMap(
+    jsonValue(url, jsonClient),
+    (metadata: unknown): Effect.Effect<string, VersionSourceError> => {
+      if (!isRecord(metadata)) {
+        return Effect.fail(
+          new VersionSourceError("invalidMetadata", url, `Invalid PyPI metadata for ${url}`),
+        );
+      }
+
+      const { info } = metadata;
+      const version = isRecord(info) ? info["version"] : undefined;
+      if (typeof version !== "string" || version.length === 0) {
+        return Effect.fail(
+          new VersionSourceError("missingVersion", url, `Missing PyPI latest version for ${url}`),
+        );
+      }
+
+      return isSemver(version)
+        ? Effect.succeed(version)
+        : Effect.fail(
+            new VersionSourceError(
+              "invalidMetadata",
+              url,
+              `Invalid PyPI latest version for ${url}: ${version}`,
+            ),
+          );
+    },
+  );
+}
+
+export { latestNpmVersion, latestPyPiVersion, VersionSourceError };
+export type { VersionSourceErrorKind };
