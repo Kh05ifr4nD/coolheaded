@@ -1,4 +1,5 @@
 import { runUpdateScript, scriptPath } from "coolheaded/core/updateScript.ts";
+import type { CommandRunner } from "coolheaded/core/commandRunner.ts";
 import { Effect } from "effect";
 import { latestPyPiVersion } from "coolheaded/source/version.ts";
 import { updateVersionedNixpkgsPythonUvLock } from "coolheaded/update/uvLock.ts";
@@ -25,7 +26,7 @@ function project(version: string, pythonMinorVersion: string): UvProject {
   };
 }
 
-function updateProgram(args: readonly string[]): Effect.Effect<void, Error> {
+function updateProgram(args: readonly string[], runner: CommandRunner): Effect.Effect<void, Error> {
   return updateVersionedNixpkgsPythonUvLock({
     args,
     latestVersion,
@@ -33,12 +34,13 @@ function updateProgram(args: readonly string[]): Effect.Effect<void, Error> {
     project,
     pythonPackage: PYTHON_PACKAGE,
     repositoryRootPath: REPOSITORY_ROOT_PATH,
+    runner,
     uvLockFilePath: UV_LOCK_FILE_PATH,
   });
 }
 
-async function main(args: readonly string[]): Promise<void> {
-  await Effect.runPromise(updateProgram(args));
+async function main(args: readonly string[], runner: CommandRunner): Promise<void> {
+  await Effect.runPromise(updateProgram(args, runner));
 }
 
 runUpdateScript(import.meta.url, updateProgram);

@@ -40,7 +40,7 @@ describe("Deno task topology", (): void => {
     assertEquals(tasks["check"], "deno task check:types && deno task check:fileSpec");
     assertEquals(
       tasks["test:pure"],
-      "deno test --allow-env=FAST_CHECK_SEED,FAST_CHECK_PATH,FAST_CHECK_RUNS tests/ci/changeImpact.ts tests/ci/pullRequest.ts tests/ci/runtimePermissions.ts tests/core/fastCheck.ts tests/core/version.ts tests/nix/denoDependencies.ts tests/nix/denoSnapshot.ts tests/pin/packageHashConfig.ts tests/pin/sriHash.ts tests/repo/pathProperty.ts tests/update/stateProperty.ts",
+      "deno test --allow-env=FAST_CHECK_SEED,FAST_CHECK_PATH,FAST_CHECK_RUNS tests/ci/changeImpact.ts tests/ci/pullRequest.ts tests/ci/pullRequestControl.ts tests/ci/pullRequestFailure.ts tests/ci/runtimePermissions.ts tests/ci/updateControl.ts tests/ci/updateState.ts tests/core/commandRunner.ts tests/core/fastCheck.ts tests/core/version.ts tests/nix/denoDependencies.ts tests/nix/denoSnapshot.ts tests/pin/packageHashConfig.ts tests/pin/sriHash.ts tests/repo/pathProperty.ts tests/update/rustPackage.ts tests/update/stateProperty.ts",
     );
     assertEquals(
       tasks["test:integration:env"],
@@ -59,17 +59,21 @@ describe("Deno task topology", (): void => {
       "deno test --allow-env=PATH,COOLHEADED_CUE,COOLHEADED_GIT --allow-read=.,$TMPDIR,$COOLHEADED_DENO,$COOLHEADED_CUE,$COOLHEADED_GIT,$COOLHEADED_GIT_DIR --allow-run=$COOLHEADED_DENO,$COOLHEADED_CUE,$COOLHEADED_GIT --allow-write=$TMPDIR tests/repo/fileSpec/*.ts",
     );
     assertEquals(
+      tasks["test:integration:update"],
+      "deno test --allow-env=COOLHEADED_GIT,GITHUB_OUTPUT --allow-read=$TMPDIR --allow-run=$COOLHEADED_DENO,$COOLHEADED_GIT --allow-write=$TMPDIR tests/ci/denoDependenciesRun.ts tests/ci/flakeInputRun.ts tests/ci/packageRun.ts tests/ci/updateGit.ts tests/ci/updateGitBranch.ts tests/ci/updateRuntime.ts",
+    );
+    assertEquals(
       tasks["test:integration"],
-      "deno task test:integration:env && deno task test:integration:read && deno task test:integration:write && deno task test:integration:repo",
+      "deno task test:integration:env && deno task test:integration:read && deno task test:integration:write && deno task test:integration:repo && deno task test:integration:update",
     );
     assertEquals(
       tasks["test:runtime"],
-      "deno task test:pure --no-check && deno task test:integration:env --no-check && deno task test:integration:read --no-check && deno task test:integration:write --no-check && deno task test:integration:repo --no-check",
+      "deno task test:pure --no-check && deno task test:integration:env --no-check && deno task test:integration:read --no-check && deno task test:integration:write --no-check && deno task test:integration:repo --no-check && deno task test:integration:update --no-check",
     );
     assertEquals(tasks["test"], "deno task check:types && deno task test:runtime");
     assertEquals(
       tasks["test:coverage"],
-      "deno task test:pure --no-check --coverage=.coverage/pure --coverage-raw-data-only --clean && deno task test:integration:env --no-check --coverage=.coverage/env --coverage-raw-data-only --clean && deno task test:integration:read --no-check --coverage=.coverage/read --coverage-raw-data-only --clean && deno task test:integration:write --no-check --coverage=.coverage/write --coverage-raw-data-only --clean && deno task test:integration:repo --no-check --coverage=.coverage/repo --coverage-raw-data-only --clean && deno coverage .coverage/pure .coverage/env .coverage/read .coverage/write .coverage/repo",
+      "deno task test:pure --no-check --coverage=.coverage/pure --coverage-raw-data-only --clean && deno task test:integration:env --no-check --coverage=.coverage/env --coverage-raw-data-only --clean && deno task test:integration:read --no-check --coverage=.coverage/read --coverage-raw-data-only --clean && deno task test:integration:write --no-check --coverage=.coverage/write --coverage-raw-data-only --clean && deno task test:integration:repo --no-check --coverage=.coverage/repo --coverage-raw-data-only --clean && deno task test:integration:update --no-check --coverage=.coverage/update --coverage-raw-data-only --clean && deno coverage .coverage/pure .coverage/env .coverage/read .coverage/write .coverage/repo .coverage/update",
     );
 
     const runtimeCommand = tasks["test:runtime"];
@@ -98,12 +102,13 @@ describe("Deno task topology", (): void => {
       ".coverage/read",
       ".coverage/write",
       ".coverage/repo",
+      ".coverage/update",
     ]);
     assertEquals(new Set(coverageTargets).size, runtimeChildren.length);
     assertEquals(coverageCommand.split("--clean").length - 1, runtimeChildren.length);
     assertStringIncludes(
       coverageCommand,
-      "deno coverage .coverage/pure .coverage/env .coverage/read .coverage/write .coverage/repo",
+      "deno coverage .coverage/pure .coverage/env .coverage/read .coverage/write .coverage/repo .coverage/update",
     );
 
     const gitHooks = await Deno.readTextFile("flake/gitHooks.nix");

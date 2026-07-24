@@ -10,6 +10,7 @@ import {
   fetchGitHubSourceHash,
   prepareGitHubTagTarballWorkspace,
 } from "coolheaded/source/github.ts";
+import type { CommandRunner } from "coolheaded/core/commandRunner.ts";
 import { Effect } from "effect";
 import { latestGitHubVersion } from "coolheaded/source/version.ts";
 import { withTemporaryDirectory } from "coolheaded/core/temporaryDirectory.ts";
@@ -31,8 +32,8 @@ function latestVersion(): Effect.Effect<string, Error> {
   });
 }
 
-function bun2nixOutPath(): Effect.Effect<string, Error> {
-  return commandOutput("nix", [
+function bun2nixOutPath(runner: CommandRunner): Effect.Effect<string, Error> {
+  return commandOutput(runner, "nix", [
     "build",
     "--no-link",
     "--print-out-paths",
@@ -46,35 +47,37 @@ function generatedBunNixFromWorkspace(
   bun2nixPath: string,
   workspacePath: string,
   version: string,
+  runner: CommandRunner,
 ): Effect.Effect<string, Error> {
   return Effect.gen(function* generatedBunNixFromWorkspaceSteps(): Effect.fn.Return<string, Error> {
-    yield* prepareGitHubTagTarballWorkspace(GITHUB_SOURCE, workspacePath, version);
+    yield* prepareGitHubTagTarballWorkspace(GITHUB_SOURCE, workspacePath, version, runner);
     yield* commandOutput(
+      runner,
       bun2nixPath,
       ["-o", `${workspacePath}/generatedPackage.nix`],
       workspacePath,
     );
 
-    return yield* commandOutput("cat", [`${workspacePath}/generatedPackage.nix`]);
+    return yield* commandOutput(runner, "cat", [`${workspacePath}/generatedPackage.nix`]);
   });
 }
 
-function generatedBunNix(version: string): Effect.Effect<string, Error> {
-  return Effect.flatMap(bun2nixOutPath(), (outPath: string): Effect.Effect<string, Error> => {
+function generatedBunNix(version: string, runner: CommandRunner): Effect.Effect<string, Error> {
+  return Effect.flatMap(bun2nixOutPath(runner), (outPath: string): Effect.Effect<string, Error> => {
     const bun2nixPath = `${outPath.trim()}/bin/bun2nix`;
 
     return withTemporaryDirectory(
       (workspacePath: string): Effect.Effect<string, Error> =>
-        generatedBunNixFromWorkspace(bun2nixPath, workspacePath, version),
+        generatedBunNixFromWorkspace(bun2nixPath, workspacePath, version, runner),
     );
   });
 }
 
-function writeUpdatedFiles(version: string): Effect.Effect<void, Error> {
+function writeUpdatedFiles(version: string, runner: CommandRunner): Effect.Effect<void, Error> {
   return Effect.gen(function* writeUpdatedFilesSteps(): Effect.fn.Return<void, Error> {
     const { bunNix, hash } = yield* Effect.all({
-      bunNix: generatedBunNix(version),
-      hash: fetchGitHubSourceHash(GITHUB_SOURCE, version, REPOSITORY_ROOT_PATH),
+      bunNix: generatedBunNix(version, runner),
+      hash: fetchGitHubSourceHash(GITHUB_SOURCE, version, REPOSITORY_ROOT_PATH, runner),
     });
 
     yield* writePinJson(PIN_FILE_PATH, {
@@ -82,16 +85,21 @@ function writeUpdatedFiles(version: string): Effect.Effect<void, Error> {
       version,
     });
     yield* writeTextFile(GENERATED_PACKAGE_FILE_PATH, `${bunNix.trim()}\n`);
-    yield* formatNixFile(GENERATED_PACKAGE_FILE_PATH);
+    yield* formatNixFile(runner, GENERATED_PACKAGE_FILE_PATH);
   });
 }
 
-function updateProgram(args: readonly string[]): Effect.Effect<void, Error> {
-  return updateNewerPinVersion(args, latestVersion, PIN_FILE_PATH, writeUpdatedFiles);
+function updateProgram(args: readonly string[], runner: CommandRunner): Effect.Effect<void, Error> {
+  return updateNewerPinVersion(
+    args,
+    latestVersion,
+    PIN_FILE_PATH,
+    (version: string): Effect.Effect<void, Error> => writeUpdatedFiles(version, runner),
+  );
 }
 
-async function main(args: readonly string[]): Promise<void> {
-  await Effect.runPromise(updateProgram(args));
+async function main(args: readonly string[], runner: CommandRunner): Promise<void> {
+  await Effect.runPromise(updateProgram(args, runner));
 }
 
 runUpdateScript(import.meta.url, updateProgram);

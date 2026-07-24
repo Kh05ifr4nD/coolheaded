@@ -1,8 +1,10 @@
 #!/usr/bin/env -S deno run --allow-env --allow-read --allow-run
 
 import { run, writeOutput, writeStderr } from "./process.ts";
+import type { CommandRunner } from "coolheaded/core/commandRunner.ts";
 import { SYSTEM_TARGETS } from "coolheaded/system/target.ts";
 import { activatedCheck } from "./model.ts";
+import { denoCommandRunner } from "coolheaded/core/denoCommandRunner.ts";
 import { toFileUrl } from "@jsr/std__path";
 
 const CHECK_DRV_PATHS_EXPR =
@@ -23,13 +25,18 @@ function localGitFlakeRef(rev: string): string {
   return `git+${toFileUrl(Deno.cwd()).href}?rev=${encodeURIComponent(rev)}`;
 }
 
-async function checkedOutBaseFlakeRef(): Promise<string> {
-  const result = await run(["git", "rev-parse", "HEAD^1"], { capture: true });
+async function checkedOutBaseFlakeRef(runner: CommandRunner): Promise<string> {
+  const result = await run(runner, ["git", "rev-parse", "HEAD^1"], { capture: true });
   return localGitFlakeRef(result.stdout);
 }
 
-async function checkDrvPaths(flakeRef: string, system: string): Promise<CheckDrvPaths> {
+async function checkDrvPaths(
+  flakeRef: string,
+  system: string,
+  runner: CommandRunner,
+): Promise<CheckDrvPaths> {
   const result = await run(
+    runner,
     ["nix", "eval", "--json", `${flakeRef}#checks.${system}`, "--apply", CHECK_DRV_PATHS_EXPR],
     { capture: true },
   );
@@ -49,13 +56,16 @@ async function checkDrvPaths(flakeRef: string, system: string): Promise<CheckDrv
   return Object.fromEntries(entries);
 }
 
-async function checkDrvPathsBySystem(flakeRef: string): Promise<CheckDrvPathsBySystem> {
+async function checkDrvPathsBySystem(
+  flakeRef: string,
+  runner: CommandRunner,
+): Promise<CheckDrvPathsBySystem> {
   return Object.fromEntries(
     await Promise.all(
       SYSTEM_TARGETS.map(
         async (target: SystemTarget): Promise<readonly [string, CheckDrvPaths]> => [
           target.system,
-          await checkDrvPaths(flakeRef, target.system),
+          await checkDrvPaths(flakeRef, target.system, runner),
         ],
       ),
     ),
@@ -165,10 +175,11 @@ function checksFromChangedFiles(
 async function checkedOutBaseChangedChecks(
   currentDrvPathsBySystem: CheckDrvPathsBySystem,
   availableBySystem: Readonly<Record<string, readonly string[]>>,
+  runner: CommandRunner,
 ): Promise<readonly ActivatedCheck[]> {
   try {
     return changedActivatedChecks(
-      await checkDrvPathsBySystem(await checkedOutBaseFlakeRef()),
+      await checkDrvPathsBySystem(await checkedOutBaseFlakeRef(runner), runner),
       currentDrvPathsBySystem,
     );
   } catch (error: unknown) {
@@ -177,7 +188,7 @@ async function checkedOutBaseChangedChecks(
     await writeStderr(
       `Base check evaluation failed; falling back to changed-path impact: ${errorSummary}`,
     );
-    const result = await run(["git", "diff", "--name-only", "HEAD^1", "HEAD", "--"], {
+    const result = await run(runner, ["git", "diff", "--name-only", "HEAD^1", "HEAD", "--"], {
       capture: true,
     });
     const changedFiles = result.stdout
@@ -197,6 +208,7 @@ async function requestedActivatedChecks(
   activateAllChecks: string | undefined,
   availableBySystem: Readonly<Record<string, readonly string[]>>,
   currentDrvPathsBySystem: CheckDrvPathsBySystem,
+  runner: CommandRunner,
 ): Promise<readonly ActivatedCheck[]> {
   if (activateAllChecks === "true") {
     return buildMatrix(
@@ -215,14 +227,14 @@ async function requestedActivatedChecks(
   }
 
   if (comparesCheckedOutBase(eventName)) {
-    return await checkedOutBaseChangedChecks(currentDrvPathsBySystem, availableBySystem);
+    return await checkedOutBaseChangedChecks(currentDrvPathsBySystem, availableBySystem, runner);
   }
 
   return [];
 }
 
-async function discoverChangeImpact(): Promise<void> {
-  const currentDrvPathsBySystem = await checkDrvPathsBySystem(".");
+async function discoverChangeImpact(runner: CommandRunner): Promise<void> {
+  const currentDrvPathsBySystem = await checkDrvPathsBySystem(".", runner);
   const availableBySystem = availableChecksBySystem(currentDrvPathsBySystem);
 
   const include = await requestedActivatedChecks(
@@ -231,6 +243,7 @@ async function discoverChangeImpact(): Promise<void> {
     Deno.env.get("ACTIVATE_ALL_CHECKS"),
     availableBySystem,
     currentDrvPathsBySystem,
+    runner,
   );
 
   await writeOutput("hasActivatedChecks", String(include.length > 0));
@@ -238,7 +251,7 @@ async function discoverChangeImpact(): Promise<void> {
 }
 
 if (import.meta.main) {
-  void discoverChangeImpact();
+  void discoverChangeImpact(denoCommandRunner);
 }
 
 export {

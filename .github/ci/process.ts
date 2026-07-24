@@ -1,5 +1,11 @@
 #!/usr/bin/env -S deno run --allow-env --allow-read --allow-run --allow-write
 
+import type {
+  CommandRequest,
+  CommandResult,
+  CommandRunner,
+} from "coolheaded/core/commandRunner.ts";
+
 interface RunOptions {
   readonly capture?: boolean;
   readonly check?: boolean;
@@ -13,6 +19,22 @@ interface RunResult {
   readonly stdout: string;
 }
 
+class CommandExitError extends Error {
+  public readonly request: CommandRequest;
+  public readonly result: CommandResult;
+
+  public constructor(request: CommandRequest, result: CommandResult) {
+    super(
+      `${request.command.join(" ")} failed with exit ${result.code}${
+        result.stderr.trim().length === 0 ? "" : `: ${result.stderr.trim()}`
+      }`,
+    );
+    this.name = "CommandExitError";
+    this.request = request;
+    this.result = result;
+  }
+}
+
 async function writeStdout(text: string): Promise<void> {
   await Deno.stdout.write(new globalThis.TextEncoder().encode(`${text}\n`));
 }
@@ -21,32 +43,30 @@ async function writeStderr(text: string): Promise<void> {
   await Deno.stderr.write(new globalThis.TextEncoder().encode(`${text}\n`));
 }
 
-async function run(command: readonly string[], options: RunOptions = {}): Promise<RunResult> {
+async function run(
+  runner: CommandRunner,
+  command: readonly string[],
+  options: RunOptions = {},
+): Promise<RunResult> {
   const [executable, ...args] = command;
   if (executable === undefined) {
     throw new Error("Missing command executable");
   }
 
-  const commandOptions = {
-    args,
-    stderr: "piped",
-    stdout: "piped",
+  const request = {
+    command: [executable, ...args],
     ...(options.cwd === undefined ? {} : { cwd: options.cwd }),
     ...(options.env === undefined ? {} : { env: options.env }),
-  } as const;
-  const output = await new Deno.Command(executable, commandOptions).output();
+  } as const satisfies CommandRequest;
+  const output = await runner.run(request);
   const result = {
     code: output.code,
-    stderr: new globalThis.TextDecoder().decode(output.stderr).trim(),
-    stdout: new globalThis.TextDecoder().decode(output.stdout).trim(),
+    stderr: output.stderr.trim(),
+    stdout: output.stdout.trim(),
   };
 
-  if ((options.check ?? true) && !output.success) {
-    throw new Error(
-      `${command.join(" ")} failed with exit ${output.code}${
-        result.stderr.length === 0 ? "" : `: ${result.stderr}`
-      }`,
-    );
+  if ((options.check ?? true) && output.code !== 0) {
+    throw new CommandExitError(request, output);
   }
 
   if (!(options.capture ?? true)) {
@@ -61,15 +81,18 @@ async function run(command: readonly string[], options: RunOptions = {}): Promis
   return result;
 }
 
-async function gitHasChanges(paths: readonly string[] = []): Promise<boolean> {
-  const result = await run(["git", "diff", "--quiet", ...paths], {
+async function gitHasChanges(
+  runner: CommandRunner,
+  paths: readonly string[] = [],
+): Promise<boolean> {
+  const result = await run(runner, ["git", "diff", "--quiet", ...paths], {
     check: false,
   });
   return result.code !== 0;
 }
 
-async function changedFiles(): Promise<readonly string[]> {
-  const result = await run(["git", "diff", "--name-only"], { capture: true });
+async function changedFiles(runner: CommandRunner): Promise<readonly string[]> {
+  const result = await run(runner, ["git", "diff", "--name-only"], { capture: true });
   return result.stdout.split("\n").filter((line: string): boolean => line.length > 0);
 }
 
@@ -92,13 +115,14 @@ async function readJson(path: string): Promise<unknown> {
   return JSON.parse(await Deno.readTextFile(path));
 }
 
-async function nixEvalRaw(expr: string): Promise<string> {
-  const result = await run(["nix", "eval", "--raw", expr], { capture: true });
+async function nixEvalRaw(runner: CommandRunner, expr: string): Promise<string> {
+  const result = await run(runner, ["nix", "eval", "--raw", expr], { capture: true });
   return result.stdout;
 }
 
-async function currentSystem(): Promise<string> {
+async function currentSystem(runner: CommandRunner): Promise<string> {
   const result = await run(
+    runner,
     ["nix", "eval", "--impure", "--raw", "--expr", "builtins.currentSystem"],
     { capture: true },
   );
@@ -120,6 +144,7 @@ function isRecord(value: unknown): value is Readonly<Record<string, unknown>> {
 }
 
 export {
+  CommandExitError,
   assertOnlyChangedFiles,
   changedFiles,
   currentSystem,

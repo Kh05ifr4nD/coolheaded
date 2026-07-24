@@ -1,33 +1,13 @@
 import { compareVersions, isSemver } from "coolheaded/core/version.ts";
+import type { CommandRunner } from "coolheaded/core/commandRunner.ts";
 import { Effect } from "effect";
+import { denoCommandRunner } from "coolheaded/core/denoCommandRunner.ts";
 
 interface RuntimeWritable {
   readonly write: (bytes: unknown) => Promise<number>;
 }
 
-interface CommandOutput {
-  readonly code: number;
-  readonly stderr: Uint8Array;
-  readonly stdout: Uint8Array;
-  readonly success: boolean;
-}
-
-interface RuntimeCommand {
-  readonly output: () => Promise<CommandOutput>;
-}
-
-type RuntimeCommandConstructor = new (
-  command: string,
-  options: {
-    readonly args: readonly string[];
-    readonly cwd?: string;
-    readonly stderr: "piped";
-    readonly stdout: "piped";
-  },
-) => RuntimeCommand;
-
 interface DenoRuntime {
-  readonly Command: RuntimeCommandConstructor;
   readonly args: readonly string[];
   readonly exit: (code: number) => never;
   readonly mainModule: string;
@@ -54,7 +34,6 @@ function isDenoRuntime(value: unknown): value is DenoRuntime {
 
   return (
     Array.isArray(value["args"]) &&
-    typeof value["Command"] === "function" &&
     typeof value["mainModule"] === "string" &&
     typeof value["exit"] === "function" &&
     typeof value["readTextFile"] === "function" &&
@@ -185,6 +164,7 @@ function updateNewerPinVersion(
 }
 
 function commandOutput(
+  runner: CommandRunner,
   command: string,
   args: readonly string[],
   cwd?: string,
@@ -198,16 +178,13 @@ function commandOutput(
       return new UpdateError(`Failed to run ${command}`);
     },
     async try(): Promise<string> {
-      const options = {
-        args,
-        stderr: "piped",
-        stdout: "piped",
+      const output = await runner.run({
+        command: [command, ...args],
         ...(typeof cwd === "string" ? { cwd } : {}),
-      } as const;
-      const output = await new (denoRuntime().Command)(command, options).output();
+      });
 
-      if (!output.success) {
-        const stderr = new globalThis.TextDecoder().decode(output.stderr).trim();
+      if (output.code !== 0) {
+        const stderr = output.stderr.trim();
         throw new UpdateError(
           `Failed to run ${command}: exit ${output.code}${
             stderr.length === 0 ? "" : `: ${stderr}`
@@ -215,13 +192,13 @@ function commandOutput(
         );
       }
 
-      return new globalThis.TextDecoder().decode(output.stdout).trim();
+      return output.stdout.trim();
     },
   });
 }
 
-function formatNixFile(path: string): Effect.Effect<void, UpdateError> {
-  return Effect.asVoid(commandOutput("nix", ["fmt", "--", path]));
+function formatNixFile(runner: CommandRunner, path: string): Effect.Effect<void, UpdateError> {
+  return Effect.asVoid(commandOutput(runner, "nix", ["fmt", "--", path]));
 }
 
 function errorMessage(error: unknown): string {
@@ -246,10 +223,10 @@ function reportErrorEffect(error: unknown): Effect.Effect<void> {
 
 function runUpdateScript(
   moduleUrl: string,
-  program: (args: readonly string[]) => Effect.Effect<void, Error>,
+  program: (args: readonly string[], runner: CommandRunner) => Effect.Effect<void, Error>,
 ): void {
   if (denoRuntime().mainModule === moduleUrl) {
-    const updateEffect = program(denoRuntime().args);
+    const updateEffect = program(denoRuntime().args, denoCommandRunner);
     const reportedEffect = Effect.catchAll(updateEffect, reportErrorEffect);
 
     Effect.runFork(reportedEffect);

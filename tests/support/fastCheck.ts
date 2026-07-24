@@ -16,6 +16,14 @@ interface FastCheckConfig {
 interface ReplayTarget {
   readonly file: string;
   readonly filter: string;
+  readonly replayArgument?: () => string;
+}
+
+interface FastCheckResult {
+  readonly counterexample: readonly unknown[] | null;
+  readonly counterexamplePath: string | null;
+  readonly failed: boolean;
+  readonly seed: number;
 }
 
 type FastCheckEnvironment = Readonly<Record<string, string | undefined>>;
@@ -95,7 +103,11 @@ function fastCheckConfig(
   return { path: pathValue, runs, seed };
 }
 
-function defineReplayTarget(file: string, filter: string): ReplayTarget {
+function defineReplayTarget(
+  file: string,
+  filter: string,
+  replayArgument?: () => string,
+): ReplayTarget {
   if (file.length === 0 || filter.length === 0 || file.includes("\0") || filter.includes("\0")) {
     throw new TypeError("Fast-check replay target must have a non-empty file and filter");
   }
@@ -106,7 +118,43 @@ function defineReplayTarget(file: string, filter: string): ReplayTarget {
   }
   replayTargets.add(key);
 
-  return Object.freeze({ file, filter });
+  return Object.freeze({
+    file,
+    filter,
+    ...(replayArgument === undefined ? {} : { replayArgument }),
+  });
+}
+
+function assertResult(target: ReplayTarget, result: Readonly<FastCheckResult>, runs: number): void {
+  if (result.failed) {
+    if (result.counterexample === null || result.counterexamplePath === null) {
+      throw new TypeError("Failed fast-check result omitted replay details");
+    }
+    const replayArguments = target.replayArgument === undefined ? [] : [target.replayArgument()];
+    const replayCommand = [
+      `FAST_CHECK_SEED=${shellQuote(String(result.seed))}`,
+      `FAST_CHECK_PATH=${shellQuote(result.counterexamplePath)}`,
+      `FAST_CHECK_RUNS=${shellQuote(String(runs))}`,
+      "deno test --no-check",
+      "--allow-env=FAST_CHECK_SEED,FAST_CHECK_PATH,FAST_CHECK_RUNS",
+      `--filter ${shellQuote(target.filter)}`,
+      shellQuote(target.file),
+      ...(replayArguments.length === 0
+        ? []
+        : ["--", ...replayArguments.map((argument: string): string => shellQuote(argument))]),
+    ].join(" ");
+    throw new FastCheckFailureError(
+      target,
+      {
+        counterexample: result.counterexample,
+        counterexamplePath: result.counterexamplePath,
+        seed: result.seed,
+      },
+      runs,
+      replayCommand,
+      replayArguments,
+    );
+  }
 }
 
 function assertProperty<Parameters extends [unknown, ...unknown[]]>(
@@ -120,31 +168,21 @@ function assertProperty<Parameters extends [unknown, ...unknown[]]>(
     numRuns: config.runs,
     seed: config.seed,
   });
+  assertResult(target, result, config.runs);
+}
 
-  if (result.failed) {
-    if (result.counterexample === null || result.counterexamplePath === null) {
-      throw new TypeError("Failed fast-check result omitted replay details");
-    }
-    const replayCommand = [
-      `FAST_CHECK_SEED=${shellQuote(String(result.seed))}`,
-      `FAST_CHECK_PATH=${shellQuote(result.counterexamplePath)}`,
-      `FAST_CHECK_RUNS=${shellQuote(String(config.runs))}`,
-      "deno test --no-check",
-      "--allow-env=FAST_CHECK_SEED,FAST_CHECK_PATH,FAST_CHECK_RUNS",
-      `--filter ${shellQuote(target.filter)}`,
-      shellQuote(target.file),
-    ].join(" ");
-    throw new FastCheckFailureError(
-      target,
-      {
-        counterexample: result.counterexample,
-        counterexamplePath: result.counterexamplePath,
-        seed: result.seed,
-      },
-      config.runs,
-      replayCommand,
-    );
-  }
+async function assertAsyncProperty<Parameters extends [unknown, ...unknown[]]>(
+  target: ReplayTarget,
+  property: Readonly<ReturnType<typeof fc.asyncProperty<Parameters>>>,
+  environment?: FastCheckEnvironment,
+): Promise<void> {
+  const config = fastCheckConfig(environment);
+  const result = await fc.check(property, {
+    ...(config.path === undefined ? {} : { path: config.path }),
+    numRuns: config.runs,
+    seed: config.seed,
+  });
+  assertResult(target, result, config.runs);
 }
 
 export {
@@ -152,6 +190,7 @@ export {
   DEFAULT_FAST_CHECK_SEED,
   InvalidFastCheckEnvironmentError,
   MAX_FAST_CHECK_RUNS,
+  assertAsyncProperty,
   assertProperty,
   defineReplayTarget,
   fastCheckConfig,

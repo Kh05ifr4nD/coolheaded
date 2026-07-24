@@ -1,3 +1,5 @@
+import type { CommandRunner } from "coolheaded/core/commandRunner.ts";
+
 const DENO_SNAPSHOT_HASH_FILE_PATH = "flake/denoDependencies.nix";
 const FAKE_HASH = "sha256-AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA=";
 
@@ -53,27 +55,26 @@ function isDenoSnapshotHashMismatch(output: string): boolean {
   );
 }
 
-async function buildDenoSnapshotCheck(system: string): Promise<DenoSnapshotBuildResult> {
+async function buildDenoSnapshotCheck(
+  system: string,
+  runner: CommandRunner,
+): Promise<DenoSnapshotBuildResult> {
   const [command, ...args] = denoSnapshotBuildCommand(system);
   if (command === undefined) {
     throw new Error("Missing Deno snapshot build command");
   }
 
-  const output = await new Deno.Command(command, {
-    args,
-    stderr: "piped",
-    stdout: "piped",
-  }).output();
+  const output = await runner.run({ command: [command, ...args] });
 
   return {
     code: output.code,
-    stderr: new globalThis.TextDecoder().decode(output.stderr).trim(),
-    stdout: new globalThis.TextDecoder().decode(output.stdout).trim(),
+    stderr: output.stderr.trim(),
+    stdout: output.stdout.trim(),
   };
 }
 
-async function buildDenoSnapshotHash(system: string): Promise<string> {
-  const result = await buildDenoSnapshotCheck(system);
+async function buildDenoSnapshotHash(system: string, runner: CommandRunner): Promise<string> {
+  const result = await buildDenoSnapshotCheck(system, runner);
   if (result.code === 0) {
     throw new Error("Expected fake Deno snapshot hash to fail, but the build succeeded");
   }
@@ -85,21 +86,27 @@ async function buildDenoSnapshotHashWithFakeHash(
   system: string,
   original: string,
   fake: string,
+  runner: CommandRunner,
+  filePath: string,
 ): Promise<string> {
-  await Deno.writeTextFile(DENO_SNAPSHOT_HASH_FILE_PATH, fake);
+  await Deno.writeTextFile(filePath, fake);
   try {
-    return await buildDenoSnapshotHash(system);
+    return await buildDenoSnapshotHash(system, runner);
   } finally {
-    await Deno.writeTextFile(DENO_SNAPSHOT_HASH_FILE_PATH, original);
+    await Deno.writeTextFile(filePath, original);
   }
 }
 
-async function updateDenoSnapshotHash(system: string): Promise<void> {
-  const original = await Deno.readTextFile(DENO_SNAPSHOT_HASH_FILE_PATH);
+async function updateDenoSnapshotHash(
+  system: string,
+  runner: CommandRunner,
+  filePath = DENO_SNAPSHOT_HASH_FILE_PATH,
+): Promise<void> {
+  const original = await Deno.readTextFile(filePath);
   const fake = replaceDenoSnapshotHash(original, FAKE_HASH);
-  const hash = await buildDenoSnapshotHashWithFakeHash(system, original, fake);
+  const hash = await buildDenoSnapshotHashWithFakeHash(system, original, fake, runner, filePath);
 
-  await Deno.writeTextFile(DENO_SNAPSHOT_HASH_FILE_PATH, replaceDenoSnapshotHash(original, hash));
+  await Deno.writeTextFile(filePath, replaceDenoSnapshotHash(original, hash));
 }
 
 export {

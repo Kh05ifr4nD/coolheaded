@@ -4,6 +4,7 @@ import {
   updateNewerPinVersion,
   writeTextFile,
 } from "coolheaded/core/updateScript.ts";
+import type { CommandRunner } from "coolheaded/core/commandRunner.ts";
 import { Effect } from "effect";
 import { withTemporaryDirectory } from "coolheaded/core/temporaryDirectory.ts";
 import { writePinJson } from "coolheaded/pin/json.ts";
@@ -26,6 +27,7 @@ interface VersionedUvLockUpdate {
   readonly pinFilePath: string;
   readonly project: (version: string) => UvProject;
   readonly repositoryRootPath: string;
+  readonly runner: CommandRunner;
   readonly uvLockFilePath: string;
 }
 
@@ -36,6 +38,7 @@ interface VersionedNixpkgsPythonUvLockUpdate {
   readonly project: (version: string, pythonMinorVersion: string) => UvProject;
   readonly pythonPackage: string;
   readonly repositoryRootPath: string;
+  readonly runner: CommandRunner;
   readonly uvLockFilePath: string;
 }
 
@@ -66,9 +69,10 @@ function parsePythonMinorVersion(value: string, source: string): string {
 function nixpkgsPythonMinorVersion(
   repositoryRootPath: string,
   pythonPackage: string,
+  runner: CommandRunner,
 ): Effect.Effect<string, Error> {
   return Effect.map(
-    commandOutput("nix", [
+    commandOutput(runner, "nix", [
       "eval",
       "--inputs-from",
       repositoryRootPath,
@@ -126,6 +130,7 @@ ${tomlTableArrays("project.optional-dependencies", project.optionalDependencies)
 function generatedUvLock(
   repositoryRootPath: string,
   project: UvProject,
+  runner: CommandRunner,
 ): Effect.Effect<string, Error> {
   return withTemporaryDirectory(
     (workspacePath: string): Effect.Effect<string, Error> =>
@@ -133,6 +138,7 @@ function generatedUvLock(
         writeTextFile(`${workspacePath}/pyproject.toml`, uvProjectContents(project)),
         Effect.zipRight(
           commandOutput(
+            runner,
             "nix",
             [
               "run",
@@ -147,7 +153,7 @@ function generatedUvLock(
             ],
             repositoryRootPath,
           ),
-          commandOutput("cat", [`${workspacePath}/uv.lock`]),
+          commandOutput(runner, "cat", [`${workspacePath}/uv.lock`]),
         ),
       ),
   );
@@ -160,7 +166,7 @@ function updateVersionedUvLock(options: VersionedUvLockUpdate): Effect.Effect<vo
     options.pinFilePath,
     (version: string): Effect.Effect<void, Error> =>
       Effect.flatMap(
-        generatedUvLock(options.repositoryRootPath, options.project(version)),
+        generatedUvLock(options.repositoryRootPath, options.project(version), options.runner),
         (uvLock: string): Effect.Effect<void> =>
           Effect.zipRight(
             writePinJson(options.pinFilePath, { version }),
@@ -174,7 +180,7 @@ function updateVersionedNixpkgsPythonUvLock(
   options: VersionedNixpkgsPythonUvLockUpdate,
 ): Effect.Effect<void, Error> {
   return Effect.flatMap(
-    nixpkgsPythonMinorVersion(options.repositoryRootPath, options.pythonPackage),
+    nixpkgsPythonMinorVersion(options.repositoryRootPath, options.pythonPackage, options.runner),
     (pythonMinorVersion: string): Effect.Effect<void, Error> =>
       updateVersionedUvLock({
         args: options.args,
@@ -182,6 +188,7 @@ function updateVersionedNixpkgsPythonUvLock(
         pinFilePath: options.pinFilePath,
         project: (version: string): UvProject => options.project(version, pythonMinorVersion),
         repositoryRootPath: options.repositoryRootPath,
+        runner: options.runner,
         uvLockFilePath: options.uvLockFilePath,
       }),
   );

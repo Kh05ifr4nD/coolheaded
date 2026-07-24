@@ -1,6 +1,8 @@
 #!/usr/bin/env -S deno run --allow-env --allow-run --allow-write
 
 import { currentSystem, isRecord, run, writeOutput } from "coolheadedCi/process.ts";
+import type { CommandRunner } from "coolheaded/core/commandRunner.ts";
+import { denoCommandRunner } from "coolheaded/core/denoCommandRunner.ts";
 
 interface MatrixItem {
   readonly currentVersion: string;
@@ -36,12 +38,12 @@ function filteredNames(): readonly string[] | null {
   return packages === undefined || packages.length === 0 ? null : packages.split(/\s+/u);
 }
 
-async function discoverPackage(): Promise<readonly MatrixItem[]> {
+async function discoverPackage(runner: CommandRunner): Promise<readonly MatrixItem[]> {
   const config = JSON.stringify({
     filter: filteredNames(),
-    system: await currentSystem(),
+    system: await currentSystem(runner),
   });
-  const result = await run(["nix", "eval", "--json", "--impure", "--expr", NIX_EXPR], {
+  const result = await run(runner, ["nix", "eval", "--json", "--impure", "--expr", NIX_EXPR], {
     capture: true,
     env: { DISCOVERY_CONFIG: config },
   });
@@ -61,7 +63,7 @@ async function discoverPackage(): Promise<readonly MatrixItem[]> {
 }
 
 async function main(): Promise<void> {
-  const include = await discoverPackage();
+  const include = await discoverPackage(denoCommandRunner);
   await writeOutput("matrix", JSON.stringify({ include }));
   await writeOutput("hasUpdates", String(include.length > 0));
 }

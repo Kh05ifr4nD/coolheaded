@@ -1,6 +1,7 @@
-import { denoRuntime, updateNewerPinVersion } from "coolheaded/core/updateScript.ts";
+import type { CommandRunner } from "coolheaded/core/commandRunner.ts";
 import { Effect } from "effect";
 import { fetchGitHubSourceHash } from "coolheaded/source/github.ts";
+import { updateNewerPinVersion } from "coolheaded/core/updateScript.ts";
 import { writePinJson } from "coolheaded/pin/json.ts";
 
 interface GitHubRustPackage {
@@ -16,6 +17,7 @@ interface GitHubRustPackageUpdate {
   readonly package: GitHubRustPackage;
   readonly pinFilePath: string;
   readonly repositoryRootPath: string;
+  readonly runner: CommandRunner;
 }
 
 interface RustPackagePin {
@@ -70,14 +72,16 @@ function cargoVendorHash(
   repositoryRootPath: string,
   version: string,
   hash: string,
+  runner: CommandRunner,
 ): Effect.Effect<string, Error> {
   return Effect.tryPromise({
     catch(error: unknown): Error {
       return error instanceof Error ? error : new Error(String(error));
     },
     async try(): Promise<string> {
-      const output = await new (denoRuntime().Command)("nix", {
-        args: [
+      const output = await runner.run({
+        command: [
+          "nix",
           "build",
           "--impure",
           "--no-link",
@@ -85,16 +89,13 @@ function cargoVendorHash(
           cargoVendorHashPrefetchExpression(source, repositoryRootPath, version, hash),
         ],
         cwd: repositoryRootPath,
-        stderr: "piped",
-        stdout: "piped",
-      }).output();
+      });
 
-      if (output.success) {
+      if (output.code === 0) {
         throw new Error(`Unexpected successful ${source.pname} cargo vendor hash prefetch`);
       }
 
-      const stderr = new globalThis.TextDecoder().decode(output.stderr);
-      return await Effect.runPromise(parseCargoVendorHash(source.pname, new Error(stderr)));
+      return await Effect.runPromise(parseCargoVendorHash(source.pname, new Error(output.stderr)));
     },
   });
 }
@@ -106,10 +107,16 @@ function updateGitHubRustPackagePin(options: GitHubRustPackageUpdate): Effect.Ef
     options.pinFilePath,
     (version: string): Effect.Effect<void, Error> =>
       Effect.flatMap(
-        fetchGitHubSourceHash(options.package, version, options.repositoryRootPath),
+        fetchGitHubSourceHash(options.package, version, options.repositoryRootPath, options.runner),
         (hash: string): Effect.Effect<void, Error> =>
           Effect.flatMap(
-            cargoVendorHash(options.package, options.repositoryRootPath, version, hash),
+            cargoVendorHash(
+              options.package,
+              options.repositoryRootPath,
+              version,
+              hash,
+              options.runner,
+            ),
             (cargoVendorHashValue: string): Effect.Effect<void> =>
               writePinJson(options.pinFilePath, {
                 cargoVendorHash: cargoVendorHashValue,
@@ -121,5 +128,5 @@ function updateGitHubRustPackagePin(options: GitHubRustPackageUpdate): Effect.Ef
   );
 }
 
-export { cargoVendorHash, updateGitHubRustPackagePin };
+export { cargoVendorHash, cargoVendorHashPrefetchExpression, updateGitHubRustPackagePin };
 export type { GitHubRustPackage, GitHubRustPackageUpdate, RustPackagePin };

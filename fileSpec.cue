@@ -107,6 +107,8 @@ package fileSpec
 		"package.sh"?: #RegularFile
 		ts?: {
 			core?: {
+				"commandRunner.ts"?:      #RegularFile
+				"denoCommandRunner.ts"?:  #RegularFile
 				"temporaryDirectory.ts"?: #RegularFile
 				"updateScript.ts"?:       #RegularFile
 				"version.ts"?:            #RegularFile
@@ -158,15 +160,31 @@ package fileSpec
 	tests?: {
 		ci?: {
 			"changeImpact.ts"?:          #RegularFile
+			"denoDependenciesRun.ts"?:   #RegularFile
 			"fileSystemPermissions.ts"?: #RegularFile
+			"flakeInputRun.ts"?:         #RegularFile
+			"packageRun.ts"?:            #RegularFile
 			"pullRequest.ts"?:           #RegularFile
+			"pullRequestControl.ts"?:    #RegularFile
+			"pullRequestFailure.ts"?:    #RegularFile
 			"runtimePermissions.ts"?:    #RegularFile
 			"taskTopology.ts"?:          #RegularFile
+			"updateControl.ts"?:         #RegularFile
+			"updateGit.ts"?:             #RegularFile
+			"updateGitBranch.ts"?:       #RegularFile
+			"updateGitFixture.ts"?:      #RegularFile
+			"updateRuntime.ts"?:         #RegularFile
+			"updateState.ts"?:           #RegularFile
+			"updateStateCompletion.ts"?: #RegularFile
+			"updateStateContract.ts"?:   #RegularFile
+			"updateStateModel.ts"?:      #RegularFile
+			"updateStateOracle.ts"?:     #RegularFile
 			"updatePackage.ts"?:         #RegularFile
 		}
 		core?: {
-			"fastCheck.ts"?: #RegularFile
-			"version.ts"?:   #RegularFile
+			"commandRunner.ts"?: #RegularFile
+			"fastCheck.ts"?:     #RegularFile
+			"version.ts"?:       #RegularFile
 		}
 		nix?: {
 			"denoDependencies.ts"?: #RegularFile
@@ -198,6 +216,7 @@ package fileSpec
 			"version.ts"?: #RegularFile
 		}
 		support?: {
+			"commandRunner.ts"?:  #RegularFile
 			"fastCheck.ts"?:      #RegularFile
 			"fastCheckError.ts"?: #RegularFile
 			"fetchMock.ts"?:      #RegularFile
@@ -208,6 +227,7 @@ package fileSpec
 		}
 		update?: {
 			"releaseHash.ts"?:   #RegularFile
+			"rustPackage.ts"?:   #RegularFile
 			"stateProperty.ts"?: #RegularFile
 		}
 	}
@@ -295,6 +315,8 @@ package fileSpec
 		"package.sh"!: #RegularFile
 		ts!: {
 			core!: {
+				"commandRunner.ts"!:      #RegularFile
+				"denoCommandRunner.ts"!:  #RegularFile
 				"temporaryDirectory.ts"!: #RegularFile
 				"updateScript.ts"!:       #RegularFile
 				"version.ts"!:            #RegularFile
@@ -346,15 +368,31 @@ package fileSpec
 	tests!: {
 		ci!: {
 			"changeImpact.ts"!:          #RegularFile
+			"denoDependenciesRun.ts"!:   #RegularFile
 			"fileSystemPermissions.ts"!: #RegularFile
+			"flakeInputRun.ts"!:         #RegularFile
+			"packageRun.ts"!:            #RegularFile
 			"pullRequest.ts"!:           #RegularFile
+			"pullRequestControl.ts"!:    #RegularFile
+			"pullRequestFailure.ts"!:    #RegularFile
 			"runtimePermissions.ts"!:    #RegularFile
 			"taskTopology.ts"!:          #RegularFile
+			"updateControl.ts"!:         #RegularFile
+			"updateGit.ts"!:             #RegularFile
+			"updateGitBranch.ts"!:       #RegularFile
+			"updateGitFixture.ts"!:      #RegularFile
+			"updateRuntime.ts"!:         #RegularFile
+			"updateState.ts"!:           #RegularFile
+			"updateStateCompletion.ts"!: #RegularFile
+			"updateStateContract.ts"!:   #RegularFile
+			"updateStateModel.ts"!:      #RegularFile
+			"updateStateOracle.ts"!:     #RegularFile
 			"updatePackage.ts"!:         #RegularFile
 		}
 		core!: {
-			"fastCheck.ts"!: #RegularFile
-			"version.ts"!:   #RegularFile
+			"commandRunner.ts"!: #RegularFile
+			"fastCheck.ts"!:     #RegularFile
+			"version.ts"!:       #RegularFile
 		}
 		nix!: {
 			"denoDependencies.ts"!: #RegularFile
@@ -386,6 +424,7 @@ package fileSpec
 			"version.ts"!: #RegularFile
 		}
 		support!: {
+			"commandRunner.ts"!:  #RegularFile
 			"fastCheck.ts"!:      #RegularFile
 			"fastCheckError.ts"!: #RegularFile
 			"fetchMock.ts"!:      #RegularFile
@@ -396,6 +435,7 @@ package fileSpec
 		}
 		update!: {
 			"releaseHash.ts"!:   #RegularFile
+			"rustPackage.ts"!:   #RegularFile
 			"stateProperty.ts"!: #RegularFile
 		}
 	}
