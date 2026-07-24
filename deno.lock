@@ -8,8 +8,10 @@
     "npm:@jsr/std__path@*": "1.1.5",
     "npm:@jsr/std__testing@*": "1.0.19",
     "npm:@total-typescript/ts-reset@*": "0.6.1",
+    "npm:@types/semver@7.7.1": "7.7.1",
     "npm:effect@*": "3.21.2",
-    "npm:fast-check@*": "3.23.2"
+    "npm:fast-check@*": "3.23.2",
+    "npm:semver@7.8.5": "7.8.5"
   },
   "npm": {
     "@jsr/std__assert@1.0.19": {
@@ -107,6 +109,9 @@
     "@total-typescript/ts-reset@0.6.1": {
       "integrity": "sha512-cka47fVSo6lfQDIATYqb/vO1nvFfbPw7uWLayIXIhGETj0wcOOlrlkobOMDNQOFr9QOafegUPq13V2+6vtD7yg=="
     },
+    "@types/semver@7.7.1": {
+      "integrity": "sha512-FmgJfu+MOcQ370SD0ev7EI8TlCAfKYU+B4m5T3yXc1CiRN94g/SZPtsCkk506aUDtlMnFZvasDwHHUcZUEaYuA=="
+    },
     "effect@3.21.2": {
       "integrity": "sha512-rXd2FGDM8KdjSIrc+mqEELo7ScW7xTVxEf1iInmPSpIde9/nyGuFM710cjTo7/EreGXiUX2MOonPpprbz2XHCg==",
       "dependencies": [
@@ -122,6 +127,10 @@
     },
     "pure-rand@6.1.0": {
       "integrity": "sha512-bVWawvoZoBYpp6yIoQtQXHZjmz35RSVHnUOTefl8Vcjr8snTPY1wnpSPMWekcFwbxI6gtmT7rSYPFvz71ldiOA=="
+    },
+    "semver@7.8.5": {
+      "integrity": "sha512-Y7/KDsb8LjooZpwaqGyulO6DQlksgCncchHGk+sZIY4SBvUocMBEFH5Ur1fI4dV+Jvl0w6cjvucaIi40puRioA==",
+      "bin": true
     }
   },
   "workspace": {
@@ -133,8 +142,10 @@
       "npm:@jsr/std__path@*",
       "npm:@jsr/std__testing@*",
       "npm:@total-typescript/ts-reset@*",
+      "npm:@types/semver@7.7.1",
       "npm:effect@*",
-      "npm:fast-check@*"
+      "npm:fast-check@*",
+      "npm:semver@7.8.5"
     ]
   }
 }

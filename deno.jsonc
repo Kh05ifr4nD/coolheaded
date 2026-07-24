@@ -29,10 +29,12 @@
     "@jsr/std__path": "npm:@jsr/std__path",
     "@jsr/std__testing": "npm:@jsr/std__testing",
     "@total-typescript/ts-reset": "npm:@total-typescript/ts-reset",
+    "@types/semver": "npm:@types/semver@7.7.1",
     "coolheaded/": "./lib/ts/",
     "coolheadedCi/": "./.github/ci/",
     "effect": "npm:effect",
     "fast-check": "npm:fast-check",
+    "semver": "npm:semver@7.8.5",
   },
   "lint": {
     "exclude": ["packages/*/script/*.mjs"],

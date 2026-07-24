@@ -1,28 +1,28 @@
-const SEMVER_PATTERN = /^(?<version>\d+\.\d+\.\d+(?:[-+][0-9A-Za-z.-]+)?)$/u;
+import { compare as compareSemvers, valid } from "semver";
 
-function semverParts(version: string): readonly number[] {
-  return version
-    .split(/[.+-]/u)
-    .slice(0, 3)
-    .map((part: string): number => Math.trunc(Number(part)));
+function canonicalSemver(version: string): string | null {
+  const buildMetadataIndex = version.indexOf("+");
+  const precedenceVersion =
+    buildMetadataIndex === -1 ? version : version.slice(0, buildMetadataIndex);
+
+  return valid(version) === precedenceVersion ? version : null;
+}
+
+function parseSemver(version: string): string {
+  const parsed = canonicalSemver(version);
+  if (parsed === null) {
+    throw new TypeError(`Invalid SemVer: ${version}`);
+  }
+
+  return parsed;
 }
 
 function compareVersions(left: string, right: string): number {
-  const leftParts = semverParts(left);
-  const rightParts = semverParts(right);
-
-  for (const index of [0, 1, 2]) {
-    const diff = (leftParts[index] ?? 0) - (rightParts[index] ?? 0);
-    if (diff !== 0) {
-      return diff;
-    }
-  }
-
-  return left.localeCompare(right);
+  return compareSemvers(parseSemver(left), parseSemver(right));
 }
 
 function isSemver(version: string): boolean {
-  return SEMVER_PATTERN.test(version);
+  return canonicalSemver(version) !== null;
 }
 
 export { compareVersions, isSemver };
