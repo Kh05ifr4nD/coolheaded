@@ -41,7 +41,6 @@ describe("CI change impact discovery", (): void => {
     assertEquals(activatedCheckKind("denoDependencies"), "denoSnapshot");
     assertEquals(activatedCheckKind("deno"), "package");
     assertEquals(activatedCheckKind("minerUFull"), "package");
-    assertEquals(activatedCheckKind("openVikingFull"), "package");
   });
 
   it("selects checks whose derivation identity changed", (): void => {
@@ -143,8 +142,8 @@ describe("CI change impact discovery", (): void => {
       "aarch64-darwin": [
         "codex",
         "codexHomeModule",
-        "openViking",
-        "openVikingFull",
+        "minerU",
+        "minerUFull",
         "paseo",
         "paseoHomeModule",
         "unrelated",
@@ -158,7 +157,7 @@ describe("CI change impact discovery", (): void => {
           ".github/ci/impact.ts",
           "fileSpec.cue",
           "homeModules/codex.nix",
-          "packages/openViking/package.nix",
+          "packages/minerU/package.nix",
           "packages/paseo/check.nix",
           "tests/changeImpact.ts",
         ],
@@ -168,8 +167,8 @@ describe("CI change impact discovery", (): void => {
         "codex",
         "codexHomeModule",
         "codexMinimal",
-        "openViking",
-        "openVikingFull",
+        "minerU",
+        "minerUFull",
         "paseo",
         "paseoHomeModule",
       ],
