@@ -39,7 +39,6 @@ const DECLARATIVE_SOURCE_ENGINES = {
   "packages/minerU/update.ts": "updateVersionedNixpkgsPythonUvLock",
   "packages/ohMyPi/update.ts": "releaseHashUpdateProgram",
   "packages/openCode/update.ts": "releaseHashUpdateProgram",
-  "packages/openViking/update.ts": "updateGitHubRustPackagePin",
   "packages/oxlint/update.ts": "releaseHashUpdateProgram",
   "packages/rtk/update.ts": "updateGitHubRustPackagePin",
   "packages/rumdl/update.ts": "releaseHashUpdateProgram",

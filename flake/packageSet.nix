@@ -89,7 +89,6 @@ let
       withRipgrep = false;
     };
     minerUFull = basePackages.minerU.override { withAll = true; };
-    openVikingFull = basePackages.openViking.override { withAll = true; };
     oxlintMinimal = basePackages.oxlint.override { withTypecheck = false; };
   };
 in
