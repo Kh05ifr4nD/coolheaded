@@ -5,6 +5,7 @@ import { VersionSourceError } from "coolheaded/source/version.ts";
 
 const MAX_GITHUB_PAGES = 10;
 const REQUEST_TIMEOUT_MS = 30_000;
+const CANONICAL_GITHUB_REPOSITORY_PATH = /^\/repositories\/[1-9][0-9]*\/(?<source>tags|releases)$/u;
 interface LatestGitHubVersionOptions {
   readonly owner: string;
   readonly repo: string;
@@ -54,26 +55,13 @@ function sourceError(
 }
 function trustedPageUrl(
   candidateUrl: string,
-  endpointUrl: string,
+  requestedUrl: string,
 ): Effect.Effect<string, VersionSourceError> {
-  return Effect.try({
-    catch: (): VersionSourceError =>
-      sourceError("pagination", candidateUrl, `Untrusted GitHub page from ${candidateUrl}`),
-    try(): string {
-      const candidate = new globalThis.URL(candidateUrl);
-      const endpoint = new globalThis.URL(endpointUrl);
-      if (
-        candidate.origin !== "https://api.github.com" ||
-        candidate.origin !== endpoint.origin ||
-        candidate.pathname !== endpoint.pathname ||
-        candidate.username.length > 0 ||
-        candidate.password.length > 0
-      ) {
-        throw sourceError("pagination", candidateUrl, `Untrusted GitHub page from ${candidateUrl}`);
-      }
-      return candidate.href;
-    },
-  });
+  return candidateUrl === requestedUrl
+    ? Effect.succeed(candidateUrl)
+    : Effect.fail(
+        sourceError("pagination", candidateUrl, `Untrusted GitHub page from ${candidateUrl}`),
+      );
 }
 function refNames(
   value: unknown,
@@ -100,6 +88,7 @@ function trustedNextUrl(
   link: string | undefined,
   responseUrl: string,
   endpointUrl: string,
+  source: GitHubVersionSource,
 ): Effect.Effect<string | undefined, VersionSourceError> {
   if (link === undefined) {
     return Effect.succeed(void 0);
@@ -129,15 +118,41 @@ function trustedNextUrl(
   }
   const nextTarget = nextTargets.join("");
 
-  return Effect.flatMap(
-    Effect.try({
-      catch: (): VersionSourceError =>
-        sourceError("pagination", responseUrl, `Invalid GitHub next page from ${responseUrl}`),
-      try: (): string => new globalThis.URL(nextTarget, responseUrl).href,
-    }),
-    (nextUrl: string): Effect.Effect<string, VersionSourceError> =>
-      trustedPageUrl(nextUrl, endpointUrl),
-  );
+  return Effect.try({
+    catch: (): VersionSourceError =>
+      sourceError("pagination", responseUrl, `Invalid GitHub next page from ${responseUrl}`),
+    try(): string {
+      const candidate = new globalThis.URL(nextTarget, responseUrl);
+      const endpoint = new globalThis.URL(endpointUrl);
+      const response = new globalThis.URL(responseUrl);
+      const page = candidate.searchParams.get("page");
+      const canonicalPathSource = CANONICAL_GITHUB_REPOSITORY_PATH.exec(candidate.pathname)
+        ?.groups?.["source"];
+      const responseCanonicalPathSource = CANONICAL_GITHUB_REPOSITORY_PATH.exec(response.pathname)
+        ?.groups?.["source"];
+      const trustedPath =
+        responseCanonicalPathSource === source
+          ? candidate.pathname === response.pathname
+          : response.pathname === endpoint.pathname &&
+            (candidate.pathname === response.pathname || canonicalPathSource === source);
+      const trustedQuery =
+        page !== null &&
+        /^(?:[2-9]|[1-9][0-9]+)$/u.test(page) &&
+        (candidate.search === `?per_page=100&page=${page}` ||
+          candidate.search === `?page=${page}&per_page=100`);
+      if (
+        candidate.origin !== "https://api.github.com" ||
+        candidate.username.length > 0 ||
+        candidate.password.length > 0 ||
+        candidate.hash.length > 0 ||
+        !trustedPath ||
+        !trustedQuery
+      ) {
+        throw new Error("Untrusted GitHub continuation");
+      }
+      return candidate.href;
+    },
+  });
 }
 function allRefNames(
   endpointUrl: string,
@@ -165,9 +180,9 @@ function allRefNames(
         timeoutMs: REQUEST_TIMEOUT_MS,
         url,
       });
-      yield* trustedPageUrl(response.url, endpointUrl);
+      yield* trustedPageUrl(response.url, url);
       names.push(...(yield* refNames(value, source, response.url)));
-      url = yield* trustedNextUrl(response.headers["link"], response.url, endpointUrl);
+      url = yield* trustedNextUrl(response.headers["link"], response.url, endpointUrl, source);
     }
     if (url !== undefined) {
       return yield* Effect.fail(

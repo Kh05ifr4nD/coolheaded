@@ -1,18 +1,77 @@
 import type { HttpRequest, JsonResponse } from "coolheaded/core/httpClient.ts";
+import { assertAsyncProperty, defineReplayTarget } from "coolheadedTestSupport/fastCheck.ts";
 import { assertEquals, assertInstanceOf } from "@jsr/std__assert";
 import { gitHubRelease, latestGitHubVersion } from "coolheaded/source/githubVersion.ts";
 import { Effect } from "effect";
 import { VersionSourceError } from "coolheaded/source/version.ts";
+import fc from "fast-check";
 import { strictJsonClient } from "coolheadedTestSupport/httpClient.ts";
 
 const OK_STATUS = 200;
 const TIMEOUT_MS = 30_000;
-const FIRST_URL = "https://api.github.com/repos/example/tool/tags?per_page=100";
-const RELEASES_URL = "https://api.github.com/repos/example/tool/releases?per_page=100";
-const RELEASE_URL = "https://api.github.com/repos/example/tool/releases/tags/v2.0.0";
-const SECOND_URL = `${FIRST_URL}&page=2`;
+const CONTRACT_OWNER = "cli";
+const CONTRACT_REPOSITORY_ID = "212613049";
+const CONTRACT_REPO = "cli";
+const MAX_PROPERTY_PAGE = 10_000;
+const MAX_REPOSITORY_ID = 999_999_999;
+const PAGE_SOURCES = ["tags", "releases"] as const;
+type GitHubPageSource = (typeof PAGE_SOURCES)[number];
+type InvalidContinuationKind =
+  | "duplicatePage"
+  | "duplicatePerPage"
+  | "extraQuery"
+  | "foreignOrigin"
+  | "fragment"
+  | "insecureOrigin"
+  | "invalidPage"
+  | "missingPage"
+  | "missingPerPage"
+  | "noncanonicalId"
+  | "resourceChange"
+  | "userinfo"
+  | "wrongPerPage"
+  | "zeroId";
+const INVALID_CONTINUATION_KINDS = [
+  "duplicatePage",
+  "duplicatePerPage",
+  "extraQuery",
+  "foreignOrigin",
+  "fragment",
+  "insecureOrigin",
+  "invalidPage",
+  "missingPage",
+  "missingPerPage",
+  "noncanonicalId",
+  "resourceChange",
+  "userinfo",
+  "wrongPerPage",
+  "zeroId",
+] as const satisfies readonly InvalidContinuationKind[];
 const REQUEST_HEADERS = { accept: "application/vnd.github+json" };
 type ExpectedJsonRequest = Parameters<typeof strictJsonClient>[0][number];
+
+function namedPageUrl(source: GitHubPageSource, owner = "example", repo = "tool"): string {
+  return `https://api.github.com/repos/${owner}/${repo}/${source}?per_page=100`;
+}
+
+function canonicalPageUrl(
+  repositoryId: string,
+  source: GitHubPageSource,
+  page: number,
+  pageFirst = false,
+): string {
+  const query = pageFirst ? `page=${page}&per_page=100` : `per_page=100&page=${page}`;
+  return `https://api.github.com/repositories/${repositoryId}/${source}?${query}`;
+}
+
+function versionEntries(source: GitHubPageSource, version: string): readonly unknown[] {
+  return source === "releases" ? [{ tag_name: `v${version}` }] : [{ name: `v${version}` }];
+}
+
+const FIRST_URL = namedPageUrl("tags");
+const RELEASES_URL = namedPageUrl("releases");
+const RELEASE_URL = "https://api.github.com/repos/example/tool/releases/tags/v2.0.0";
+const SECOND_URL = `${FIRST_URL}&page=2`;
 
 function request(url: string): HttpRequest {
   return {
@@ -54,19 +113,89 @@ function plan(
   };
 }
 
-async function paginationFailure(
+async function sourcePaginationFailure(
+  source: GitHubPageSource,
+  requestUrl: string,
   link: string | undefined,
-  finalUrl: string = FIRST_URL,
+  finalUrl: string = requestUrl,
 ): Promise<VersionSourceError> {
-  const fake = strictJsonClient([plan(FIRST_URL, [{ name: "v1.0.0" }], link, finalUrl)]);
+  const fake = strictJsonClient([
+    plan(requestUrl, versionEntries(source, "1.0.0"), link, finalUrl),
+  ]);
   const error = await Effect.runPromise(
-    Effect.flip(latestGitHubVersion({ owner: "example", repo: "tool" }, fake.client)),
+    Effect.flip(latestGitHubVersion({ owner: "example", repo: "tool", source }, fake.client)),
   );
   assertInstanceOf(error, VersionSourceError);
   assertEquals(error.kind, "pagination");
   assertEquals(fake.calls.length, 1);
   fake.assertExhausted();
   return error;
+}
+
+async function paginationFailure(
+  link: string | undefined,
+  finalUrl: string = FIRST_URL,
+): Promise<VersionSourceError> {
+  return await sourcePaginationFailure("tags", FIRST_URL, link, finalUrl);
+}
+
+function invalidContinuationUrl(
+  kind: InvalidContinuationKind,
+  source: GitHubPageSource,
+  repositoryId: string,
+  page: number,
+  invalidPage: string,
+): string {
+  const path = `/repositories/${repositoryId}/${source}`;
+  const query = `?per_page=100&page=${page}`;
+  switch (kind) {
+    case "duplicatePage": {
+      return `https://api.github.com${path}?per_page=100&page=${page}&page=${page}`;
+    }
+    case "duplicatePerPage": {
+      return `https://api.github.com${path}?per_page=100&per_page=100&page=${page}`;
+    }
+    case "extraQuery": {
+      return `https://api.github.com${path}${query}&direction=asc`;
+    }
+    case "foreignOrigin": {
+      return `https://example.com${path}${query}`;
+    }
+    case "fragment": {
+      return `https://api.github.com${path}${query}#next`;
+    }
+    case "insecureOrigin": {
+      return `http://api.github.com${path}${query}`;
+    }
+    case "invalidPage": {
+      return `https://api.github.com${path}?per_page=100&page=${invalidPage}`;
+    }
+    case "missingPage": {
+      return `https://api.github.com${path}?per_page=100`;
+    }
+    case "missingPerPage": {
+      return `https://api.github.com${path}?page=${page}`;
+    }
+    case "noncanonicalId": {
+      return `https://api.github.com/repositories/0${repositoryId}/${source}${query}`;
+    }
+    case "resourceChange": {
+      const changedSource = source === "tags" ? "releases" : "tags";
+      return `https://api.github.com/repositories/${repositoryId}/${changedSource}${query}`;
+    }
+    case "userinfo": {
+      return `https://user@api.github.com${path}${query}`;
+    }
+    case "wrongPerPage": {
+      return `https://api.github.com${path}?per_page=99&page=${page}`;
+    }
+    case "zeroId": {
+      return `https://api.github.com/repositories/0/${source}${query}`;
+    }
+    default: {
+      throw new TypeError("Unknown invalid continuation kind");
+    }
+  }
 }
 
 Deno.test("GitHub versions follow a trusted relative next page", async (): Promise<void> => {
@@ -79,6 +208,102 @@ Deno.test("GitHub versions follow a trusted relative next page", async (): Promi
     "2.0.0",
   );
   fake.assertExhausted();
+});
+
+for (const source of PAGE_SOURCES) {
+  Deno.test(`GitHub ${source} follow GitHub's named-to-numeric repository Link contract`, async (): Promise<void> => {
+    const firstUrl = namedPageUrl(source, CONTRACT_OWNER, CONTRACT_REPO);
+    const canonicalUrl = canonicalPageUrl(CONTRACT_REPOSITORY_ID, source, 2);
+    const fake = strictJsonClient([
+      plan(firstUrl, versionEntries(source, "1.0.0"), `<${canonicalUrl}>; rel="next"`),
+      plan(canonicalUrl, versionEntries(source, "2.0.0")),
+    ]);
+
+    assertEquals(
+      await Effect.runPromise(
+        latestGitHubVersion({ owner: CONTRACT_OWNER, repo: CONTRACT_REPO, source }, fake.client),
+      ),
+      "2.0.0",
+    );
+    assertEquals(fake.calls.length, 2);
+    fake.assertExhausted();
+  });
+}
+
+const canonicalContinuationName =
+  "GitHub versions follow generated canonical numeric repository continuations";
+Deno.test(canonicalContinuationName, async (): Promise<void> => {
+  await assertAsyncProperty(
+    defineReplayTarget("tests/source/githubVersion.ts", canonicalContinuationName, undefined, [
+      "GH_TOKEN",
+      "GITHUB_TOKEN",
+    ]),
+    fc.asyncProperty(
+      fc.constantFrom(...PAGE_SOURCES),
+      fc.integer({ max: MAX_REPOSITORY_ID, min: 1 }).map(String),
+      fc.integer({ max: MAX_PROPERTY_PAGE, min: 2 }),
+      fc.boolean(),
+      async (
+        source: GitHubPageSource,
+        repositoryId: string,
+        page: number,
+        pageFirst: boolean,
+      ): Promise<void> => {
+        const firstUrl = namedPageUrl(source);
+        const canonicalUrl = canonicalPageUrl(repositoryId, source, page, pageFirst);
+        const fake = strictJsonClient([
+          plan(firstUrl, versionEntries(source, "1.0.0"), `<${canonicalUrl}>; rel="next"`),
+          plan(canonicalUrl, versionEntries(source, "9.0.0")),
+        ]);
+
+        assertEquals(
+          await Effect.runPromise(
+            latestGitHubVersion({ owner: "example", repo: "tool", source }, fake.client),
+          ),
+          "9.0.0",
+        );
+        assertEquals(fake.calls.length, 2);
+        fake.assertExhausted();
+      },
+    ),
+  );
+});
+
+const rejectedContinuationName =
+  "GitHub versions reject generated non-contract continuation capabilities";
+Deno.test(rejectedContinuationName, async (): Promise<void> => {
+  await assertAsyncProperty(
+    defineReplayTarget("tests/source/githubVersion.ts", rejectedContinuationName, undefined, [
+      "GH_TOKEN",
+      "GITHUB_TOKEN",
+    ]),
+    fc.asyncProperty(
+      fc.constantFrom(...PAGE_SOURCES),
+      fc.integer({ max: MAX_REPOSITORY_ID, min: 1 }).map(String),
+      fc.integer({ max: MAX_PROPERTY_PAGE, min: 2 }),
+      fc.constantFrom("0", "1", "01", "02", "-2", "2.0", "two"),
+      async (
+        source: GitHubPageSource,
+        repositoryId: string,
+        page: number,
+        invalidPage: string,
+      ): Promise<void> => {
+        const firstUrl = namedPageUrl(source);
+        await Promise.all(
+          INVALID_CONTINUATION_KINDS.map(async (kind: InvalidContinuationKind): Promise<void> => {
+            const invalidUrl = invalidContinuationUrl(
+              kind,
+              source,
+              repositoryId,
+              page,
+              invalidPage,
+            );
+            await sourcePaginationFailure(source, firstUrl, `<${invalidUrl}>; rel="next"`);
+          }),
+        );
+      },
+    ),
+  );
 });
 
 for (const [name, link] of [
@@ -125,7 +350,34 @@ for (const [name, finalUrl, link] of [
 }
 
 Deno.test("GitHub versions reject pagination cycles", async (): Promise<void> => {
-  await paginationFailure(`<${FIRST_URL}>; rel="next"`);
+  const canonicalUrl = canonicalPageUrl("123", "tags", 2);
+  const fake = strictJsonClient([
+    plan(FIRST_URL, [{ name: "v1.0.0" }], `<${canonicalUrl}>; rel="next"`),
+    plan(canonicalUrl, [{ name: "v2.0.0" }], `<${canonicalUrl}>; rel="next"`),
+  ]);
+  const error = await Effect.runPromise(
+    Effect.flip(latestGitHubVersion({ owner: "example", repo: "tool" }, fake.client)),
+  );
+  assertInstanceOf(error, VersionSourceError);
+  assertEquals(error.kind, "pagination");
+  assertEquals(fake.calls.length, 2);
+  fake.assertExhausted();
+});
+
+Deno.test("GitHub versions reject a changed canonical repository id", async (): Promise<void> => {
+  const secondUrl = canonicalPageUrl("123", "tags", 2);
+  const changedRepositoryUrl = canonicalPageUrl("456", "tags", 3);
+  const fake = strictJsonClient([
+    plan(FIRST_URL, [{ name: "v1.0.0" }], `<${secondUrl}>; rel="next"`),
+    plan(secondUrl, [{ name: "v2.0.0" }], `<${changedRepositoryUrl}>; rel="next"`),
+  ]);
+  const error = await Effect.runPromise(
+    Effect.flip(latestGitHubVersion({ owner: "example", repo: "tool" }, fake.client)),
+  );
+  assertInstanceOf(error, VersionSourceError);
+  assertEquals(error.kind, "pagination");
+  assertEquals(fake.calls.length, 2);
+  fake.assertExhausted();
 });
 
 Deno.test("GitHub versions reject pagination beyond the page limit", async (): Promise<void> => {
