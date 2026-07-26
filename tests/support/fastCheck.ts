@@ -6,6 +6,12 @@ const DEFAULT_FAST_CHECK_SEED = 24_301;
 const MAX_FAST_CHECK_RUNS = 10_000;
 const MAX_FAST_CHECK_SEED = 2_147_483_647;
 const MIN_FAST_CHECK_SEED = -2_147_483_648;
+const FAST_CHECK_ENVIRONMENT_VARIABLES = [
+  "FAST_CHECK_SEED",
+  "FAST_CHECK_PATH",
+  "FAST_CHECK_RUNS",
+] as const;
+const CANONICAL_ENVIRONMENT_VARIABLE = /^[A-Z_][A-Z0-9_]*$/u;
 
 interface FastCheckConfig {
   readonly path?: string;
@@ -17,6 +23,7 @@ interface ReplayTarget {
   readonly file: string;
   readonly filter: string;
   readonly replayArgument?: () => string;
+  readonly unsetEnvironmentVariables?: readonly string[];
 }
 
 interface FastCheckResult {
@@ -103,14 +110,36 @@ function fastCheckConfig(
   return { path: pathValue, runs, seed };
 }
 
+function validateUnsetEnvironmentVariables(unsetEnvironmentVariables: readonly string[]): void {
+  const seen = new Set<string>();
+  for (const name of unsetEnvironmentVariables) {
+    if (!CANONICAL_ENVIRONMENT_VARIABLE.test(name)) {
+      throw new InvalidFastCheckEnvironmentError(
+        `${name} must use canonical environment variable syntax`,
+      );
+    }
+    if (
+      FAST_CHECK_ENVIRONMENT_VARIABLES.some(
+        (fastCheckName: string): boolean => fastCheckName === name,
+      ) ||
+      seen.has(name)
+    ) {
+      throw new InvalidFastCheckEnvironmentError(`Duplicate replay environment variable: ${name}`);
+    }
+    seen.add(name);
+  }
+}
+
 function defineReplayTarget(
   file: string,
   filter: string,
   replayArgument?: () => string,
+  unsetEnvironmentVariables: readonly string[] = [],
 ): ReplayTarget {
   if (file.length === 0 || filter.length === 0 || file.includes("\0") || filter.includes("\0")) {
     throw new TypeError("Fast-check replay target must have a non-empty file and filter");
   }
+  validateUnsetEnvironmentVariables(unsetEnvironmentVariables);
 
   const key = `${file}\0${filter}`;
   if (replayTargets.has(key)) {
@@ -119,6 +148,11 @@ function defineReplayTarget(
   replayTargets.add(key);
 
   return Object.freeze({
+    ...(unsetEnvironmentVariables.length === 0
+      ? {}
+      : {
+          unsetEnvironmentVariables: Object.freeze([...unsetEnvironmentVariables]),
+        }),
     file,
     filter,
     ...(replayArgument === undefined ? {} : { replayArgument }),
@@ -130,13 +164,23 @@ function assertResult(target: ReplayTarget, result: Readonly<FastCheckResult>, r
     if (result.counterexample === null || result.counterexamplePath === null) {
       throw new TypeError("Failed fast-check result omitted replay details");
     }
+    const unsetEnvironmentVariables = target.unsetEnvironmentVariables ?? [];
+    validateUnsetEnvironmentVariables(unsetEnvironmentVariables);
     const replayArguments = target.replayArgument === undefined ? [] : [target.replayArgument()];
     const replayCommand = [
       `FAST_CHECK_SEED=${shellQuote(String(result.seed))}`,
       `FAST_CHECK_PATH=${shellQuote(result.counterexamplePath)}`,
       `FAST_CHECK_RUNS=${shellQuote(String(runs))}`,
+      ...(unsetEnvironmentVariables.length === 0
+        ? []
+        : [
+            "env",
+            ...unsetEnvironmentVariables.flatMap((name: string): readonly string[] => ["-u", name]),
+          ]),
       "deno test --no-check",
-      "--allow-env=FAST_CHECK_SEED,FAST_CHECK_PATH,FAST_CHECK_RUNS",
+      `--allow-env=${[...FAST_CHECK_ENVIRONMENT_VARIABLES, ...unsetEnvironmentVariables].join(
+        ",",
+      )}`,
       `--filter ${shellQuote(target.filter)}`,
       shellQuote(target.file),
       ...(replayArguments.length === 0

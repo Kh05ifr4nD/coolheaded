@@ -44,7 +44,7 @@ describe("Deno task topology", (): void => {
     );
     assertEquals(
       tasks["test:integration:env"],
-      "env -u GH_TOKEN -u GITHUB_TOKEN $COOLHEADED_DENO test --allow-env=GH_TOKEN,GITHUB_TOKEN tests/source/githubVersion.ts",
+      "env -u GH_TOKEN -u GITHUB_TOKEN $COOLHEADED_DENO test --allow-env=FAST_CHECK_PATH,FAST_CHECK_RUNS,FAST_CHECK_SEED,GH_TOKEN,GITHUB_TOKEN tests/source/githubVersion.ts",
     );
     assertEquals(
       tasks["test:integration:net"],

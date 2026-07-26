@@ -96,6 +96,42 @@ describe("fast-check replay support", (): void => {
       "Duplicate fast-check replay target",
     );
   });
+
+  it("unsets explicitly declared environment variables in replay commands", (): void => {
+    const target = defineReplayTarget(
+      "tests/core/fastCheck.ts",
+      "fast-check replay support permits declared replay environment",
+      undefined,
+      ["GH_TOKEN", "GITHUB_TOKEN"],
+    );
+    const failure = capturedFailure(target, {
+      FAST_CHECK_RUNS: "1",
+      FAST_CHECK_SEED: "42",
+    });
+
+    assertStringIncludes(
+      failure.message,
+      "FAST_CHECK_RUNS='1' env -u GH_TOKEN -u GITHUB_TOKEN deno test --no-check " +
+        "--allow-env=FAST_CHECK_SEED,FAST_CHECK_PATH,FAST_CHECK_RUNS,GH_TOKEN,GITHUB_TOKEN",
+    );
+  });
+
+  it("rejects unsafe and duplicate unset environment variables", (): void => {
+    for (const [index, unsetEnvironmentVariables] of [
+      ["GH_TOKEN,GITHUB_TOKEN"],
+      ["GH_TOKEN", "GH_TOKEN"],
+      ["FAST_CHECK_SEED"],
+    ].entries()) {
+      assertThrows((): void => {
+        defineReplayTarget(
+          "tests/core/fastCheck.ts",
+          `fast-check replay support rejects replay environment ${index}`,
+          undefined,
+          unsetEnvironmentVariables,
+        );
+      }, InvalidFastCheckEnvironmentError);
+    }
+  });
 });
 
 Deno.test(deterministicReplayName, (): void => {
@@ -116,7 +152,9 @@ Deno.test(deterministicReplayName, (): void => {
 
   assertStringIncludes(
     failure.message,
-    `FAST_CHECK_SEED='${failure.seed}' FAST_CHECK_PATH='${failure.counterexamplePath}' FAST_CHECK_RUNS='23'`,
+    `FAST_CHECK_SEED='${failure.seed}' FAST_CHECK_PATH='${failure.counterexamplePath}' ` +
+      "FAST_CHECK_RUNS='23' deno test --no-check " +
+      "--allow-env=FAST_CHECK_SEED,FAST_CHECK_PATH,FAST_CHECK_RUNS",
   );
   assertStringIncludes(
     failure.message,
