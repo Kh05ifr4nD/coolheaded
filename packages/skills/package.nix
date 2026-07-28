@@ -14,8 +14,9 @@ packageLib.mkNpmCliPackage {
     fetchNpmDeps
     jq
     makeWrapper
-    nodejs-slim
     ;
+
+  nodejs = nodejs-slim;
 
   pname = "skills";
   cliPath = "bin/cli.mjs";

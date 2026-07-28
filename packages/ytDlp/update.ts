@@ -16,6 +16,7 @@ type ReleaseTargets = Parameters<typeof releaseUrlsFromTargets>[0];
 interface UpdateDependencies {
   readonly httpClient: HttpClient;
   readonly jsonClient: JsonClient;
+  readonly pinFilePath: string;
 }
 
 const RELEASE_TARGETS = {
@@ -49,7 +50,7 @@ function updateProgram(
           "sha256Digest",
           dependencies.httpClient,
         ),
-        (config): Effect.Effect<void> => writePackageHashConfig(PIN_FILE_PATH, config),
+        (config): Effect.Effect<void> => writePackageHashConfig(dependencies.pinFilePath, config),
       ),
   );
 }
@@ -59,9 +60,13 @@ async function main(args: readonly string[], dependencies: UpdateDependencies): 
 }
 
 function cliProgram(args: readonly string[]): Effect.Effect<void, Error> {
-  return updateProgram(args, { httpClient: fetchHttpClient, jsonClient: fetchJsonClient });
+  return updateProgram(args, {
+    httpClient: fetchHttpClient,
+    jsonClient: fetchJsonClient,
+    pinFilePath: PIN_FILE_PATH,
+  });
 }
 
 runUpdateScript(import.meta.url, cliProgram);
 
-export { main };
+export { main, updateProgram };

@@ -12,6 +12,7 @@ type ReleaseTargets = Parameters<typeof releaseUrlsFromTargets>[0];
 interface UpdateDependencies {
   readonly httpClient: HttpClient;
   readonly jsonClient: JsonClient;
+  readonly pinFilePath: string;
 }
 
 const RELEASE_TARGETS = {
@@ -33,7 +34,7 @@ function updateProgram(
     httpClient: dependencies.httpClient,
     latestVersion: (): ReturnType<typeof latestGitHubVersion> =>
       latestVersion(dependencies.jsonClient),
-    pinFilePath: PIN_FILE_PATH,
+    pinFilePath: dependencies.pinFilePath,
     source: "sha256Digest",
     urlsForVersion: (version: string) =>
       releaseUrlsFromTargets(
@@ -51,9 +52,13 @@ async function main(args: readonly string[], dependencies: UpdateDependencies): 
 function cliProgram(
   args: readonly string[],
 ): ReturnType<typeof releaseHashUpdateProgram<GitHubVersionError>> {
-  return updateProgram(args, { httpClient: fetchHttpClient, jsonClient: fetchJsonClient });
+  return updateProgram(args, {
+    httpClient: fetchHttpClient,
+    jsonClient: fetchJsonClient,
+    pinFilePath: PIN_FILE_PATH,
+  });
 }
 
 runUpdateScript(import.meta.url, cliProgram);
 
-export { main };
+export { main, updateProgram };

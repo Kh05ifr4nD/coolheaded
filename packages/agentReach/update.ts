@@ -14,27 +14,38 @@ const SOURCE = {
   tag: (version: string): string => `v${version}`,
 };
 
+interface UpdateDependencies {
+  readonly jsonClient: JsonClient;
+  readonly pinFilePath: string;
+  readonly repositoryRootPath: string;
+  readonly runner: CommandRunner;
+}
+
 function latestVersion(jsonClient: JsonClient): ReturnType<typeof latestGitHubVersion> {
   return latestGitHubVersion({ owner: SOURCE.owner, repo: SOURCE.repo }, jsonClient);
 }
 
 function updateProgram(
   args: readonly string[],
-  runner: CommandRunner,
-  jsonClient: JsonClient,
+  dependencies: UpdateDependencies,
 ): Effect.Effect<void, Error> {
   return updateGitHubSourcePin({
     args,
-    latestVersion: (): Effect.Effect<string, Error> => latestVersion(jsonClient),
-    pinFilePath: PIN_FILE_PATH,
-    repositoryRootPath: REPOSITORY_ROOT_PATH,
-    runner,
+    latestVersion: (): Effect.Effect<string, Error> => latestVersion(dependencies.jsonClient),
+    pinFilePath: dependencies.pinFilePath,
+    repositoryRootPath: dependencies.repositoryRootPath,
+    runner: dependencies.runner,
     source: SOURCE,
   });
 }
 
 function cliProgram(args: readonly string[], runner: CommandRunner): Effect.Effect<void, Error> {
-  return updateProgram(args, runner, fetchJsonClient);
+  return updateProgram(args, {
+    jsonClient: fetchJsonClient,
+    pinFilePath: PIN_FILE_PATH,
+    repositoryRootPath: REPOSITORY_ROOT_PATH,
+    runner,
+  });
 }
 
 runUpdateScript(import.meta.url, cliProgram);

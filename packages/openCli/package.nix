@@ -14,8 +14,9 @@ let
       fetchNpmDeps
       jq
       makeWrapper
-      nodejs-slim
       ;
+
+    nodejs = nodejs-slim;
 
     pname = "opencli";
     packageName = "@jackwener/opencli";

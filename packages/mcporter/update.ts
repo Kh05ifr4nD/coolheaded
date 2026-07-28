@@ -7,32 +7,37 @@ import { updateNpmTarballPackage } from "coolheaded/npm/tarball.ts";
 
 const NPM_PACKAGE_NAME = "mcporter";
 
+interface UpdateDependencies {
+  readonly importMetaUrl: string;
+  readonly jsonClient: JsonClient;
+  readonly runner: CommandRunner;
+}
+
 function updateProgram(
   args: readonly string[],
-  runner: CommandRunner,
-  jsonClient: JsonClient,
+  dependencies: UpdateDependencies,
 ): Effect.Effect<void, Error> {
   return updateNpmTarballPackage({
     args,
-    importMetaUrl: import.meta.url,
-    jsonClient,
+    importMetaUrl: dependencies.importMetaUrl,
+    jsonClient: dependencies.jsonClient,
     packageName: NPM_PACKAGE_NAME,
+    runner: dependencies.runner,
+  });
+}
+
+async function main(args: readonly string[], dependencies: UpdateDependencies): Promise<void> {
+  await Effect.runPromise(updateProgram(args, dependencies));
+}
+
+function cliProgram(args: readonly string[], runner: CommandRunner): Effect.Effect<void, Error> {
+  return updateProgram(args, {
+    importMetaUrl: import.meta.url,
+    jsonClient: fetchJsonClient,
     runner,
   });
 }
 
-async function main(
-  args: readonly string[],
-  runner: CommandRunner,
-  jsonClient: JsonClient,
-): Promise<void> {
-  await Effect.runPromise(updateProgram(args, runner, jsonClient));
-}
-
-function cliProgram(args: readonly string[], runner: CommandRunner): Effect.Effect<void, Error> {
-  return updateProgram(args, runner, fetchJsonClient);
-}
-
 runUpdateScript(import.meta.url, cliProgram);
 
-export { main };
+export { main, updateProgram };
