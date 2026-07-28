@@ -42,7 +42,7 @@ packageLib.mkGitHubReleaseBinaryPackage {
 
     install -Dm755 "$src" "$out/libexec/yt-dlp/bin/yt-dlp"
     makeWrapper "$out/libexec/yt-dlp/bin/yt-dlp" "$out/bin/yt-dlp" \
-      --add-flags "--js-runtimes node" \
+      --add-flags "--no-js-runtimes --js-runtimes node" \
       --prefix PATH : ${lib.escapeShellArg runtimePath}
 
     runHook postInstall
