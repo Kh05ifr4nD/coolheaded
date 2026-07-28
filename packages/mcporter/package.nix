@@ -4,7 +4,7 @@
   fetchNpmDeps,
   jq,
   makeWrapper,
-  nodejs,
+  nodejs-slim,
   packageLib,
 }:
 packageLib.mkNpmCliPackage {
@@ -13,7 +13,7 @@ packageLib.mkNpmCliPackage {
     fetchNpmDeps
     jq
     makeWrapper
-    nodejs
+    nodejs-slim
     ;
 
   pname = "mcporter";

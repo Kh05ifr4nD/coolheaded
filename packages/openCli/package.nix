@@ -4,7 +4,7 @@
   fetchNpmDeps,
   jq,
   makeWrapper,
-  nodejs,
+  nodejs-slim,
   packageLib,
 }:
 let
@@ -14,7 +14,7 @@ let
       fetchNpmDeps
       jq
       makeWrapper
-      nodejs
+      nodejs-slim
       ;
 
     pname = "opencli";

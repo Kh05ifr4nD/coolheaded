@@ -2,10 +2,11 @@
   lib,
   stdenv,
   autoPatchelfHook,
-  coolheaded,
   ffmpeg-headless,
   makeWrapper,
+  nodejs-slim,
   packageLib,
+  zlib,
 }:
 
 let
@@ -16,8 +17,8 @@ let
     "yt-dlp_linux"
   ];
   runtimePath = lib.makeBinPath [
-    coolheaded.deno
     ffmpeg-headless
+    nodejs-slim
   ];
 in
 packageLib.mkGitHubReleaseBinaryPackage {
@@ -30,7 +31,10 @@ packageLib.mkGitHubReleaseBinaryPackage {
     makeWrapper
   ]
   ++ lib.optionals stdenv.hostPlatform.isLinux [ autoPatchelfHook ];
-  buildInputs = lib.optionals stdenv.hostPlatform.isLinux [ stdenv.cc.cc.lib ];
+  buildInputs = lib.optionals stdenv.hostPlatform.isLinux [
+    stdenv.cc.cc.lib
+    zlib
+  ];
 
   dontUnpack = true;
   installPhase = ''
@@ -38,6 +42,7 @@ packageLib.mkGitHubReleaseBinaryPackage {
 
     install -Dm755 "$src" "$out/libexec/yt-dlp/bin/yt-dlp"
     makeWrapper "$out/libexec/yt-dlp/bin/yt-dlp" "$out/bin/yt-dlp" \
+      --add-flags "--js-runtimes node" \
       --prefix PATH : ${lib.escapeShellArg runtimePath}
 
     runHook postInstall

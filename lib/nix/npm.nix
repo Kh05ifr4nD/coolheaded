@@ -58,7 +58,7 @@ let
       launcherNames,
       makeWrapper,
       meta,
-      nodejs,
+      nodejs-slim,
       pname,
       cliPath,
       extraNativeBuildInputs ? [ ],
@@ -68,7 +68,7 @@ let
       packageName ? pname,
       pinPath ? base.defaultPinPath,
       preVersionCheck ? "",
-      runtimeInputs ? [ nodejs ],
+      runtimeInputs ? [ nodejs-slim ],
       tarballName ? npmTarballName packageName,
       versionCheckKeepEnvironment ? [ ],
       versionCheckProgramArg ? "--version",
@@ -134,7 +134,7 @@ let
         cp -R ${lib.escapeShellArgs installItems} "$packageRoot/"
 
         for launcherName in ${lib.escapeShellArgs launcherNames}; do
-          makeWrapper ${nodejs}/bin/node "$out/bin/$launcherName" \
+          makeWrapper ${nodejs-slim}/bin/node "$out/bin/$launcherName" \
             --add-flags "$packageRoot/${cliPath}" \
             --prefix PATH : "${runtimePath}"
         done

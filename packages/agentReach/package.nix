@@ -3,11 +3,9 @@
   stdenv,
   fetchFromGitHub,
   ffmpeg-headless,
-  makeWrapper,
-  nodejs_24,
+  nodejs-slim,
   packageLib,
   python313Packages,
-  symlinkJoin,
   coolheaded,
 }:
 
@@ -16,13 +14,12 @@ let
   pin = builtins.fromJSON (builtins.readFile ./pin.json);
   canExecute = stdenv.buildPlatform.canExecute stdenv.hostPlatform;
   runtimeTools = [
-    coolheaded.deno
     coolheaded.gh
     coolheaded.mcporter
     coolheaded.openCli
     coolheaded.ytDlp
     ffmpeg-headless
-    nodejs_24
+    nodejs-slim
   ];
 
   application = python313Packages.buildPythonApplication {
@@ -41,6 +38,11 @@ let
     __structuredAttrs = true;
 
     patches = [ ./patch/nixManagedRuntime.patch ];
+
+    postPatch = ''
+      grep -Fq "System dependencies are provided by the Nix package." agent_reach/cli.py
+      grep -Fq 'AGENT_REACH_NIX_MANAGED") != "1"' agent_reach/channels/youtube.py
+    '';
 
     build-system = [ python313Packages.hatchling ];
     dependencies = with python313Packages; [
@@ -96,29 +98,4 @@ let
     };
   };
 in
-symlinkJoin {
-  name = "${pname}-${pin.version}";
-  paths = [ application ] ++ runtimeTools;
-  nativeBuildInputs = [ makeWrapper ];
-
-  postBuild = lib.optionalString canExecute ''
-    . ${../../lib/package.sh}
-
-    assertExecutableSet "$out/bin" \
-      agent-reach corepack deno dx ffmpeg ffprobe gh mcporter node npm npx opencli yt-dlp
-    "$out/bin/agent-reach" version > /dev/null
-    "$out/bin/gh" --version > /dev/null
-    "$out/bin/mcporter" --version > /dev/null
-    "$out/bin/opencli" --version > /dev/null
-    "$out/bin/yt-dlp" --version > /dev/null
-  '';
-
-  passthru = { inherit application; };
-
-  meta = application.meta // {
-    sourceProvenance = with lib.sourceTypes; [
-      fromSource
-      binaryNativeCode
-    ];
-  };
-}
+application

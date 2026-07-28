@@ -1,14 +1,6 @@
 diff --git a/agent_reach/cli.py b/agent_reach/cli.py
 --- a/agent_reach/cli.py
 +++ b/agent_reach/cli.py
-@@ -174,6 +174,6 @@ def _cmd_install(args):
-     from agent_reach.doctor import check_all, format_report
- 
--    safe_mode = args.safe
-+    safe_mode = args.safe or os.environ.get("AGENT_REACH_NIX_MANAGED") == "1"
-     dry_run = args.dry_run
- 
-     config = Config()
 @@ -184,7 +184,8 @@ def _cmd_install(args):
  
      # Ensure tools directory exists (for upstream tool repos)
@@ -19,7 +11,7 @@ diff --git a/agent_reach/cli.py b/agent_reach/cli.py
  
      if dry_run:
          print("DRY RUN — showing what would be done (no changes)")
-@@ -320,6 +321,8 @@ def _cmd_install(args):
+@@ -320,7 +321,9 @@ def _cmd_install(args):
  
          # ── Install agent skill ──
 -        _install_skill()
@@ -32,6 +24,15 @@ diff --git a/agent_reach/cli.py b/agent_reach/cli.py
 +            print(f"✅ Installation complete! {ok}/{total} channels active.")
  
          if not requested_channels:
+@@ -510,4 +513,8 @@ def _install_system_deps():
+     """Install system-level dependencies: gh CLI, Node.js (for mcporter)."""
++    if os.environ.get("AGENT_REACH_NIX_MANAGED") == "1":
++        print("System dependencies are provided by the Nix package.")
++        return
++
+     import shutil
+     import subprocess
+     import platform
 diff --git a/agent_reach/config.py b/agent_reach/config.py
 --- a/agent_reach/config.py
 +++ b/agent_reach/config.py
@@ -56,15 +57,17 @@ diff --git a/pyproject.toml b/pyproject.toml
 diff --git a/agent_reach/channels/youtube.py b/agent_reach/channels/youtube.py
 --- a/agent_reach/channels/youtube.py
 +++ b/agent_reach/channels/youtube.py
-@@ -2,6 +2,7 @@
+@@ -2,6 +2,8 @@
  """YouTube — check if yt-dlp is available with JS runtime."""
  
- import shutil
+-import shutil
++import os
++import shutil
 +import sys
  
  from agent_reach.probe import probe_command
  from agent_reach.utils.paths import get_ytdlp_config_path, render_ytdlp_fix_command
-@@ -30,7 +31,12 @@ class YouTubeChannel(Channel):
+@@ -30,7 +32,12 @@ class YouTubeChannel(Channel):
  
      def check(self, config=None):
          # 真跑 yt-dlp --version 探活，区分未装 / venv 断链 / 跑不动
@@ -78,3 +81,14 @@ diff --git a/agent_reach/channels/youtube.py b/agent_reach/channels/youtube.py
          if probe.status == "missing":
              self.active_backend = None
              return "off", "yt-dlp 未安装。安装：pip install yt-dlp"
+@@ -57,7 +64,9 @@ class YouTubeChannel(Channel):
+         # Check yt-dlp config for --js-runtimes
+         # Deno works out of the box; Node.js requires explicit config
+         has_deno = shutil.which("deno")
+-        if not has_deno:
++        if (
++            not has_deno and os.environ.get("AGENT_REACH_NIX_MANAGED") != "1"
++        ):
+             ytdlp_config = get_ytdlp_config_path()
+             if not _has_js_runtime_config(ytdlp_config):
+                 return "warn", (

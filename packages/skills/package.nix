@@ -5,7 +5,7 @@
   git,
   jq,
   makeWrapper,
-  nodejs,
+  nodejs-slim,
   packageLib,
 }:
 packageLib.mkNpmCliPackage {
@@ -14,7 +14,7 @@ packageLib.mkNpmCliPackage {
     fetchNpmDeps
     jq
     makeWrapper
-    nodejs
+    nodejs-slim
     ;
 
   pname = "skills";
@@ -34,7 +34,7 @@ packageLib.mkNpmCliPackage {
   ];
   runtimeInputs = [
     git
-    nodejs
+    nodejs-slim
   ];
   preVersionCheck = ''
     export HOME="$PWD/versionCheckHome"
