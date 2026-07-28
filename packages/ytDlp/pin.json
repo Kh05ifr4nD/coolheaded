@@ -1,0 +1,8 @@
+{
+  "version": "2026.07.04",
+  "platformPackageHashes": {
+    "aarch64-darwin": "sha256-SYvQ2uF4VcWZ03HWjsW6/EOanYZA6Di+JcdlqXkvJhs=",
+    "aarch64-linux": "sha256-ts6XZGdzBw16f/1ru9yuy0fEhIOQnFTJFb8Ip6m14LE=",
+    "x86_64-linux": "sha256-a7s9MUzeT+vjbl+h1VRi4pyXT2NETnB4cYNPbYzCEK4="
+  }
+}

@@ -1,0 +1,28 @@
+diff --git a/dist/src/main.js b/dist/src/main.js
+--- a/dist/src/main.js
++++ b/dist/src/main.js
+@@ -106,8 +106,9 @@ installNodeNetwork();
+ //  - registerCommand() overwrites on name collision (see registry.ts), so
+ //    user-CLI discovery MUST run after built-in discovery to preserve the
+ //    intended override order (user adapters override built-in ones).
+ //  - discoverPlugins runs last: plugins may override both built-in and user CLIs.
+-const skipUserDiscovery = argv[0] === 'convention-audit';
++const skipUserDiscovery = process.env.AGENT_REACH_NIX_MANAGED === '1' ||
++    argv[0] === 'convention-audit';
+ if (skipUserDiscovery) {
+     await discoverClis(BUILTIN_CLIS);
+ }
+diff --git a/dist/src/update-check.js b/dist/src/update-check.js
+--- a/dist/src/update-check.js
++++ b/dist/src/update-check.js
+@@ -60,7 +60,9 @@ function isNewer(a, b) {
+     return aPat > bPat;
+ }
+ function isCI() {
+-    return !!(process.env.CI || process.env.CONTINUOUS_INTEGRATION);
++    return !!(process.env.AGENT_REACH_NIX_MANAGED ||
++        process.env.CI ||
++        process.env.CONTINUOUS_INTEGRATION);
+ }
+ /** Pure function: derive notice text from cache state. Exported for tests. */
+ export function buildUpdateNotices({ cliVersion, cache, now }) {
