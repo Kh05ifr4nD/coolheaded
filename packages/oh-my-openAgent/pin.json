@@ -1,9 +1,9 @@
 {
-  "version": "4.19.2",
-  "packageHash": "sha512-pHAbd6/6xsrPPxNDSufZ+sVXl7kfeEjB73g1gy8s5ZfiSjr+pssaK6fI4P8E4jcc2xC/MseqOWnLbrSqnwTI+w==",
+  "version": "4.19.3",
+  "packageHash": "sha512-eQclumP6RS2BYqruqOUbubMea5sLCqwWbbBtvsJaDiAVmhERh1ZrWrZTqCg0QlBh8MrFpsXqhs7TljeE8WE9wQ==",
   "platformPackageHashes": {
-    "aarch64-darwin": "sha512-XNf0EZGSuVonoMiRf/iEHvWBrqG9A80x7h87JPLynfwB6xHCYTYGyE3Yx3gjgz7SyI/XCsrT/S31dOnvwqU8Lg==",
-    "aarch64-linux": "sha512-aYHj2FtmSeb94kL0CCIXjr9ewBd/QBCC7GSr3MojdE1PaUyRCPtwkJWYrVWoaas5OiME72nGE4PJzrOAoqAhhQ==",
-    "x86_64-linux": "sha512-RY5jwpGm4dXSSIJePyDX+D9ZjvQWj/feUH8OVvSZHwe3kPhJfxQCSf4awYTPBuRmZCeYmKaRLhUvFB6j/PiC+A=="
+    "aarch64-darwin": "sha512-dTKYC8h+gbTVBWtsAyCUW0mGGhDMd18z4S2Rp2TFeP19HZEBWUPcaC/k1PH9vnqYKA72wGjZ4r7FtpsMyM9VYg==",
+    "aarch64-linux": "sha512-Tgv13Tv42VBrKFjwSvnATox6ibuShTUJvHGSPDhSzVY/1PmrQDaNDurZqvgDYNp6UzBKdmuuCgYTD/pZcAzHVw==",
+    "x86_64-linux": "sha512-c6vXpjSmy8SILNo5OkDv/zbiwZByv95Cr6f7WPNdUEend4CFak0FuxIUSTTxtiBeuVVPqxtdz3D/3VNUb2mpdQ=="
   }
 }
