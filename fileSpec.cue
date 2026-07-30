@@ -244,6 +244,7 @@ package fileSpec
 			"updateScriptTypes.ts"?: #RegularFile
 		}
 		update?: {
+			"agentReach.ts"?:             #RegularFile
 			"checksumManifest.ts"?:       #RegularFile
 			"checksumPackage.ts"?:        #RegularFile
 			"checksumPackageFixture.ts"?: #RegularFile
@@ -252,11 +253,13 @@ package fileSpec
 			"grokBuild.ts"?:              #RegularFile
 			"httpPassThrough.ts"?:        #RegularFile
 			"nixfmt.ts"?:                 #RegularFile
+			"npmPackages.ts"?:            #RegularFile
 			"ohMyOpenAgent.ts"?:          #RegularFile
 			"oxfmt.ts"?:                  #RegularFile
 			"paseo.ts"?:                  #RegularFile
 			"qmd.ts"?:                    #RegularFile
 			"releaseHash.ts"?:            #RegularFile
+			"releasePackages.ts"?:        #RegularFile
 			"rustPackage.ts"?:            #RegularFile
 			"stateProperty.ts"?:          #RegularFile
 			"uvLock.ts"?:                 #RegularFile
@@ -483,6 +486,7 @@ package fileSpec
 			"updateScriptTypes.ts"!: #RegularFile
 		}
 		update!: {
+			"agentReach.ts"!:             #RegularFile
 			"checksumManifest.ts"!:       #RegularFile
 			"checksumPackage.ts"!:        #RegularFile
 			"checksumPackageFixture.ts"!: #RegularFile
@@ -491,11 +495,13 @@ package fileSpec
 			"grokBuild.ts"!:              #RegularFile
 			"httpPassThrough.ts"!:        #RegularFile
 			"nixfmt.ts"!:                 #RegularFile
+			"npmPackages.ts"!:            #RegularFile
 			"ohMyOpenAgent.ts"!:          #RegularFile
 			"oxfmt.ts"!:                  #RegularFile
 			"paseo.ts"!:                  #RegularFile
 			"qmd.ts"!:                    #RegularFile
 			"releaseHash.ts"!:            #RegularFile
+			"releasePackages.ts"!:        #RegularFile
 			"rustPackage.ts"!:            #RegularFile
 			"stateProperty.ts"!:          #RegularFile
 			"uvLock.ts"!:                 #RegularFile

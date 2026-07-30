@@ -1,0 +1,14 @@
+diff --git a/dist/src/update-check.js b/dist/src/update-check.js
+--- a/dist/src/update-check.js
++++ b/dist/src/update-check.js
+@@ -60,7 +60,9 @@ function isNewer(a, b) {
+     return aPat > bPat;
+ }
+ function isCI() {
+-    return !!(process.env.CI || process.env.CONTINUOUS_INTEGRATION);
++    return !!(process.env.AGENT_REACH_NIX_MANAGED ||
++        process.env.CI ||
++        process.env.CONTINUOUS_INTEGRATION);
+ }
+ /** Pure function: derive notice text from cache state. Exported for tests. */
+ export function buildUpdateNotices({ cliVersion, cache, now }) {

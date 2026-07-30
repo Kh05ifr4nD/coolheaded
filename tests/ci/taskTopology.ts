@@ -56,7 +56,7 @@ describe("Deno task topology", (): void => {
     );
     assertEquals(
       tasks["test:integration:write"],
-      "env -u GH_TOKEN -u GITHUB_TOKEN $COOLHEADED_DENO test --allow-env=GH_TOKEN,GITHUB_TOKEN --allow-read=$TMPDIR --allow-write=$TMPDIR tests/ci/fileSystemPermissions.ts tests/ci/updatePackage.ts tests/npm/packageHashUpdate.ts tests/npm/tarball.ts tests/update/checksumPackage.ts tests/update/checksumPackageHttp.ts tests/update/deno.ts tests/update/grokBuild.ts tests/update/httpPassThrough.ts tests/update/nixfmt.ts tests/update/ohMyOpenAgent.ts tests/update/oxfmt.ts tests/update/paseo.ts tests/update/qmd.ts tests/update/releaseHash.ts tests/update/uvLock.ts",
+      "env -u GH_TOKEN -u GITHUB_TOKEN $COOLHEADED_DENO test --allow-env=GH_TOKEN,GITHUB_TOKEN --allow-read=$TMPDIR --allow-write=$TMPDIR tests/ci/fileSystemPermissions.ts tests/ci/updatePackage.ts tests/npm/packageHashUpdate.ts tests/npm/tarball.ts tests/update/agentReach.ts tests/update/checksumPackage.ts tests/update/checksumPackageHttp.ts tests/update/deno.ts tests/update/grokBuild.ts tests/update/httpPassThrough.ts tests/update/nixfmt.ts tests/update/npmPackages.ts tests/update/ohMyOpenAgent.ts tests/update/oxfmt.ts tests/update/paseo.ts tests/update/qmd.ts tests/update/releaseHash.ts tests/update/releasePackages.ts tests/update/uvLock.ts",
     );
     assertEquals(
       tasks["test:integration:repo"],
