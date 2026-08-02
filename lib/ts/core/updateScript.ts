@@ -1,7 +1,9 @@
-import { compareVersions, isSemver } from "coolheaded/core/version.ts";
 import type { CommandRunner } from "coolheaded/core/commandRunner.ts";
 import { Effect } from "effect";
 import { denoCommandRunner } from "coolheaded/core/denoCommandRunner.ts";
+import { semverVersionScheme } from "coolheaded/core/version.ts";
+
+type VersionScheme = typeof semverVersionScheme;
 
 interface RuntimeWritable {
   readonly write: (bytes: unknown) => Promise<number>;
@@ -99,13 +101,22 @@ function readTextFile(path: string): Effect.Effect<string, UpdateError> {
   });
 }
 
-function semverVersion(version: string, source: string): Effect.Effect<string, UpdateError> {
-  return isSemver(version)
+function validVersion(
+  version: string,
+  source: string,
+  versionScheme: VersionScheme,
+): Effect.Effect<string, UpdateError> {
+  return versionScheme.isValid(version)
     ? Effect.succeed(version)
-    : Effect.fail(new UpdateError(`${source} is not valid SemVer: ${version}`));
+    : Effect.fail(
+        new UpdateError(`${source} is not valid ${versionScheme.description}: ${version}`),
+      );
 }
 
-function currentPinVersion(pinPath: string): Effect.Effect<string, UpdateError> {
+function currentPinVersion(
+  pinPath: string,
+  versionScheme: VersionScheme,
+): Effect.Effect<string, UpdateError> {
   return Effect.flatMap(
     readTextFile(pinPath),
     (contents: string): Effect.Effect<string, UpdateError> =>
@@ -119,33 +130,38 @@ function currentPinVersion(pinPath: string): Effect.Effect<string, UpdateError> 
             return Effect.fail(new UpdateError(`${pinPath} does not contain a string version`));
           }
 
-          return semverVersion(pin["version"], `${pinPath} version`);
+          return validVersion(pin["version"], `${pinPath} version`, versionScheme);
         },
       ),
   );
 }
 
-function newerPinVersion(currentVersion: string, candidateVersion: string): string | undefined {
-  return compareVersions(currentVersion, candidateVersion) < 0 ? candidateVersion : undefined;
+function newerPinVersion(
+  currentVersion: string,
+  candidateVersion: string,
+  versionScheme: VersionScheme = semverVersionScheme,
+): string | undefined {
+  return versionScheme.compare(currentVersion, candidateVersion) < 0 ? candidateVersion : undefined;
 }
 
 function requestedOrNewerPinVersion<LatestError extends Error>(
   args: readonly string[],
   latestVersion: () => Effect.Effect<string, LatestError>,
   pinPath: string,
+  versionScheme: VersionScheme = semverVersionScheme,
 ): Effect.Effect<string | undefined, LatestError | UpdateError> {
   const [version] = args;
 
   if (typeof version === "string" && version.length > 0) {
-    return semverVersion(version, "Requested version");
+    return validVersion(version, "Requested version", versionScheme);
   }
 
-  return Effect.flatMap(currentPinVersion(pinPath), (currentVersion: string) =>
+  return Effect.flatMap(currentPinVersion(pinPath, versionScheme), (currentVersion: string) =>
     Effect.flatMap(latestVersion(), (candidateVersion: string) =>
       Effect.map(
-        semverVersion(candidateVersion, "Latest version"),
+        validVersion(candidateVersion, "Latest version", versionScheme),
         (validCandidateVersion: string): string | undefined =>
-          newerPinVersion(currentVersion, validCandidateVersion),
+          newerPinVersion(currentVersion, validCandidateVersion, versionScheme),
       ),
     ),
   );

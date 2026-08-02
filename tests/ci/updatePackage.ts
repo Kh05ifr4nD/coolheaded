@@ -3,10 +3,15 @@ import { assertInstanceOf, assertThrows } from "@jsr/std__assert";
 import { describe, it } from "@jsr/std__testing/bdd";
 import { Effect } from "effect";
 import { assertVersionAdvanced } from "coolheadedCi/update/run/package.ts";
+import { calendarVersionScheme } from "coolheaded/core/version.ts";
 
 describe("package update version gate", (): void => {
   it("accepts a release after its prerelease", (): void => {
     assertVersionAdvanced("example", "1.0.0-rc.1", "1.0.0");
+  });
+
+  it("accepts a calendar release version for a package with that scheme", (): void => {
+    assertVersionAdvanced("ytDlp", "2026.06.09", "2026.07.04", calendarVersionScheme);
   });
 
   it("rejects build metadata as a version advance", (): void => {

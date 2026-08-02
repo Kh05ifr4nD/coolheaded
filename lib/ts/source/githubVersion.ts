@@ -1,7 +1,9 @@
 import type { JsonClient, JsonClientError, JsonResponse } from "coolheaded/core/httpClient.ts";
-import { compareVersions, isSemver } from "coolheaded/core/version.ts";
 import { Effect } from "effect";
 import { VersionSourceError } from "coolheaded/source/version.ts";
+import { semverVersionScheme } from "coolheaded/core/version.ts";
+
+type VersionScheme = typeof semverVersionScheme;
 
 const MAX_GITHUB_PAGES = 10;
 const REQUEST_TIMEOUT_MS = 30_000;
@@ -11,6 +13,7 @@ interface LatestGitHubVersionOptions {
   readonly repo: string;
   readonly source?: GitHubVersionSource;
   readonly versionPattern?: Readonly<RegExp>;
+  readonly versionScheme?: VersionScheme;
 }
 interface GitHubRelease {
   readonly name: string;
@@ -192,10 +195,14 @@ function allRefNames(
     return names;
   });
 }
-function normalizedVersion(name: string, pattern: Readonly<RegExp>): string | undefined {
+function normalizedVersion(
+  name: string,
+  pattern: Readonly<RegExp>,
+  versionScheme: VersionScheme,
+): string | undefined {
   const stablePattern = new RegExp(pattern.source, pattern.flags.replaceAll(/[gy]/gu, ""));
   const version = stablePattern.exec(name)?.groups?.["version"];
-  return typeof version === "string" && isSemver(version) ? version : undefined;
+  return typeof version === "string" && versionScheme.isValid(version) ? version : undefined;
 }
 function gitHubRelease(
   owner: string,
@@ -240,13 +247,14 @@ function latestGitHubVersion(
   const source = options.source ?? "tags";
   const endpointUrl = `https://api.github.com/repos/${options.owner}/${options.repo}/${source}?per_page=100`;
   const pattern = options.versionPattern ?? /^v(?<version>\d+\.\d+\.\d+)$/u;
+  const versionScheme = options.versionScheme ?? semverVersionScheme;
   return Effect.flatMap(
     allRefNames(endpointUrl, source, jsonClient),
     (names: readonly string[]): Effect.Effect<string, VersionSourceError> => {
       const version = names
-        .map((name: string): string | undefined => normalizedVersion(name, pattern))
+        .map((name: string): string | undefined => normalizedVersion(name, pattern, versionScheme))
         .filter((candidate: string | undefined): candidate is string => candidate !== undefined)
-        .toSorted(compareVersions)
+        .toSorted(versionScheme.compare)
         .at(-1);
       return version === undefined
         ? Effect.fail(

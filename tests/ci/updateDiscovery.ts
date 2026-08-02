@@ -24,15 +24,27 @@ Deno.test("flake input discovery validates filters and locked revisions", (): vo
 });
 
 Deno.test("package discovery validates and sorts evaluated versions", (): void => {
-  assertEquals(packageUpdates({ alpha: "1.0.0", ignored: null, zeta: "2.0.0" }), [
-    { currentVersion: "1.0.0", name: "alpha" },
-    { currentVersion: "2.0.0", name: "zeta" },
-  ]);
+  assertEquals(
+    packageUpdates({
+      alpha: { version: "1.0.0", versionScheme: "semver" },
+      ignored: null,
+      zeta: { version: "2.0.0", versionScheme: "semver" },
+    }),
+    [
+      { currentVersion: "1.0.0", name: "alpha", versionScheme: "semver" },
+      { currentVersion: "2.0.0", name: "zeta", versionScheme: "semver" },
+    ],
+  );
   const error = assertThrows((): void => {
     packageUpdates([]);
   });
   assertInstanceOf(error, Error);
   assertEquals(error.message, "Invalid package discovery JSON");
+  const invalidVersionScheme = assertThrows((): void => {
+    packageUpdates({ broken: { version: "1.0.0", versionScheme: "bogus" } });
+  });
+  assertInstanceOf(invalidVersionScheme, Error);
+  assertEquals(invalidVersionScheme.message, "Invalid version scheme for package broken");
 });
 
 Deno.test("package discovery sends exact system and filtered Nix requests", async (): Promise<void> => {
@@ -53,12 +65,17 @@ Deno.test("package discovery sends exact system and filtered Nix requests", asyn
           }),
         },
       },
-      result: { code: 0, stderr: "", stdout: '{"zeta":"2.0.0","alpha":"1.0.0"}' },
+      result: {
+        code: 0,
+        stderr: "",
+        stdout:
+          '{"zeta":{"version":"2.0.0","versionScheme":"semver"},"alpha":{"version":"1.0.0","versionScheme":"semver"}}',
+      },
     },
   ]);
   assertEquals(await discoverPackage(runner, ["zeta", "alpha"]), [
-    { currentVersion: "1.0.0", name: "alpha" },
-    { currentVersion: "2.0.0", name: "zeta" },
+    { currentVersion: "1.0.0", name: "alpha", versionScheme: "semver" },
+    { currentVersion: "2.0.0", name: "zeta", versionScheme: "semver" },
   ]);
   runner.assertExhausted();
 });
@@ -99,8 +116,8 @@ Deno.test("update lanes use stable kind and name ordering", (): void => {
   assertEquals(
     updateLanes(
       [
-        { currentVersion: "2", name: "zeta" },
-        { currentVersion: "1", name: "alpha" },
+        { currentVersion: "2", name: "zeta", versionScheme: "semver" },
+        { currentVersion: "1", name: "alpha", versionScheme: "semver" },
       ],
       [{ currentVersion: "f", name: "nixpkgs" }],
       true,
@@ -108,8 +125,8 @@ Deno.test("update lanes use stable kind and name ordering", (): void => {
     [
       { currentVersion: "deno.lock", kind: "denoDependencies", name: "denoDependencies" },
       { currentVersion: "f", kind: "flakeInput", name: "nixpkgs" },
-      { currentVersion: "1", kind: "package", name: "alpha" },
-      { currentVersion: "2", kind: "package", name: "zeta" },
+      { currentVersion: "1", kind: "package", name: "alpha", versionScheme: "semver" },
+      { currentVersion: "2", kind: "package", name: "zeta", versionScheme: "semver" },
     ],
   );
 });

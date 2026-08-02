@@ -87,6 +87,7 @@ jobs:
         env:
           CURRENT_VERSION: ${{ matrix.currentVersion }}
           GITHUB_TOKEN: ${{ steps.app-token.outputs.token }}
+          VERSION_SCHEME: ${{ matrix.versionScheme || 'semver' }}
         run: |
           case "${{ matrix.kind }}" in
             package)

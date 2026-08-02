@@ -26,6 +26,7 @@ packageLib.mkGitHubReleaseBinaryPackage {
   owner = "yt-dlp";
   tag = { version, ... }: version;
   asset = { target, ... }: target;
+  passthru.updateVersionScheme = "calendar";
 
   nativeBuildInputs = [
     makeWrapper

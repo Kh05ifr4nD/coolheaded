@@ -1,3 +1,5 @@
+import type { VersionSchemeName } from "coolheaded/core/version.ts";
+
 const DENO_SNAPSHOT_CHECK = "denoDependencies";
 
 type ActivatedCheckKind = "denoSnapshot" | "package";
@@ -14,6 +16,7 @@ interface UpdateLane {
   readonly currentVersion: string;
   readonly kind: UpdateLaneKind;
   readonly name: string;
+  readonly versionScheme?: VersionSchemeName;
 }
 
 function activatedCheckKind(name: string): ActivatedCheckKind {

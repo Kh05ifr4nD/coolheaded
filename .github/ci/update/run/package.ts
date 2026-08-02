@@ -9,10 +9,12 @@ import {
   run,
   writeOutput,
 } from "coolheadedCi/process.ts";
-import { compareVersions, isSemver } from "coolheaded/core/version.ts";
+import { semverVersionScheme, versionSchemeFromName } from "coolheaded/core/version.ts";
 import type { CommandRunner } from "coolheaded/core/commandRunner.ts";
 import { UpdateError } from "coolheaded/core/updateScript.ts";
 import { denoCommandRunner } from "coolheaded/core/denoCommandRunner.ts";
+
+type VersionScheme = ReturnType<typeof versionSchemeFromName>;
 
 const PACKAGE_UPDATE_ALLOWED_FILES_EXPR = `
 let
@@ -62,17 +64,20 @@ function assertVersionAdvanced(
   name: string,
   currentVersion: string | undefined,
   newVersion: string,
+  versionScheme: VersionScheme = semverVersionScheme,
 ): void {
-  if (!isSemver(newVersion)) {
-    throw new UpdateError(`${name} produced invalid SemVer: ${newVersion}`);
+  if (!versionScheme.isValid(newVersion)) {
+    throw new UpdateError(`${name} produced invalid ${versionScheme.description}: ${newVersion}`);
   }
 
   if (currentVersion !== undefined && currentVersion.length > 0) {
-    if (!isSemver(currentVersion)) {
-      throw new UpdateError(`${name} has invalid current SemVer: ${currentVersion}`);
+    if (!versionScheme.isValid(currentVersion)) {
+      throw new UpdateError(
+        `${name} has invalid current ${versionScheme.description}: ${currentVersion}`,
+      );
     }
 
-    if (compareVersions(currentVersion, newVersion) >= 0) {
+    if (versionScheme.compare(currentVersion, newVersion) >= 0) {
       throw new UpdateError(
         `${name} produced package changes without a version advance: ${currentVersion} -> ${newVersion}`,
       );
@@ -85,6 +90,7 @@ async function runPackage(
   runner: CommandRunner,
   version?: string,
   currentVersion = Deno.env.get("CURRENT_VERSION"),
+  versionScheme: VersionScheme = semverVersionScheme,
 ): Promise<void> {
   await run(
     runner,
@@ -116,7 +122,7 @@ async function runPackage(
 
   const attr = `.#packages.${system}.${JSON.stringify(name)}`;
   const newVersion = await nixEvalRaw(runner, `${attr}.version`);
-  assertVersionAdvanced(name, currentVersion, newVersion);
+  assertVersionAdvanced(name, currentVersion, newVersion, versionScheme);
 
   await writeOutput("updated", "true");
   await writeOutput("newVersion", newVersion);
@@ -133,7 +139,13 @@ async function main(args: readonly string[]): Promise<void> {
     throw new Error("Usage: package.ts <name> [version]");
   }
 
-  await runPackage(name, denoCommandRunner, version);
+  await runPackage(
+    name,
+    denoCommandRunner,
+    version,
+    undefined,
+    versionSchemeFromName(Deno.env.get("VERSION_SCHEME")),
+  );
 }
 
 if (import.meta.main) {
