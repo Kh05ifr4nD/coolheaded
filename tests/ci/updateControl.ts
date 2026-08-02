@@ -29,6 +29,29 @@ describe("update control command runner", (): void => {
     runner.assertExhausted();
   });
 
+  it("prepares a missing update branch from an explicit base ref", async (): Promise<void> => {
+    const baseRef = "codex/ci-structural-root-fixes";
+    const runner = new FakeCommandRunner([
+      {
+        request: { command: ["git", "fetch", "origin", baseRef] },
+        result: success,
+      },
+      {
+        request: { command: ["git", "fetch", "origin", "update/package/example"] },
+        result: { code: 1, stderr: "missing", stdout: "" },
+      },
+      {
+        request: {
+          command: ["git", "checkout", "-B", "update/package/example", `origin/${baseRef}`],
+        },
+        result: success,
+      },
+    ]);
+
+    await prepareBranch("update/package/example", runner, baseRef);
+    runner.assertExhausted();
+  });
+
   it("rebases an existing branch without fallback", async (): Promise<void> => {
     const branch = "update/package/example";
     const runner = new FakeCommandRunner([
