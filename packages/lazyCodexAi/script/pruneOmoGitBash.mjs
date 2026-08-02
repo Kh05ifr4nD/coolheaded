@@ -114,19 +114,19 @@ function removeArrayValues(record, key, removedValues, file) {
 /**
  * @param {string} file
  * @param {string} source
- * @param {string} before
- * @param {string} after
+ * @param {RegExp} pattern
+ * @param {string} replacement
  * @returns {string}
  */
-function replaceExactly(file, source, before, after) {
-  const first = source.indexOf(before);
-  if (first === -1) {
+function replaceSingleRuntimePattern(file, source, pattern, replacement) {
+  const matches = source.match(pattern);
+  if (matches === null) {
     throw new Error(`${file}: expected runtime fragment is missing`);
   }
-  if (source.includes(before, first + before.length)) {
+  if (matches.length !== 1) {
     throw new Error(`${file}: expected one runtime fragment, found multiple`);
   }
-  return `${source.slice(0, first)}${after}${source.slice(first + before.length)}`;
+  return source.replace(pattern, replacement);
 }
 
 /**
@@ -135,22 +135,22 @@ function replaceExactly(file, source, before, after) {
  */
 function pruneRuntimeConfig(file) {
   let source = nodeFs.readFileSync(file, "utf8");
-  source = replaceExactly(
+  source = replaceSingleRuntimePattern(
     file,
     source,
-    '  const gitBashEnabled = (input.platform ?? process.platform) === "win32" && input.gitBashEnabled === true;\n',
-    "",
+    /(?<prefix>function[ \t]+ensureOmoBuiltinMcpPolicies[ \t]*\([^)\r\n]*\)[ \t]*\{[\s\S]*?)^[ \t]*const[ \t]+gitBashEnabled[ \t]*=[^\r\n]*\r?\n/gmu,
+    "$<prefix>",
   );
-  source = replaceExactly(
+  source = replaceSingleRuntimePattern(
     file,
     source,
-    '  nextConfig = ensurePluginMcpEnabled(nextConfig, "omo@sisyphuslabs", "git_bash", gitBashEnabled);',
-    "  nextConfig = removeGitBashMcpConfig(nextConfig);",
+    /(?<prefix>function[ \t]+ensureOmoBuiltinMcpPolicies[ \t]*\([^)\r\n]*\)[ \t]*\{[\s\S]*?)^(?<indent>[ \t]*)(?<config>[A-Za-z_$][A-Za-z0-9_$]*)[ \t]*=[ \t]*ensurePluginMcpEnabled\([ \t]*\k<config>,[ \t]*"omo@sisyphuslabs",[ \t]*"git_bash",[ \t]*gitBashEnabled[ \t]*\);[ \t]*$/gmu,
+    "$<prefix>$<indent>$<config> = removeGitBashMcpConfig($<config>);",
   );
-  source = replaceExactly(
+  source = replaceSingleRuntimePattern(
     file,
     source,
-    "function ensureHookTrusted(config, state) {",
+    /^function[ \t]+ensureHookTrusted[ \t]*\([^)\r\n]*\)[ \t]*\{/gmu,
     `function removeGitBashMcpConfig(config) {
   const sectionPath = ["plugins", "omo@sisyphuslabs", "mcp_servers", "git_bash"];
   const withoutSection = removeTomlSections(config, (header) => tomlPathEquals(header, sectionPath));
@@ -190,7 +190,7 @@ function tomlAssignmentKey(line) {
   }
   return null;
 }
-function ensureHookTrusted(config, state) {`,
+$&`,
   );
   nodeFs.writeFileSync(file, source);
 }

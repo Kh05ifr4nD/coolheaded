@@ -4,6 +4,7 @@ import { assertEquals, assertInstanceOf } from "@jsr/std__assert";
 import { gitHubRelease, latestGitHubVersion } from "coolheaded/source/githubVersion.ts";
 import { Effect } from "effect";
 import { VersionSourceError } from "coolheaded/source/version.ts";
+import { calendarVersionScheme } from "coolheaded/core/version.ts";
 import fc from "fast-check";
 import { strictJsonClient } from "coolheadedTestSupport/httpClient.ts";
 
@@ -206,6 +207,33 @@ Deno.test("GitHub versions follow a trusted relative next page", async (): Promi
   assertEquals(
     await Effect.runPromise(latestGitHubVersion({ owner: "example", repo: "tool" }, fake.client)),
     "2.0.0",
+  );
+  fake.assertExhausted();
+});
+
+Deno.test("GitHub releases support an explicit calendar version scheme", async (): Promise<void> => {
+  const fake = strictJsonClient([
+    plan(RELEASES_URL, [
+      { tag_name: "2026.06.09" },
+      { tag_name: "2026.07.04" },
+      { tag_name: "2026.07.03" },
+    ]),
+  ]);
+
+  assertEquals(
+    await Effect.runPromise(
+      latestGitHubVersion(
+        {
+          owner: "example",
+          repo: "tool",
+          source: "releases",
+          versionPattern: /^(?<version>\d{4}\.\d{2}\.\d{2})$/u,
+          versionScheme: calendarVersionScheme,
+        },
+        fake.client,
+      ),
+    ),
+    "2026.07.04",
   );
   fake.assertExhausted();
 });

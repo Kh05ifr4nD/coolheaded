@@ -81,12 +81,14 @@ jobs:
       - name: Prepare update branch
         env:
           UPDATE_BRANCH: ${{ matrix.kind == 'package' && format('update/package/{0}', matrix.name) || matrix.kind == 'flakeInput' && format('update/flakeInput/{0}', matrix.name) || 'update/denoDependencies' }}
-        run: nix develop -c deno run --allow-run .github/ci/update/branch.ts "$UPDATE_BRANCH"
+          UPDATE_BASE_REF: ${{ github.event_name == 'workflow_dispatch' && github.ref_name || 'main' }}
+        run: nix develop -c deno run --allow-run .github/ci/update/branch.ts "$UPDATE_BRANCH" "$UPDATE_BASE_REF"
       - id: update
         name: Run update
         env:
           CURRENT_VERSION: ${{ matrix.currentVersion }}
           GITHUB_TOKEN: ${{ steps.app-token.outputs.token }}
+          VERSION_SCHEME: ${{ matrix.versionScheme || 'semver' }}
         run: |
           case "${{ matrix.kind }}" in
             package)

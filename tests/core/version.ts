@@ -1,7 +1,13 @@
+import { assertEquals, assertThrows } from "@jsr/std__assert";
 import { assertProperty, defineReplayTarget } from "coolheadedTestSupport/fastCheck.ts";
-import { compareVersions, isSemver } from "coolheaded/core/version.ts";
+import {
+  calendarVersionScheme,
+  compareCalendarVersions,
+  compareVersions,
+  isSemver,
+  versionSchemeFromName,
+} from "coolheaded/core/version.ts";
 import { describe, it } from "@jsr/std__testing/bdd";
-import { assertEquals } from "@jsr/std__assert";
 import fc from "fast-check";
 
 const MAX_VERSION_PART = 1_000_000;
@@ -106,6 +112,60 @@ describe("SemVer", (): void => {
   it("orders nonnumeric prerelease identifiers lexically", (): void => {
     assertEquals(compareVersions("1.0.0-0E-0", "1.0.0-0E-1") < 0, true);
   });
+});
+
+describe("calendar versions", (): void => {
+  it("validates real calendar dates and compares them chronologically", (): void => {
+    for (const version of ["2000.02.29", "2024.02.29", "2026.07.04"]) {
+      assertEquals(calendarVersionScheme.isValid(version), true);
+    }
+    for (const version of ["1900.02.29", "2026.02.29", "2026.04.31", "2026.13.01", "2026.7.04"]) {
+      assertEquals(calendarVersionScheme.isValid(version), false);
+    }
+    assertEquals(calendarVersionScheme.compare("2026.06.09", "2026.07.04") < 0, true);
+    assertEquals(calendarVersionScheme.compare("2026.07.04", "2026.07.04"), 0);
+  });
+
+  it("rejects invalid calendar versions during comparison", (): void => {
+    assertThrows(
+      (): void => {
+        compareCalendarVersions("2026.02.29", "2026.07.04");
+      },
+      TypeError,
+      "Invalid calendar version: 2026.02.29",
+    );
+    assertThrows(
+      (): void => {
+        compareCalendarVersions("2026.07.04", "2026.02.29");
+      },
+      TypeError,
+      "Invalid calendar version: 2026.02.29",
+    );
+  });
+});
+
+Deno.test("version schemes resolve by their stable names", (): void => {
+  for (const name of [undefined, "", "semver"] as const) {
+    assertEquals(versionSchemeFromName(name).name, "semver");
+  }
+  assertEquals(versionSchemeFromName("calendar").name, "calendar");
+  assertThrows(
+    (): void => {
+      versionSchemeFromName("unknown");
+    },
+    TypeError,
+    "Unknown version scheme: unknown",
+  );
+});
+
+Deno.test("version comparison rejects invalid SemVer", (): void => {
+  assertThrows(
+    (): void => {
+      compareVersions("1.0.0-", "1.0.0");
+    },
+    TypeError,
+    "Invalid SemVer: 1.0.0-",
+  );
 });
 
 const validName = "SemVer accepts all generated valid versions";

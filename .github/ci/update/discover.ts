@@ -3,6 +3,7 @@
 import { readJson, writeOutput } from "coolheadedCi/process.ts";
 import type { CommandRunner } from "coolheaded/core/commandRunner.ts";
 import type { UpdateLane } from "coolheadedCi/model.ts";
+import type { VersionSchemeName } from "coolheaded/core/version.ts";
 import { denoCommandRunner } from "coolheaded/core/denoCommandRunner.ts";
 import { discoverPackage } from "./discover/package.ts";
 import { flakeInputUpdates } from "./discover/flakeInput.ts";
@@ -29,6 +30,7 @@ interface DiscoveryState {
   readonly packageLanes: readonly Readonly<{
     readonly currentVersion: string;
     readonly name: string;
+    readonly versionScheme: VersionSchemeName;
   }>[];
 }
 
@@ -56,7 +58,11 @@ function discoveryPlan(selection: Readonly<DiscoverySelection>): readonly Discov
 }
 
 function updateLanes(
-  packageLanes: readonly Readonly<{ readonly currentVersion: string; readonly name: string }>[],
+  packageLanes: readonly Readonly<{
+    readonly currentVersion: string;
+    readonly name: string;
+    readonly versionScheme: VersionSchemeName;
+  }>[],
   flakeInputLanes: readonly Readonly<{ readonly currentVersion: string; readonly name: string }>[],
   includeDenoDependencies: boolean,
 ): readonly UpdateLane[] {
@@ -66,6 +72,7 @@ function updateLanes(
         currentVersion: item.currentVersion,
         kind: "package",
         name: item.name,
+        versionScheme: item.versionScheme,
       }),
     ),
     ...flakeInputLanes.map(

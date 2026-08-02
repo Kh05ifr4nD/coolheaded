@@ -2,11 +2,13 @@
 
 import { currentSystem, isRecord, run, writeOutput } from "coolheadedCi/process.ts";
 import type { CommandRunner } from "coolheaded/core/commandRunner.ts";
+import type { VersionSchemeName } from "coolheaded/core/version.ts";
 import { denoCommandRunner } from "coolheaded/core/denoCommandRunner.ts";
 
 interface MatrixItem {
   readonly currentVersion: string;
   readonly name: string;
+  readonly versionScheme: VersionSchemeName;
 }
 
 const NIX_EXPR = `
@@ -16,17 +18,29 @@ let
   packages = flake.packages.\${config.system};
   isUpdatable = package:
     package ? version && ((package.passthru or { }) ? updateScript);
+  getVersionScheme = package:
+    (package.passthru or { }).updateVersionScheme or "semver";
   getVersion = name:
     let
       package = builtins.getAttr name packages;
     in
     if builtins.hasAttr name packages && isUpdatable package
-    then { inherit name; value = package.version; }
+    then {
+      inherit name;
+      value = {
+        version = package.version;
+        versionScheme = getVersionScheme package;
+      };
+    }
     else null;
 in
   if config.filter == null then
     builtins.mapAttrs (
-      _name: package: if isUpdatable package then package.version else null
+      _name: package:
+      if isUpdatable package then {
+        version = package.version;
+        versionScheme = getVersionScheme package;
+      } else null
     ) packages
   else
     builtins.listToAttrs
@@ -38,6 +52,10 @@ function filteredNames(): readonly string[] | null {
   return packages === undefined || packages.length === 0 ? null : packages.split(/\s+/u);
 }
 
+function isVersionSchemeName(value: unknown): value is VersionSchemeName {
+  return value === "calendar" || value === "semver";
+}
+
 function packageUpdates(value: unknown): readonly MatrixItem[] {
   if (!isRecord(value)) {
     throw new Error("Invalid package discovery JSON");
@@ -45,8 +63,18 @@ function packageUpdates(value: unknown): readonly MatrixItem[] {
 
   return Object.entries(value)
     .flatMap((entry: readonly [string, unknown]): readonly MatrixItem[] => {
-      const [name, currentVersion] = entry;
-      return typeof currentVersion === "string" ? [{ currentVersion, name }] : [];
+      const [name, item] = entry;
+      if (!isRecord(item)) {
+        return [];
+      }
+      const { version: currentVersion, versionScheme } = item;
+      if (typeof currentVersion !== "string") {
+        return [];
+      }
+      if (!isVersionSchemeName(versionScheme)) {
+        throw new Error(`Invalid version scheme for package ${name}`);
+      }
+      return [{ currentVersion, name, versionScheme }];
     })
     .toSorted((left: Readonly<MatrixItem>, right: Readonly<MatrixItem>): number =>
       left.name.localeCompare(right.name),
