@@ -1,11 +1,11 @@
 import {
   RuntimeClosureError,
   enforceTraceWarningPolicy,
-  parseRuntimeManifest,
   parseTraceWarnings,
-} from "./runtimeClosure.mjs";
+} from "./runtimeContract.mjs";
 import { assertEquals, assertThrows } from "@jsr/std__assert";
 import { describe, it } from "@jsr/std__testing/bdd";
+import { materializeRuntimeManifest, parseRuntimeManifest } from "./runtimeManifest.mjs";
 
 const MANIFEST = [
   "node_modules/@parcel/watcher-linux-x64-glibc/watcher.node",
@@ -25,6 +25,44 @@ const WARNINGS = [
   "Failed to parse /build/source/packages/server/dist/server/terminal/shell-integration/zsh/.zshenv as script:\nUnexpected token (1:11)",
   "Failed to parse /build/source/packages/server/dist/server/terminal/shell-integration/zsh/.zshenv as module:\nUnexpected token (1:11)",
 ];
+
+/** @param {"directory" | "file" | "special" | "symlink"} kind */
+function fileStatus(kind) {
+  return {
+    isDirectory: () => kind === "directory",
+    isFile: () => kind === "file",
+    isSymbolicLink: () => kind === "symlink",
+  };
+}
+
+/** @type {NonNullable<Parameters<typeof materializeRuntimeManifest>[2]>} */
+const FILE_SYSTEM = {
+  existsSync: () => true,
+  lstatSync: (candidate) => {
+    if (candidate.endsWith("/node_modules/@getpaseo/client")) {
+      return fileStatus("symlink");
+    }
+    if (candidate.endsWith("/packages/client") || candidate.endsWith("/bundle")) {
+      return fileStatus("directory");
+    }
+    if (candidate.endsWith("/fifo")) {
+      return fileStatus("special");
+    }
+    return fileStatus("file");
+  },
+  readlinkSync: () => "../../packages/client",
+  realpathSync: (candidate) => {
+    if (candidate.endsWith("/escape")) {
+      return "/outside";
+    }
+    if (candidate.endsWith("/node_modules/@getpaseo/client")) {
+      return "/source/packages/client";
+    }
+    return candidate;
+  },
+  statSync: (candidate) =>
+    candidate.endsWith("/packages/client") ? fileStatus("directory") : fileStatus("file"),
+};
 
 describe("Paseo runtime closure policy", () => {
   it("parses only prefixed trace warnings", () => {
@@ -91,6 +129,49 @@ describe("Paseo runtime closure policy", () => {
       },
       RuntimeClosureError,
       "sorted",
+    );
+    assertThrows(
+      () => {
+        parseRuntimeManifest("-option\n");
+      },
+      RuntimeClosureError,
+      "invalid runtime path",
+    );
+    assertThrows(
+      () => {
+        parseRuntimeManifest("directory/\n");
+      },
+      RuntimeClosureError,
+      "invalid runtime path",
+    );
+  });
+
+  it("materializes an explicit leaf closure", () => {
+    assertEquals(
+      materializeRuntimeManifest(
+        "/source",
+        ["node_modules/@getpaseo/client", "packages/client", "packages/client/index.js"],
+        FILE_SYSTEM,
+      ),
+      ["node_modules/@getpaseo/client", "packages/client/index.js"],
+    );
+    assertEquals(
+      materializeRuntimeManifest("/source", ["bundle", "bundle/index.js"], FILE_SYSTEM),
+      ["bundle/index.js"],
+    );
+    assertThrows(
+      () => {
+        materializeRuntimeManifest("/source", ["escape"], FILE_SYSTEM);
+      },
+      RuntimeClosureError,
+      "escapes source root",
+    );
+    assertThrows(
+      () => {
+        materializeRuntimeManifest("/source", ["fifo"], FILE_SYSTEM);
+      },
+      RuntimeClosureError,
+      "unsupported type",
     );
   });
 });

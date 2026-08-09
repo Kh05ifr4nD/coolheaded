@@ -13,7 +13,9 @@ in
 upstreamPackage.overrideAttrs (oldAttrs: {
   postPatch = (oldAttrs.postPatch or "") + ''
     mv scripts/trace-daemon.mjs scripts/trace-daemon-upstream.mjs
+    cp ${./script/runtimeContract.mjs} scripts/runtimeContract.mjs
     cp ${./script/runtimeClosure.mjs} scripts/trace-daemon.mjs
+    cp ${./script/runtimeManifest.mjs} scripts/runtimeManifest.mjs
   '';
 
   nativeInstallCheckInputs = (oldAttrs.nativeInstallCheckInputs or [ ]) ++ [
