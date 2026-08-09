@@ -70,6 +70,10 @@ let
         context: 32768
         provider: openai
   '';
+  invalidConfig = pkgs.writeText "oh-my-pi-invalid-config.yml" ''
+    theme:
+      dark: semantic-negative-control
+  '';
 in
 {
   ohMyPiHomeModule =
@@ -77,9 +81,34 @@ in
     assert configurationOnly.config.home.packages == [ ];
     assert configurationOnlyConfigSource == pathConfig;
     assert configurationOnlyModelsSource == pathModels;
-    pkgs.runCommand "oh-my-pi-home-module-check" { } ''
-      diff -u ${expectedConfig} ${configSource}
-      diff -u ${expectedModels} ${modelsSource}
-      touch "$out"
-    '';
+    pkgs.runCommand "oh-my-pi-home-module-check"
+      {
+        nativeBuildInputs = [
+          pkgs.jq
+          pkgs.remarshal
+        ];
+      }
+      ''
+        set -o pipefail
+
+        canonicalYaml() {
+          remarshal --if yaml --of json "$1" | jq --compact-output --sort-keys
+        }
+
+        compareYaml() {
+          canonicalYaml "$1" > "$3.expected.json"
+          canonicalYaml "$2" > "$3.actual.json"
+          diff -u "$3.expected.json" "$3.actual.json"
+        }
+
+        compareYaml ${expectedConfig} ${configSource} config
+        compareYaml ${expectedModels} ${modelsSource} models
+
+        if compareYaml ${expectedConfig} ${invalidConfig} invalid; then
+          echo "semantic YAML comparison accepted different data" >&2
+          exit 1
+        fi
+
+        touch "$out"
+      '';
 }
