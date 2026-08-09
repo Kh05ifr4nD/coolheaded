@@ -1,6 +1,6 @@
 import { assertEquals, assertThrows } from "@jsr/std__assert";
 import { assertProperty, defineReplayTarget } from "coolheadedTestSupport/fastCheck.ts";
-import { gitPaths, validateGitPathNames } from "coolheaded/repo/fileSpec/git.ts";
+import { gitPaths, validateGitPathNames } from "coolheaded/repo/layout/git.ts";
 import fc from "fast-check";
 
 const MAX_PATHS = 30;

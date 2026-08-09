@@ -1,16 +1,16 @@
 import {
   EXECUTABLE_MODE,
   requiredToolPath,
-  runFileSpecErrorProbe,
+  runLayoutErrorProbe,
   withTemporaryDirectory,
   writeRepositoryFixture,
 } from "./fixture.ts";
 import { assertEquals, assertInstanceOf, assertStrictEquals } from "@jsr/std__assert";
 import { describe, it } from "@jsr/std__testing/bdd";
 import { assertType } from "@jsr/std__testing/types";
-import { changedSnapshotComponents } from "coolheaded/repo/fileSpec/check.ts";
-import { repositorySnapshot } from "coolheaded/repo/fileSpec/git.ts";
-import { snapshotChangedError } from "coolheaded/repo/fileSpec/model.ts";
+import { changedSnapshotComponents } from "coolheaded/repo/layout/check.ts";
+import { repositorySnapshot } from "coolheaded/repo/layout/git.ts";
+import { snapshotChangedError } from "coolheaded/repo/layout/model.ts";
 
 type RepositorySnapshot = Parameters<typeof changedSnapshotComponents>[0];
 type SnapshotChangedComponent = ReturnType<typeof changedSnapshotComponents>[number];
@@ -18,9 +18,8 @@ type ToolIdentity = RepositorySnapshot["tools"]["cue"];
 
 const COMPONENTS = [
   "enumerationSha256",
-  "fileSpecSha256",
+  "layoutSha256",
   "head",
-  "ignoreSourcesSha256",
   "indexTree",
   "tools.cue.executable",
   "tools.cue.version",
@@ -53,10 +52,9 @@ const TOOLS = {
 
 const SNAPSHOT = {
   enumerationSha256: "enumeration",
-  fileSpecSha256: "file-spec",
   head: "head",
-  ignoreSourcesSha256: "ignore",
   indexTree: "index",
+  layoutSha256: "layout",
   tools: TOOLS,
 } as const satisfies RepositorySnapshot;
 
@@ -79,9 +77,8 @@ function changedSnapshot(component: SnapshotChangedComponent): RepositorySnapsho
 
   if (
     component === "enumerationSha256" ||
-    component === "fileSpecSha256" ||
+    component === "layoutSha256" ||
     component === "head" ||
-    component === "ignoreSourcesSha256" ||
     component === "indexTree"
   ) {
     return { ...SNAPSHOT, [component]: `${SNAPSHOT[component]}-changed` };
@@ -109,7 +106,7 @@ describe("snapshot identity", (): void => {
     const error = snapshotChangedError("before", "after", changedComponents);
 
     assertInstanceOf(error, Error);
-    assertEquals(error.message, "repository changed while fileSpec was being checked");
+    assertEquals(error.message, "repository changed while layout was being checked");
     assertEquals(error.kind, "snapshotChanged");
     assertEquals(error.name, "SnapshotChangedError");
     assertEquals(error.beforeFingerprint, "before");
@@ -127,8 +124,7 @@ describe("snapshot identity", (): void => {
     await withTemporaryDirectory(async (repositoryRoot: string): Promise<void> => {
       await writeRepositoryFixture(repositoryRoot);
       const snapshot = await repositorySnapshot(repositoryRoot, {
-        ignoredPaths: [],
-        indexPaths: [".gitignore", "fileSpec.cue"],
+        indexPaths: [".gitignore", "layout.cue"],
         visiblePaths: [],
       });
 
@@ -154,7 +150,7 @@ describe("snapshot identity", (): void => {
     });
   });
 
-  it("attributes a real mid-check fileSpec mutation", async (): Promise<void> => {
+  it("attributes a real mid-check layout mutation", async (): Promise<void> => {
     await withTemporaryDirectory(async (repositoryRoot: string): Promise<void> => {
       const stateRoot = await Deno.makeTempDir({ prefix: "coolheaded-snapshot-state-" });
       const wrapperPath = `${repositoryRoot}/wrapper`;
@@ -166,16 +162,16 @@ describe("snapshot identity", (): void => {
           `#!/bin/sh
 state=${JSON.stringify(`${stateRoot}/changed`)}
 if [ "$1" = "vet" ] && [ ! -f "$state" ]; then
-  printf "\\n" >> ${JSON.stringify(`${repositoryRoot}/fileSpec.cue`)}
+  printf "\\n" >> ${JSON.stringify(`${repositoryRoot}/layout.cue`)}
   touch "$state"
 fi
 exec ${JSON.stringify(originalCue)} "$@"
 `,
         );
         await Deno.chmod(wrapperPath, EXECUTABLE_MODE);
-        const error = await runFileSpecErrorProbe(repositoryRoot, wrapperPath);
+        const error = await runLayoutErrorProbe(repositoryRoot, wrapperPath);
         assertEquals(error["kind"], "snapshotChanged", JSON.stringify(error));
-        assertEquals(error["changedComponents"], ["fileSpecSha256"]);
+        assertEquals(error["changedComponents"], ["layoutSha256"]);
       } finally {
         await Deno.remove(stateRoot, { recursive: true });
       }

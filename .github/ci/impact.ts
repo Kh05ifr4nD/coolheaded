@@ -135,7 +135,7 @@ function changedFileCheckPrefix(file: string): string | null | undefined {
     return homeModuleMatch.groups["prefix"];
   }
 
-  if (file === "fileSpec.cue" || file.startsWith(".github/") || file.startsWith("tests/")) {
+  if (file === "layout.cue" || file.startsWith(".github/") || file.startsWith("tests/")) {
     return null;
   }
 

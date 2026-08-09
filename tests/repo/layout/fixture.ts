@@ -15,12 +15,12 @@ type RepositoryFixture = Readonly<{
   readonly requiredFields?: string;
 }>;
 
-type FileSpecCheckerOutput = Readonly<{
+type LayoutCheckerOutput = Readonly<{
   readonly stderr: string;
   readonly success: boolean;
 }>;
 
-type FileSpecProbeResult = Readonly<Record<string, unknown>>;
+type LayoutProbeResult = Readonly<Record<string, unknown>>;
 
 function isRecord(value: unknown): value is Readonly<Record<string, unknown>> {
   return typeof value === "object" && value !== null && !Array.isArray(value);
@@ -95,20 +95,20 @@ async function writeRepositoryFixture(
   await runGit(repositoryRoot, ["init"]);
   await Deno.writeTextFile(join(repositoryRoot, ".gitignore"), fixture.gitignore ?? "");
   await Deno.writeTextFile(
-    join(repositoryRoot, "fileSpec.cue"),
-    `package fileSpec
+    join(repositoryRoot, "layout.cue"),
+    `package layout
 
 #RegularFile: true
 
-#FileSpecPath: {
+#LayoutPath: {
 	".gitignore"?:   #RegularFile
-	"fileSpec.cue"?: #RegularFile
+	"layout.cue"?: #RegularFile
 ${pathFields}
 }
 
-#FileSpec: {
+#Layout: {
 	".gitignore"!:   #RegularFile
-	"fileSpec.cue"!: #RegularFile
+	"layout.cue"!: #RegularFile
 ${requiredFields}
 }
 `,
@@ -121,13 +121,13 @@ ${requiredFields}
       await Deno.writeTextFile(path, file.contents);
     }),
   );
-  await runGit(repositoryRoot, ["add", ".gitignore", "fileSpec.cue"]);
+  await runGit(repositoryRoot, ["add", ".gitignore", "layout.cue"]);
 }
 
-async function runFileSpecChecker(
+async function runLayoutChecker(
   repositoryRoot: string,
   cuePath: string,
-): Promise<FileSpecCheckerOutput> {
+): Promise<LayoutCheckerOutput> {
   const gitPath = requiredToolPath("COOLHEADED_GIT");
   const repositoryAccessPath = await Deno.realPath(repositoryRoot);
   const temporaryRoot = dirname(repositoryRoot);
@@ -140,7 +140,7 @@ async function runFileSpecChecker(
       `--allow-read=${repositoryRoot},${repositoryAccessPath},${temporaryRoot},${temporaryAccessRoot},${cuePath},${gitPath},${Deno.execPath()}`,
       `--allow-run=${cuePath},${gitPath}`,
       `--allow-write=${temporaryRoot},${temporaryAccessRoot}`,
-      join(REPOSITORY_ROOT_PATH, "lib/ts/repo/fileSpec.ts"),
+      join(REPOSITORY_ROOT_PATH, "lib/ts/repo/layout.ts"),
     ],
     clearEnv: true,
     cwd: repositoryRoot,
@@ -160,25 +160,25 @@ async function runFileSpecChecker(
   };
 }
 
-async function runFileSpecErrorProbe(
+async function runLayoutErrorProbe(
   repositoryRoot: string,
   cuePath: string,
-): Promise<FileSpecProbeResult> {
-  const probePath = await Deno.makeTempFile({ prefix: "coolheaded-file-spec-probe-" });
+): Promise<LayoutProbeResult> {
+  const probePath = await Deno.makeTempFile({ prefix: "coolheaded-layout-probe-" });
   try {
     const gitPath = requiredToolPath("COOLHEADED_GIT");
     const repositoryAccessPath = await Deno.realPath(repositoryRoot);
     const temporaryRoot = dirname(probePath);
     const temporaryAccessRoot = dirname(await Deno.realPath(probePath));
     const checkModule = new globalThis.URL(
-      "lib/ts/repo/fileSpec/check.ts",
+      "lib/ts/repo/layout/check.ts",
       new globalThis.URL(`file://${REPOSITORY_ROOT_PATH}/`),
     ).href;
     await Deno.writeTextFile(
       probePath,
-      `import { checkFileSpec } from ${JSON.stringify(checkModule)};
+      `import { checkLayout } from ${JSON.stringify(checkModule)};
 try {
-  await checkFileSpec(Deno.args[0] ?? "");
+  await checkLayout(Deno.args[0] ?? "");
   Deno.exit(0);
 } catch (error: unknown) {
   if (error instanceof Error) {
@@ -217,7 +217,7 @@ try {
     }
     const value: unknown = JSON.parse(new globalThis.TextDecoder().decode(output.stdout));
     if (!isRecord(value)) {
-      throw new Error("fileSpec probe did not emit a structured error");
+      throw new Error("layout probe did not emit a structured error");
     }
     return value;
   } finally {
@@ -228,7 +228,7 @@ try {
 async function withTemporaryDirectory<Success>(
   useDirectory: (directoryPath: string) => Promise<Success>,
 ): Promise<Success> {
-  const directoryPath = await Deno.makeTempDir({ prefix: "coolheaded-file-spec-test-" });
+  const directoryPath = await Deno.makeTempDir({ prefix: "coolheaded-layout-test-" });
   try {
     return await useDirectory(directoryPath);
   } finally {
@@ -240,8 +240,8 @@ export {
   EXECUTABLE_MODE,
   REPOSITORY_ROOT_PATH,
   requiredToolPath,
-  runFileSpecErrorProbe,
-  runFileSpecChecker,
+  runLayoutErrorProbe,
+  runLayoutChecker,
   runGit,
   runGitBytes,
   withTemporaryDirectory,
