@@ -97,9 +97,8 @@ function updateProgram(
     (): ReturnType<typeof latestVersion> => latestVersion(dependencies.jsonClient),
     dependencies.pinFilePath,
     (version: string): Effect.Effect<void, UpdateVersionError> =>
-      Effect.flatMap(
-        packageHashConfig(version, dependencies),
-        (config): Effect.Effect<void> => writePackageHashConfig(dependencies.pinFilePath, config),
+      Effect.flatMap(packageHashConfig(version, dependencies), (config): Effect.Effect<void> =>
+        writePackageHashConfig(dependencies.pinFilePath, config),
       ),
   );
 }

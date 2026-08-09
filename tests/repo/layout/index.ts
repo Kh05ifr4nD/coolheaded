@@ -92,8 +92,8 @@ describe("Git index hardening", (): void => {
         [...prefix, INVALID_UTF8_BYTE, 0],
       );
 
-      const error = await assertRejects(
-        (): Promise<readonly unknown[]> => gitIndexEntriesFrom(repositoryRoot),
+      const error = await assertRejects((): Promise<readonly unknown[]> =>
+        gitIndexEntriesFrom(repositoryRoot),
       );
       assertInstanceOf(error, Error);
       assertEquals(isLayoutError(error), true);

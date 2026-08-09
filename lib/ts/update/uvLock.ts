@@ -132,30 +132,29 @@ function generatedUvLock(
   project: UvProject,
   runner: CommandRunner,
 ): Effect.Effect<string, Error> {
-  return withTemporaryDirectory(
-    (workspacePath: string): Effect.Effect<string, Error> =>
+  return withTemporaryDirectory((workspacePath: string): Effect.Effect<string, Error> =>
+    Effect.zipRight(
+      writeTextFile(`${workspacePath}/pyproject.toml`, uvProjectContents(project)),
       Effect.zipRight(
-        writeTextFile(`${workspacePath}/pyproject.toml`, uvProjectContents(project)),
-        Effect.zipRight(
-          commandOutput(
-            runner,
-            "nix",
-            [
-              "run",
-              "--inputs-from",
-              repositoryRootPath,
-              "nixpkgs#uv",
-              "--",
-              "lock",
-              "--project",
-              workspacePath,
-              "--no-progress",
-            ],
+        commandOutput(
+          runner,
+          "nix",
+          [
+            "run",
+            "--inputs-from",
             repositoryRootPath,
-          ),
-          commandOutput(runner, "cat", [`${workspacePath}/uv.lock`]),
+            "nixpkgs#uv",
+            "--",
+            "lock",
+            "--project",
+            workspacePath,
+            "--no-progress",
+          ],
+          repositoryRootPath,
         ),
+        commandOutput(runner, "cat", [`${workspacePath}/uv.lock`]),
       ),
+    ),
   );
 }
 

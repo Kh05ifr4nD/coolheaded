@@ -15,10 +15,8 @@ Deno.test("Layout CLI skips non-main imports", async (): Promise<void> => {
 
 Deno.test("Layout CLI reports successful conformance", async (): Promise<void> => {
   assertEquals(
-    await layoutRun(
-      "file:///module.ts",
-      "file:///module.ts",
-      (): Promise<void> => Promise.resolve(),
+    await layoutRun("file:///module.ts", "file:///module.ts", (): Promise<void> =>
+      Promise.resolve(),
     ),
     { kind: "passed" },
   );

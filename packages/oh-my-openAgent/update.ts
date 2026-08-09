@@ -51,9 +51,8 @@ function platformHashes(
   jsonClient: JsonClient,
 ): Effect.Effect<Readonly<Record<SupportedSystem, string>>, PackageHashError> {
   return Effect.all(
-    systemRecord(
-      (system: SupportedSystem): ReturnType<typeof npmPackageHash> =>
-        packageHash(PLATFORM_PACKAGES[system], version, jsonClient),
+    systemRecord((system: SupportedSystem): ReturnType<typeof npmPackageHash> =>
+      packageHash(PLATFORM_PACKAGES[system], version, jsonClient),
     ),
   );
 }
@@ -78,9 +77,8 @@ function updateProgram(
     (): ReturnType<typeof latestNpmVersion> => latestVersion(dependencies.jsonClient),
     dependencies.pinFilePath,
     (version: string): Effect.Effect<void, PackageHashError> =>
-      Effect.flatMap(
-        packagePin(version, dependencies.jsonClient),
-        (pin): Effect.Effect<void> => writePinJson(dependencies.pinFilePath, pin),
+      Effect.flatMap(packagePin(version, dependencies.jsonClient), (pin): Effect.Effect<void> =>
+        writePinJson(dependencies.pinFilePath, pin),
       ),
   );
 }

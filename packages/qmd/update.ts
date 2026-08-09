@@ -85,9 +85,8 @@ function generatedBunNix(
     (outPath: string): Effect.Effect<string, Error> => {
       const bun2nixPath = `${outPath.trim()}/bin/bun2nix`;
 
-      return withTemporaryDirectory(
-        (workspacePath: string): Effect.Effect<string, Error> =>
-          generatedBunNixFromWorkspace(bun2nixPath, workspacePath, version, dependencies),
+      return withTemporaryDirectory((workspacePath: string): Effect.Effect<string, Error> =>
+        generatedBunNixFromWorkspace(bun2nixPath, workspacePath, version, dependencies),
       );
     },
   );

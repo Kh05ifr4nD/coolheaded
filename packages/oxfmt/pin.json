@@ -1,9 +1,9 @@
 {
-  "version": "1.76.0",
-  "binaryVersion": "0.61.0",
+  "version": "1.77.0",
+  "binaryVersion": "0.62.0",
   "platformPackageHashes": {
-    "aarch64-darwin": "sha256-3LZWUkI3rTOgpdRqg2orb2eEPmRKMJjkcJ3pa2MFsb4=",
-    "aarch64-linux": "sha256-5gTg20qu4RyyA7CU3xL48S/yw7lQdDCoBEtGk6va1To=",
-    "x86_64-linux": "sha256-kTdUVwFWJPk5FHRJWXlbQKpVK/wF08HCKRhqz1vvRQA="
+    "aarch64-darwin": "sha256-4jJM09tEsv2zDH4i3KAZpWDiahf199kORKyK/Uetb8g=",
+    "aarch64-linux": "sha256-xe9y81IjhFqecHTf4HdiLqR1CzINwdmnVwew1Pjr9hI=",
+    "x86_64-linux": "sha256-/uG59Fi/EQIdkkDxSmpTIhkVXYUnbvIMKkZ/UiByemY="
   }
 }

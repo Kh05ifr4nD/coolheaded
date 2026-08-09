@@ -413,9 +413,8 @@ Deno.test("GitHub versions reject pagination beyond the page limit", async (): P
     index === 0 ? FIRST_URL : `${FIRST_URL}&page=${index + 1}`,
   );
   const fake = strictJsonClient(
-    pages.map(
-      (url: string, index: number): ExpectedJsonRequest =>
-        plan(url, [{ name: `v1.0.${index}` }], `<${FIRST_URL}&page=${index + 2}>; rel="next"`),
+    pages.map((url: string, index: number): ExpectedJsonRequest =>
+      plan(url, [{ name: `v1.0.${index}` }], `<${FIRST_URL}&page=${index + 2}>; rel="next"`),
     ),
   );
   const error = await Effect.runPromise(

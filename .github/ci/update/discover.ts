@@ -67,21 +67,17 @@ function updateLanes(
   includeDenoDependencies: boolean,
 ): readonly UpdateLane[] {
   const updates = [
-    ...packageLanes.map(
-      (item): UpdateLane => ({
-        currentVersion: item.currentVersion,
-        kind: "package",
-        name: item.name,
-        versionScheme: item.versionScheme,
-      }),
-    ),
-    ...flakeInputLanes.map(
-      (item): UpdateLane => ({
-        currentVersion: item.currentVersion,
-        kind: "flakeInput",
-        name: item.name,
-      }),
-    ),
+    ...packageLanes.map((item): UpdateLane => ({
+      currentVersion: item.currentVersion,
+      kind: "package",
+      name: item.name,
+      versionScheme: item.versionScheme,
+    })),
+    ...flakeInputLanes.map((item): UpdateLane => ({
+      currentVersion: item.currentVersion,
+      kind: "flakeInput",
+      name: item.name,
+    })),
     ...(includeDenoDependencies
       ? ([
           { currentVersion: "deno.lock", kind: "denoDependencies", name: "denoDependencies" },
