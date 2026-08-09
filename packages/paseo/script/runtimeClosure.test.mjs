@@ -17,9 +17,13 @@ const MANIFEST = [
 
 const WARNINGS = [
   "Failed to parse /build/source/packages/server/src/server/daemon-worker.ts as module:\nUnexpected token (7:12)",
+  "Failed to resolve dependency \"./build/Release/watcher.node\":\nCannot find module './build/Release/watcher.node' loaded from /build/source/node_modules/@parcel/watcher/index.js",
+  "Failed to resolve dependency \"./build/Debug/watcher.node\":\nCannot find module './build/Debug/watcher.node' loaded from /build/source/node_modules/@parcel/watcher/index.js",
   "Failed to resolve dependency \"@parcel/watcher-\u001A-\u001A\":\nCannot find module '@parcel/watcher-\u001A-\u001A' loaded from /build/source/node_modules/@parcel/watcher/index.js",
   "Failed to resolve dependency \"utf-8-validate\":\nCannot find module 'utf-8-validate' loaded from /build/source/node_modules/ws/lib/validation.js",
+  "Failed to resolve dependency \"bufferutil\":\nCannot find module 'bufferutil' loaded from /build/source/node_modules/ws/lib/buffer-util.js",
   "Failed to parse /build/source/packages/server/dist/server/terminal/shell-integration/zsh/.zshenv as script:\nUnexpected token (1:11)",
+  "Failed to parse /build/source/packages/server/dist/server/terminal/shell-integration/zsh/.zshenv as module:\nUnexpected token (1:11)",
 ];
 
 describe("Paseo runtime closure policy", () => {
@@ -53,10 +57,27 @@ describe("Paseo runtime closure policy", () => {
       RuntimeClosureError,
       "missing runtime compensation",
     );
+    assertThrows(
+      () => {
+        enforceTraceWarningPolicy(
+          WARNINGS.filter((warning) => !warning.includes("bufferutil")),
+          MANIFEST,
+        );
+      },
+      RuntimeClosureError,
+      "missing trace warning for ws buffer fallback",
+    );
   });
 
   it("accepts only deterministic repository-relative manifests", () => {
     assertEquals(parseRuntimeManifest(`${MANIFEST.join("\n")}\n`), MANIFEST);
+    assertThrows(
+      () => {
+        parseRuntimeManifest("packages/server/dist/index.js\n..\n");
+      },
+      RuntimeClosureError,
+      "invalid runtime path",
+    );
     assertThrows(
       () => {
         parseRuntimeManifest("packages/server/dist/index.js\n../outside.js\n");

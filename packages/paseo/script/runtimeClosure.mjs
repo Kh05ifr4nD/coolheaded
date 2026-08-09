@@ -19,11 +19,18 @@ import url from "node:url";
  *     options: Readonly<{ cwd: string, encoding: "utf8", maxBuffer: number }>,
  *   ): SpawnResult,
  * }} ChildProcess
- * @typedef {{ existsSync(path: string): boolean }} FileSystem
  * @typedef {{
+ *   existsSync(path: string): boolean,
+ *   realpathSync(path: string): string,
+ *   statSync(path: string): Readonly<{ isDirectory(): boolean, isFile(): boolean }>,
+ * }} FileSystem
+ * @typedef {{
+ *   isAbsolute(path: string): boolean,
  *   join(...paths: string[]): string,
  *   posix: Readonly<{ isAbsolute(path: string): boolean, normalize(path: string): string }>,
+ *   relative(from: string, to: string): string,
  *   resolve(...paths: string[]): string,
+ *   readonly sep: string,
  * }} Path
  * @typedef {{
  *   readonly argv: readonly [string, string, ...string[]],
@@ -51,7 +58,8 @@ const UPSTREAM_TRACE_FILE = "scripts/trace-daemon-upstream.mjs";
 
 /**
  * Each accepted warning names the concrete runtime artifact that makes the
- * static-analysis gap safe. Unknown warnings and missing compensation fail.
+ * static-analysis gap safe. Warnings, policies, and compensations must remain
+ * mutually supported so upstream drift cannot leave stale exceptions behind.
  *
  * @type {readonly Readonly<{
  *   id: string,
@@ -140,6 +148,7 @@ function parseRuntimeManifest(stdout) {
   for (const entry of entries) {
     if (
       entry === "." ||
+      entry === ".." ||
       path.posix.isAbsolute(entry) ||
       entry.startsWith("../") ||
       path.posix.normalize(entry) !== entry
@@ -166,6 +175,7 @@ function parseRuntimeManifest(stdout) {
  * @returns {void}
  */
 function enforceTraceWarningPolicy(warnings, manifest) {
+  const matchedPolicyIds = new Set();
   for (const warning of warnings) {
     const policies = WARNING_POLICIES.filter(({ warningPattern }) => warningPattern.test(warning));
     if (policies.length !== 1) {
@@ -173,8 +183,15 @@ function enforceTraceWarningPolicy(warnings, manifest) {
     }
 
     const [policy] = policies;
+    matchedPolicyIds.add(policy.id);
     if (!manifest.some((entry) => policy.manifestPattern.test(entry))) {
       throw new RuntimeClosureError(`missing runtime compensation for ${policy.id}:\n${warning}`);
+    }
+  }
+
+  for (const policy of WARNING_POLICIES) {
+    if (!matchedPolicyIds.has(policy.id)) {
+      throw new RuntimeClosureError(`missing trace warning for ${policy.id}`);
     }
   }
 }
@@ -184,10 +201,27 @@ function enforceTraceWarningPolicy(warnings, manifest) {
  * @param {readonly string[]} manifest
  * @returns {void}
  */
-function assertManifestFilesExist(sourceRoot, manifest) {
+function assertManifestEntriesSafe(sourceRoot, manifest) {
+  const resolvedSourceRoot = nodeFileSystem.realpathSync(sourceRoot);
   for (const entry of manifest) {
-    if (!nodeFileSystem.existsSync(path.join(sourceRoot, entry))) {
+    const candidate = path.join(resolvedSourceRoot, entry);
+    if (!nodeFileSystem.existsSync(candidate)) {
       throw new RuntimeClosureError(`runtime manifest path does not exist: ${entry}`);
+    }
+
+    const resolvedCandidate = nodeFileSystem.realpathSync(candidate);
+    const relativeCandidate = path.relative(resolvedSourceRoot, resolvedCandidate);
+    if (
+      relativeCandidate === "" ||
+      relativeCandidate === ".." ||
+      relativeCandidate.startsWith(`..${path.sep}`) ||
+      path.isAbsolute(relativeCandidate)
+    ) {
+      throw new RuntimeClosureError(`runtime manifest path escapes source root: ${entry}`);
+    }
+    const statistics = nodeFileSystem.statSync(resolvedCandidate);
+    if (!statistics.isFile() && !statistics.isDirectory()) {
+      throw new RuntimeClosureError(`runtime manifest path has unsupported type: ${entry}`);
     }
   }
 }
@@ -218,7 +252,7 @@ function traceRuntimeClosure(sourceRoot) {
   }
 
   const manifest = parseRuntimeManifest(result.stdout);
-  assertManifestFilesExist(sourceRoot, manifest);
+  assertManifestEntriesSafe(sourceRoot, manifest);
   enforceTraceWarningPolicy(parseTraceWarnings(result.stderr), manifest);
   return result.stdout;
 }
