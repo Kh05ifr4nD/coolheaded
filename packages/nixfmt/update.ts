@@ -80,9 +80,8 @@ function updateProgram(
   dependencies: Readonly<UpdateDependencies>,
 ): Effect.Effect<void, Error> {
   return Effect.flatMap(
-    requestedOrLatestVersion(
-      args,
-      (): ReturnType<typeof latestVersion> => latestVersion(dependencies.jsonClient),
+    requestedOrLatestVersion(args, (): ReturnType<typeof latestVersion> =>
+      latestVersion(dependencies.jsonClient),
     ),
     (version: string): Effect.Effect<void, Error> =>
       Effect.flatMap(

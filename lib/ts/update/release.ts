@@ -106,13 +106,11 @@ function fetchSha256DigestHash(
       response: Response,
     ): Effect.Effect<SriHash> & Readonly<{ readonly response?: Response }> =>
       Effect.map(
-        Effect.promise(
-          async (): Promise<readonly number[]> => [
-            ...new Uint8Array(
-              await globalThis.crypto.subtle.digest("SHA-256", Uint8Array.from(response.body)),
-            ),
-          ],
-        ),
+        Effect.promise(async (): Promise<readonly number[]> => [
+          ...new Uint8Array(
+            await globalThis.crypto.subtle.digest("SHA-256", Uint8Array.from(response.body)),
+          ),
+        ]),
         bytesToSha256SRI,
       ),
   );
@@ -142,9 +140,8 @@ function releaseHashes(
   httpClient: Readonly<HttpClient>,
 ): Effect.Effect<Readonly<Record<SupportedSystem, SriHash>>, HttpClientError | UpdateError> {
   return Effect.all(
-    systemRecord(
-      (system: SupportedSystem): Effect.Effect<SriHash, HttpClientError | UpdateError> =>
-        hashForUrl(source, urls[system], httpClient),
+    systemRecord((system: SupportedSystem): Effect.Effect<SriHash, HttpClientError | UpdateError> =>
+      hashForUrl(source, urls[system], httpClient),
     ),
   );
 }

@@ -52,32 +52,21 @@ jobs:
           UPDATE_FLAKE_INPUTS: ${{ github.event_name != 'workflow_dispatch' || inputs.updateFlakeInputs != false }}
           UPDATE_PACKAGES: ${{ github.event_name != 'workflow_dispatch' || inputs.updatePackages != false }}
         run: nix develop -c deno run --allow-env --allow-read --allow-run --allow-write .github/ci/update/discover.ts
-  update:
+  prepare:
     needs: discover
     if: needs.discover.outputs.hasUpdates == 'true'
     runs-on: ubuntu-24.04
+    permissions:
+      contents: read
     strategy:
       fail-fast: false
       matrix: ${{ fromJson(needs.discover.outputs.matrix) }}
-    permissions:
-      contents: write
-      issues: write
-      pull-requests: write
     steps:
-      - id: app-token
-        uses: actions/create-github-app-token@bcd2ba49218906704ab6c1aa796996da409d3eb1 # v3
-        with:
-          client-id: ${{ vars.APP_CLIENT_ID }}
-          private-key: ${{ secrets.APP_PRIVATE_KEY }}
       - uses: actions/checkout@df4cb1c069e1874edd31b4311f1884172cec0e10 # v6
         with:
           fetch-depth: 0
-          persist-credentials: true
-          token: ${{ steps.app-token.outputs.token }}
+          persist-credentials: false
       - uses: cachix/install-nix-action@b97f05dcb019ddea06450a50ef6203d2fdc19fee # v31
-      - run: |
-          git config user.name "kh05ifr4nd-coolheaded[bot]"
-          git config user.email "292306314+kh05ifr4nd-coolheaded[bot]@users.noreply.github.com"
       - name: Prepare update branch
         env:
           UPDATE_BRANCH: ${{ matrix.kind == 'package' && format('update/package/{0}', matrix.name) || matrix.kind == 'flakeInput' && format('update/flakeInput/{0}', matrix.name) || 'update/denoDependencies' }}
@@ -87,7 +76,7 @@ jobs:
         name: Run update
         env:
           CURRENT_VERSION: ${{ matrix.currentVersion }}
-          GITHUB_TOKEN: ${{ steps.app-token.outputs.token }}
+          GITHUB_TOKEN: ${{ github.token }}
           VERSION_SCHEME: ${{ matrix.versionScheme || 'semver' }}
         run: |
           case "${{ matrix.kind }}" in
@@ -102,34 +91,156 @@ jobs:
               ;;
           esac
       - if: steps.update.outputs.updated == 'true'
+        id: format
+        name: Format update
+        run: |
+          git diff --name-only -z -- . > "$RUNNER_TEMP/update-files-before-format"
+          nix fmt
+          nix fmt -- --no-cache --fail-on-change
+          git diff --name-only -z -- . > "$RUNNER_TEMP/update-files-after-format"
+          if cmp -s "$RUNNER_TEMP/update-files-before-format" "$RUNNER_TEMP/update-files-after-format"; then
+            echo "expanded=false" >> "$GITHUB_OUTPUT"
+          else
+            echo "expanded=true" >> "$GITHUB_OUTPUT"
+          fi
+      - if: steps.update.outputs.updated == 'true'
+        name: Create update patch
+        env:
+          ARTIFACT: ${{ runner.temp }}/update-artifact
+          UPDATE_BASE_REF: ${{ github.event_name == 'workflow_dispatch' && github.ref_name || 'main' }}
+        run: |
+          mkdir -p "$ARTIFACT"
+          git diff --binary "origin/$UPDATE_BASE_REF" -- . > "$ARTIFACT/update.patch"
+          test -s "$ARTIFACT/update.patch"
+      - name: Write update metadata
+        env:
+          ARTIFACT: ${{ runner.temp }}/update-artifact
+          CHANGELOG: ${{ steps.update.outputs.changelog }}
+          FORMAT_EXPANDED: ${{ steps.format.outputs.expanded || 'false' }}
+          NEW_VERSION: ${{ steps.update.outputs.newVersion }}
+          UPDATED: ${{ steps.update.outputs.updated }}
+        run: |
+          mkdir -p "$ARTIFACT"
+          printf '%s' "$UPDATED" > "$ARTIFACT/updated"
+          printf '%s' "$NEW_VERSION" > "$ARTIFACT/newVersion"
+          printf '%s' "$CHANGELOG" > "$ARTIFACT/changelog"
+          printf '%s' "$FORMAT_EXPANDED" > "$ARTIFACT/formatExpanded"
+      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        with:
+          name: update-${{ matrix.kind }}-${{ matrix.name }}
+          path: ${{ runner.temp }}/update-artifact
+          if-no-files-found: error
+          retention-days: 1
+  publish:
+    needs: [discover, prepare]
+    if: needs.discover.outputs.hasUpdates == 'true'
+    runs-on: ubuntu-24.04
+    permissions:
+      contents: read
+    strategy:
+      fail-fast: false
+      matrix: ${{ fromJson(needs.discover.outputs.matrix) }}
+    steps:
+      - uses: actions/checkout@df4cb1c069e1874edd31b4311f1884172cec0e10 # v6
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+          ref: ${{ github.event_name == 'workflow_dispatch' && github.ref_name || 'main' }}
+      - uses: cachix/install-nix-action@b97f05dcb019ddea06450a50ef6203d2fdc19fee # v31
+      - name: Compile trusted publisher
+        run: >-
+          nix develop -c deno compile --allow-env --allow-run
+          --output "$RUNNER_TEMP/pull-request" .github/ci/update/pullRequest.ts
+      - uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4
+        with:
+          name: update-${{ matrix.kind }}-${{ matrix.name }}
+          path: ${{ runner.temp }}/update-artifact
+      - id: artifact
+        name: Read update metadata
+        env:
+          ARTIFACT: ${{ runner.temp }}/update-artifact
+        run: |
+          updated="$(cat "$ARTIFACT/updated")"
+          formatExpanded="$(cat "$ARTIFACT/formatExpanded")"
+          newVersion="$(cat "$ARTIFACT/newVersion")"
+          case "$updated" in
+            true|false) ;;
+            *) echo "Invalid update status: $updated" >&2; exit 1 ;;
+          esac
+          case "$formatExpanded" in
+            true|false) ;;
+            *) echo "Invalid format scope: $formatExpanded" >&2; exit 1 ;;
+          esac
+          case "$newVersion" in
+            *$'\n'*) echo "Invalid multiline version" >&2; exit 1 ;;
+          esac
+          {
+            printf 'updated=%s\n' "$updated"
+            printf 'formatExpanded=%s\n' "$formatExpanded"
+            printf 'newVersion=%s\n' "$newVersion"
+          } >> "$GITHUB_OUTPUT"
+      - if: steps.artifact.outputs.updated == 'true'
+        name: Apply update patch
+        env:
+          ARTIFACT: ${{ runner.temp }}/update-artifact
+          UPDATE_BRANCH: ${{ matrix.kind == 'package' && format('update/package/{0}', matrix.name) || matrix.kind == 'flakeInput' && format('update/flakeInput/{0}', matrix.name) || 'update/denoDependencies' }}
+        run: |
+          git apply --check "$ARTIFACT/update.patch"
+          git apply --index "$ARTIFACT/update.patch"
+          git diff --cached --check
+          git fetch origin "$UPDATE_BRANCH:refs/remotes/origin/$UPDATE_BRANCH" || true
+      - if: steps.artifact.outputs.updated == 'true'
+        id: app-token
+        uses: actions/create-github-app-token@bcd2ba49218906704ab6c1aa796996da409d3eb1 # v3
+        with:
+          client-id: ${{ vars.APP_CLIENT_ID }}
+          private-key: ${{ secrets.APP_PRIVATE_KEY }}
+          permission-contents: write
+          permission-issues: write
+          permission-pull-requests: write
+      - if: steps.artifact.outputs.updated == 'true'
+        name: Authenticate publisher
         env:
           GH_TOKEN: ${{ steps.app-token.outputs.token }}
+        run: |
+          git config user.name "kh05ifr4nd-coolheaded[bot]"
+          git config user.email "292306314+kh05ifr4nd-coolheaded[bot]@users.noreply.github.com"
+          gh auth setup-git
+      - if: steps.artifact.outputs.updated == 'true'
+        name: Publish update
+        env:
+          GH_TOKEN: ${{ steps.app-token.outputs.token }}
+          GIT_CONFIG_COUNT: 1
+          GIT_CONFIG_KEY_0: core.hooksPath
+          GIT_CONFIG_VALUE_0: /dev/null
           UPDATE_BRANCH: ${{ matrix.kind == 'package' && format('update/package/{0}', matrix.name) || matrix.kind == 'flakeInput' && format('update/flakeInput/{0}', matrix.name) || 'update/denoDependencies' }}
-          UPDATE_BODY: ${{ matrix.kind == 'package' && format('Automated package update for {0} from {1} to {2}.', matrix.name, matrix.currentVersion, steps.update.outputs.newVersion) || matrix.kind == 'flakeInput' && format('Automated flake input update for {0} from {1} to {2}.', matrix.name, matrix.currentVersion, steps.update.outputs.newVersion) || steps.update.outputs.changelog }}
-          UPDATE_CHANGELOG: ${{ steps.update.outputs.changelog }}
+          UPDATE_BODY: ${{ matrix.kind == 'package' && format('Automated package update for {0} from {1} to {2}.', matrix.name, matrix.currentVersion, steps.artifact.outputs.newVersion) || matrix.kind == 'flakeInput' && format('Automated flake input update for {0} from {1} to {2}.', matrix.name, matrix.currentVersion, steps.artifact.outputs.newVersion) || '' }}
           UPDATE_LABELS: ${{ matrix.kind == 'package' && 'dependencies,automated,package' || matrix.kind == 'flakeInput' && 'dependencies,automated,flakeInput' || 'dependencies,automated,denoDependencies' }}
           UPDATE_TITLE: >-
-            ${{ matrix.kind == 'package' && format('{0}: {1} -> {2}', matrix.name, matrix.currentVersion, steps.update.outputs.newVersion) || matrix.kind == 'flakeInput' && format('flake.lock: update {0}', matrix.name) || 'deno.lock: update Deno dependencies' }}
+            ${{ matrix.kind == 'package' && format('{0}: {1} -> {2}', matrix.name, matrix.currentVersion, steps.artifact.outputs.newVersion) || matrix.kind == 'flakeInput' && format('flake.lock: update {0}', matrix.name) || 'deno.lock: update Deno dependencies' }}
         run: |
+          changelog="$(cat "$RUNNER_TEMP/update-artifact/changelog")"
           body="$UPDATE_BODY"
-          if [ -n "$UPDATE_CHANGELOG" ] && [ "${{ matrix.kind }}" = package ]; then
-            body="$body"$'\n\n'"$UPDATE_CHANGELOG"
+          if [ -n "$changelog" ] && [ "${{ matrix.kind }}" = package ]; then
+            body="$body"$'\n\n'"$changelog"
+          elif [ "${{ matrix.kind }}" = denoDependencies ]; then
+            body="$changelog"
           fi
-          nix develop -c deno run --allow-env --allow-run .github/ci/update/pullRequest.ts \
+          "$RUNNER_TEMP/pull-request" \
             --branch "$UPDATE_BRANCH" \
             --title "$UPDATE_TITLE" \
             --body "$body" \
             --labels "$UPDATE_LABELS" \
-            --auto-merge "${{ github.event_name != 'workflow_dispatch' || inputs.autoMerge != false }}"
+            --auto-merge "${{ (github.event_name != 'workflow_dispatch' || inputs.autoMerge != false) && steps.artifact.outputs.formatExpanded != 'true' }}"
   summary:
-    needs: [discover, update]
+    needs: [discover, prepare, publish]
     runs-on: ubuntu-24.04
     if: always() && needs.discover.outputs.hasUpdates == 'true'
     steps:
       - run: |
           echo "## Update Summary" >> "$GITHUB_STEP_SUMMARY"
           echo "" >> "$GITHUB_STEP_SUMMARY"
-          if [ "${{ needs.update.result }}" = failure ]; then
+          if [ "${{ needs.prepare.result }}" = failure ] || [ "${{ needs.publish.result }}" = failure ]; then
             echo "Some update jobs failed." >> "$GITHUB_STEP_SUMMARY"
           else
             echo "All update jobs completed." >> "$GITHUB_STEP_SUMMARY"

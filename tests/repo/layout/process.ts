@@ -43,8 +43,8 @@ async function toolError(tool: ToolCase, executable?: string): Promise<Error> {
     } else {
       Deno.env.set(tool.environmentVariable, executable);
     }
-    const error = await assertRejects(
-      (): Promise<string> => commandOutput(tool.command, tool.versionArguments),
+    const error = await assertRejects((): Promise<string> =>
+      commandOutput(tool.command, tool.versionArguments),
     );
     assertInstanceOf(error, Error);
     return error;

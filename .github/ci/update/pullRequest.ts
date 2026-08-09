@@ -225,25 +225,24 @@ async function assertAutoMergeGateReady(
 
 async function ensureLabels(labels: readonly string[], runner: CommandRunner): Promise<void> {
   await Promise.all(
-    labels.map(
-      (label: string): Promise<unknown> =>
-        run(
-          runner,
-          [
-            "gh",
-            "label",
-            "create",
-            label,
-            "--color",
-            labelColor(label),
-            "--description",
-            "Managed by update automation",
-            "--force",
-          ],
-          {
-            capture: false,
-          },
-        ),
+    labels.map((label: string): Promise<unknown> =>
+      run(
+        runner,
+        [
+          "gh",
+          "label",
+          "create",
+          label,
+          "--color",
+          labelColor(label),
+          "--description",
+          "Managed by update automation",
+          "--force",
+        ],
+        {
+          capture: false,
+        },
+      ),
     ),
   );
 }

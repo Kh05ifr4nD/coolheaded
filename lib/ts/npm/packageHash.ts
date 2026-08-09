@@ -137,9 +137,8 @@ function writePackageHashUpdate(
       void,
       InvalidNpmMetadataError | InvalidPackageHashConfigError | JsonClientError | UpdateError
     > =>
-      Effect.flatMap(
-        hashConfigForVersion(version),
-        (config): Effect.Effect<void> => writePackageHashConfig(options.pinFilePath, config),
+      Effect.flatMap(hashConfigForVersion(version), (config): Effect.Effect<void> =>
+        writePackageHashConfig(options.pinFilePath, config),
       ),
   );
 }
