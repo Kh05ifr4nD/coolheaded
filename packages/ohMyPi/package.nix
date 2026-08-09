@@ -14,6 +14,8 @@ packageLib.mkGitHubReleaseBinaryPackage {
   targets = packageLib.npmReleaseTargets;
   asset = { target, ... }: "omp-${target}";
 
+  buildInputs = lib.optionals stdenv.hostPlatform.isLinux [ stdenv.cc.cc.lib ];
+
   nativeBuildInputs = [
     installShellFiles
     makeWrapper
@@ -27,8 +29,21 @@ packageLib.mkGitHubReleaseBinaryPackage {
 
     packageRoot="$out/libexec/oh-my-pi"
     install -Dm755 "$src" "$packageRoot/bin/omp"
-    makeWrapper "$packageRoot/bin/omp" "$out/bin/omp" \
-      --set PI_SKIP_VERSION_CHECK 1
+    makeWrapper "$packageRoot/bin/omp" "$out/bin/omp" ${
+      lib.escapeShellArgs (
+        [
+          "--set"
+          "PI_SKIP_VERSION_CHECK"
+          "1"
+        ]
+        ++ lib.optionals stdenv.hostPlatform.isLinux [
+          "--prefix"
+          "LD_LIBRARY_PATH"
+          ":"
+          (lib.makeLibraryPath [ stdenv.cc.cc.lib ])
+        ]
+      )
+    }
 
     runHook postInstall
   '';
@@ -76,6 +91,13 @@ packageLib.mkGitHubReleaseBinaryPackage {
     assertFileExists "$out/share/bash-completion/completions/omp.bash"
     assertFileExists "$out/share/fish/vendor_completions.d/omp.fish"
     assertFileExists "$out/share/zsh/site-functions/_omp"
+    ${lib.optionalString stdenv.hostPlatform.isLinux ''
+      wrapperOutput="$(<"$out/bin/omp")"
+      case "$wrapperOutput" in
+        *"LD_LIBRARY_PATH"*"${lib.makeLibraryPath [ stdenv.cc.cc.lib ]}"*) ;;
+        *) failCheck "omp wrapper is missing the GCC runtime library path" ;;
+      esac
+    ''}
   '';
 
   meta = {
