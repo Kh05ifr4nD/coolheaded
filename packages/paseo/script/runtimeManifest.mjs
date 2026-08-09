@@ -113,9 +113,9 @@ function materializeRuntimeManifest(sourceRoot, manifest, fileSystem = nodeFileS
         }
 
         const linkTarget = fileSystem.readlinkSync(candidate);
-        if (path.isAbsolute(linkTarget)) {
+        if (path.isAbsolute(linkTarget) || path.posix.normalize(linkTarget) !== linkTarget) {
           throw new RuntimeClosureError(
-            `runtime manifest symlink target must be relative: ${entry}`,
+            `runtime manifest symlink target must be normalized and relative: ${entry}`,
           );
         }
         const relocatedTarget = path.posix.normalize(

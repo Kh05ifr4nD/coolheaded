@@ -39,7 +39,7 @@ function fileStatus(kind) {
 const FILE_SYSTEM = {
   existsSync: () => true,
   lstatSync: (candidate) => {
-    if (candidate.endsWith("/node_modules/@getpaseo/client")) {
+    if (candidate.endsWith("/link") || candidate.endsWith("/node_modules/@getpaseo/client")) {
       return fileStatus("symlink");
     }
     if (candidate.endsWith("/packages/client") || candidate.endsWith("/bundle")) {
@@ -50,13 +50,17 @@ const FILE_SYSTEM = {
     }
     return fileStatus("file");
   },
-  readlinkSync: () => "../../packages/client",
+  readlinkSync: (candidate) =>
+    candidate.endsWith("/link") ? "pad/../target" : "../../packages/client",
   realpathSync: (candidate) => {
     if (candidate.endsWith("/escape")) {
       return "/outside";
     }
     if (candidate.endsWith("/node_modules/@getpaseo/client")) {
       return "/source/packages/client";
+    }
+    if (candidate.endsWith("/link")) {
+      return "/source/target";
     }
     return candidate;
   },
@@ -172,6 +176,13 @@ describe("Paseo runtime closure policy", () => {
       },
       RuntimeClosureError,
       "unsupported type",
+    );
+    assertThrows(
+      () => {
+        materializeRuntimeManifest("/source", ["link", "target"], FILE_SYSTEM);
+      },
+      RuntimeClosureError,
+      "must be normalized and relative",
     );
   });
 });
