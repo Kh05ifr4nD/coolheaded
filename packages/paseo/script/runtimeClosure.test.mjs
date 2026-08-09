@@ -3,9 +3,13 @@ import {
   enforceTraceWarningPolicy,
   parseTraceWarnings,
 } from "./runtimeContract.mjs";
-import { assertEquals, assertThrows } from "@jsr/std__assert";
-import { describe, it } from "@jsr/std__testing/bdd";
 import { materializeRuntimeManifest, parseRuntimeManifest } from "./runtimeManifest.mjs";
+import { describe as nodeDescribe, it as nodeIt } from "node:test";
+
+/** @type {(name: string, body: () => void) => void} */
+const describe = nodeDescribe;
+/** @type {(name: string, body: () => void) => void} */
+const it = nodeIt;
 
 const MANIFEST = [
   "node_modules/@parcel/watcher-linux-x64-glibc/watcher.node",
@@ -68,90 +72,83 @@ const FILE_SYSTEM = {
     candidate.endsWith("/packages/client") ? fileStatus("directory") : fileStatus("file"),
 };
 
+/**
+ * @param {() => unknown} operation
+ * @param {string} message
+ */
+function assertRuntimeError(operation, message) {
+  /** @type {unknown} */
+  let result = null;
+  try {
+    operation();
+  } catch (error) {
+    result = error;
+  }
+  if (!(result instanceof RuntimeClosureError) || !result.message.includes(message)) {
+    throw new Error(`expected RuntimeClosureError containing ${JSON.stringify(message)}`);
+  }
+}
+
+/**
+ * @param {unknown} actual
+ * @param {unknown} expected
+ */
+function assertDeepEqual(actual, expected) {
+  const actualJson = JSON.stringify(actual);
+  const expectedJson = JSON.stringify(expected);
+  if (actualJson !== expectedJson) {
+    throw new Error(`expected ${expectedJson}, received ${actualJson}`);
+  }
+}
+
 describe("Paseo runtime closure policy", () => {
   it("parses only prefixed trace warnings", () => {
     const stderr = WARNINGS.map((warning) => `trace warning: ${warning}`).join("\n");
 
-    assertEquals(parseTraceWarnings(stderr), WARNINGS);
-    assertThrows(
-      () => {
-        parseTraceWarnings(`unexpected stderr\n${stderr}`);
-      },
-      RuntimeClosureError,
-      "unexpected stderr",
-    );
+    assertDeepEqual(parseTraceWarnings(stderr), WARNINGS);
+    assertRuntimeError(() => {
+      parseTraceWarnings(`unexpected stderr\n${stderr}`);
+    }, "unexpected stderr");
   });
 
   it("accepts audited warnings only with their runtime compensation", () => {
     enforceTraceWarningPolicy(WARNINGS, MANIFEST);
 
-    assertThrows(
-      () => {
-        enforceTraceWarningPolicy(["Failed to resolve dependency unknown"], MANIFEST);
-      },
-      RuntimeClosureError,
-      "unknown trace warning",
-    );
-    assertThrows(
-      () => {
-        enforceTraceWarningPolicy(WARNINGS, MANIFEST.slice(1));
-      },
-      RuntimeClosureError,
-      "missing runtime compensation",
-    );
-    assertThrows(
-      () => {
-        enforceTraceWarningPolicy(
-          WARNINGS.filter((warning) => !warning.includes("bufferutil")),
-          MANIFEST,
-        );
-      },
-      RuntimeClosureError,
-      "missing trace warning for ws buffer fallback",
-    );
+    assertRuntimeError(() => {
+      enforceTraceWarningPolicy(["Failed to resolve dependency unknown"], MANIFEST);
+    }, "unknown trace warning");
+    assertRuntimeError(() => {
+      enforceTraceWarningPolicy(WARNINGS, MANIFEST.slice(1));
+    }, "missing runtime compensation");
+    assertRuntimeError(() => {
+      enforceTraceWarningPolicy(
+        WARNINGS.filter((warning) => !warning.includes("bufferutil")),
+        MANIFEST,
+      );
+    }, "missing trace warning for ws buffer fallback");
   });
 
   it("accepts only deterministic repository-relative manifests", () => {
-    assertEquals(parseRuntimeManifest(`${MANIFEST.join("\n")}\n`), MANIFEST);
-    assertThrows(
-      () => {
-        parseRuntimeManifest("packages/server/dist/index.js\n..\n");
-      },
-      RuntimeClosureError,
-      "invalid runtime path",
-    );
-    assertThrows(
-      () => {
-        parseRuntimeManifest("packages/server/dist/index.js\n../outside.js\n");
-      },
-      RuntimeClosureError,
-      "invalid runtime path",
-    );
-    assertThrows(
-      () => {
-        parseRuntimeManifest("z.js\na.js\n");
-      },
-      RuntimeClosureError,
-      "sorted",
-    );
-    assertThrows(
-      () => {
-        parseRuntimeManifest("-option\n");
-      },
-      RuntimeClosureError,
-      "invalid runtime path",
-    );
-    assertThrows(
-      () => {
-        parseRuntimeManifest("directory/\n");
-      },
-      RuntimeClosureError,
-      "invalid runtime path",
-    );
+    assertDeepEqual(parseRuntimeManifest(`${MANIFEST.join("\n")}\n`), MANIFEST);
+    assertRuntimeError(() => {
+      parseRuntimeManifest("packages/server/dist/index.js\n..\n");
+    }, "invalid runtime path");
+    assertRuntimeError(() => {
+      parseRuntimeManifest("packages/server/dist/index.js\n../outside.js\n");
+    }, "invalid runtime path");
+    assertRuntimeError(() => {
+      parseRuntimeManifest("z.js\na.js\n");
+    }, "sorted");
+    assertRuntimeError(() => {
+      parseRuntimeManifest("-option\n");
+    }, "invalid runtime path");
+    assertRuntimeError(() => {
+      parseRuntimeManifest("directory/\n");
+    }, "invalid runtime path");
   });
 
   it("materializes an explicit leaf closure", () => {
-    assertEquals(
+    assertDeepEqual(
       materializeRuntimeManifest(
         "/source",
         ["node_modules/@getpaseo/client", "packages/client", "packages/client/index.js"],
@@ -159,30 +156,18 @@ describe("Paseo runtime closure policy", () => {
       ),
       ["node_modules/@getpaseo/client", "packages/client/index.js"],
     );
-    assertEquals(
+    assertDeepEqual(
       materializeRuntimeManifest("/source", ["bundle", "bundle/index.js"], FILE_SYSTEM),
       ["bundle/index.js"],
     );
-    assertThrows(
-      () => {
-        materializeRuntimeManifest("/source", ["escape"], FILE_SYSTEM);
-      },
-      RuntimeClosureError,
-      "escapes source root",
-    );
-    assertThrows(
-      () => {
-        materializeRuntimeManifest("/source", ["fifo"], FILE_SYSTEM);
-      },
-      RuntimeClosureError,
-      "unsupported type",
-    );
-    assertThrows(
-      () => {
-        materializeRuntimeManifest("/source", ["link", "target"], FILE_SYSTEM);
-      },
-      RuntimeClosureError,
-      "must be normalized and relative",
-    );
+    assertRuntimeError(() => {
+      materializeRuntimeManifest("/source", ["escape"], FILE_SYSTEM);
+    }, "escapes source root");
+    assertRuntimeError(() => {
+      materializeRuntimeManifest("/source", ["fifo"], FILE_SYSTEM);
+    }, "unsupported type");
+    assertRuntimeError(() => {
+      materializeRuntimeManifest("/source", ["link", "target"], FILE_SYSTEM);
+    }, "must be normalized and relative");
   });
 });
