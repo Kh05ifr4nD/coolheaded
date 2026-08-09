@@ -1,4 +1,4 @@
-import type { HttpRequest, HttpResponse } from "coolheaded/core/httpClient.ts";
+import type { HttpRequest, HttpResponse, JsonResponse } from "coolheaded/core/httpClient.ts";
 import { strictHttpClient, strictJsonClient } from "coolheadedTestSupport/httpClient.ts";
 import { Effect } from "effect";
 import { assertEquals } from "@jsr/std__assert";
@@ -6,6 +6,7 @@ import { updateProgram as updateGh } from "coolheadedPackageGh";
 import { updateProgram as updateYtDlp } from "coolheadedPackageYtDlp";
 
 const VERSION = "1.2.3";
+const CALENDAR_PREVIOUS_VERSION = "2026.06.09";
 const CALENDAR_VERSION = "2026.07.04";
 const EMPTY_HASH = "sha256-47DEQpj8HBSa+/TImW+5JCeuQeRkm5NMpJWZG3hSuFU=";
 const HTTP_OK = 200;
@@ -19,6 +20,19 @@ function response(url: string): HttpResponse {
 
 function request(url: string): HttpRequest {
   return { headers: {}, method: "GET", timeoutMs: TIMEOUT_MS, url };
+}
+
+function githubRequest(url: string): HttpRequest {
+  return {
+    headers: { accept: "application/vnd.github+json" },
+    method: "GET",
+    timeoutMs: TIMEOUT_MS,
+    url,
+  };
+}
+
+function jsonResponse(url: string, value: unknown): JsonResponse {
+  return { response: response(url), value };
 }
 
 async function checkPackage(
@@ -69,4 +83,42 @@ Deno.test("yt-dlp updater hashes the three supported release assets", async (): 
     `${base}yt-dlp_linux_aarch64`,
     `${base}yt-dlp_linux`,
   ]);
+});
+
+Deno.test("yt-dlp updater discovers calendar-versioned GitHub releases", async (): Promise<void> => {
+  const pinFilePath = await Deno.makeTempFile();
+  const releasesUrl = "https://api.github.com/repos/yt-dlp/yt-dlp/releases?per_page=100";
+  const base = `https://github.com/yt-dlp/yt-dlp/releases/download/${CALENDAR_VERSION}/`;
+  const http = strictHttpClient(
+    ["yt-dlp_macos", "yt-dlp_linux_aarch64", "yt-dlp_linux"].map((target: string) => ({
+      effect: (): Effect.Effect<HttpResponse> => Effect.succeed(response(`${base}${target}`)),
+      request: request(`${base}${target}`),
+    })),
+  );
+  const json = strictJsonClient([
+    {
+      effect: (): Effect.Effect<JsonResponse> =>
+        Effect.succeed(jsonResponse(releasesUrl, [{ tag_name: CALENDAR_VERSION }])),
+      request: githubRequest(releasesUrl),
+    },
+  ]);
+
+  try {
+    await Deno.writeTextFile(pinFilePath, JSON.stringify({ version: CALENDAR_PREVIOUS_VERSION }));
+    await Effect.runPromise(
+      updateYtDlp([], { httpClient: http.client, jsonClient: json.client, pinFilePath }),
+    );
+    assertEquals(JSON.parse(await Deno.readTextFile(pinFilePath)), {
+      platformPackageHashes: {
+        "aarch64-darwin": EMPTY_HASH,
+        "aarch64-linux": EMPTY_HASH,
+        "x86_64-linux": EMPTY_HASH,
+      },
+      version: CALENDAR_VERSION,
+    });
+    http.assertExhausted();
+    json.assertExhausted();
+  } finally {
+    await Deno.remove(pinFilePath);
+  }
 });
