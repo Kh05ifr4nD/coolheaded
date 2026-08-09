@@ -1,9 +1,9 @@
 import { EXECUTABLE_MODE, withTemporaryDirectory, writeRepositoryFixture } from "./fixture.ts";
 import { actualToolEnvironment, runSnapshotProbe } from "./snapshotFixture.ts";
 import { describe, it } from "@jsr/std__testing/bdd";
-import type { FileSpecCommand } from "coolheaded/repo/fileSpec/model.ts";
+import type { LayoutCommand } from "coolheaded/repo/layout/types.ts";
 import { assertEquals } from "@jsr/std__assert";
-import { changedSnapshotComponents } from "coolheaded/repo/fileSpec/check.ts";
+import { changedSnapshotComponents } from "coolheaded/repo/layout/check.ts";
 import { join } from "@jsr/std__path";
 
 type WrapperFixture = Readonly<{
@@ -14,7 +14,7 @@ type WrapperFixture = Readonly<{
 
 async function writeWrapperFixture(
   repositoryRoot: string,
-  command: FileSpecCommand,
+  command: LayoutCommand,
 ): Promise<WrapperFixture> {
   const tools = actualToolEnvironment();
   const statePath = join(repositoryRoot, `${command}-version`);

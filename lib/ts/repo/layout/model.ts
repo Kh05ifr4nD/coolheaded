@@ -1,80 +1,19 @@
+import type {
+  ConformanceViolation,
+  InputDecodeError,
+  InternalInvariantError,
+  Layout,
+  LayoutError,
+  LayoutNode,
+  SnapshotChangedComponent,
+  SnapshotChangedError,
+  ToolExecutionError,
+} from "coolheaded/repo/layout/types.ts";
+
 const REGULAR_FILE_NODE = true;
 
-type FileSpecNode = typeof REGULAR_FILE_NODE | FileSpec;
-
-type ConformanceViolation = Error &
-  Readonly<{
-    readonly kind: "conformance";
-  }>;
-
-type ToolExecutionError = Error &
-  Readonly<{
-    readonly args: readonly string[];
-    readonly command: string;
-    readonly executable: string;
-    readonly exitCode: number | undefined;
-    readonly kind: "toolExecution";
-    readonly stderr: string;
-  }>;
-
-type InputDecodeError = Error &
-  Readonly<{
-    readonly kind: "inputDecode";
-    readonly source: string;
-  }>;
-
-type InternalInvariantError = Error &
-  Readonly<{
-    readonly kind: "internalInvariant";
-  }>;
-
-type FileSpecCommand = "cue" | "git";
-
-type ToolIdentity = Readonly<{
-  readonly executable: string;
-  readonly sha256: string;
-  readonly version: string;
-}>;
-
-type RepositorySnapshot = Readonly<{
-  readonly enumerationSha256: string;
-  readonly fileSpecSha256: string;
-  readonly head: string;
-  readonly ignoreSourcesSha256: string;
-  readonly indexTree: string;
-  readonly tools: Readonly<Record<FileSpecCommand | "deno", ToolIdentity>>;
-}>;
-
-type SnapshotChangedComponent =
-  | "enumerationSha256"
-  | "fileSpecSha256"
-  | "head"
-  | "ignoreSourcesSha256"
-  | "indexTree"
-  | `tools.${FileSpecCommand | "deno"}.${keyof ToolIdentity}`;
-
-type SnapshotChangedError = Error &
-  Readonly<{
-    readonly afterFingerprint: string;
-    readonly beforeFingerprint: string;
-    readonly changedComponents: readonly SnapshotChangedComponent[];
-    readonly kind: "snapshotChanged";
-  }>;
-
-type FileSpecError =
-  | ConformanceViolation
-  | InputDecodeError
-  | InternalInvariantError
-  | SnapshotChangedError
-  | ToolExecutionError;
-
-interface FileSpec {
-  readonly [name: string]: FileSpecNode;
-}
-
-const CUE_SCHEMA_NAME = "#FileSpec";
-const CUE_PATH_SCHEMA_NAME = "#FileSpecPath";
-const FILE_SPEC_SCHEMA_FILE_NAME = "fileSpec.cue";
+const CUE_SCHEMA_NAME = "#Layout";
+const LAYOUT_SCHEMA_FILE_NAME = "layout.cue";
 
 function conformanceViolation(message: string): ConformanceViolation {
   return Object.assign(new Error(message), {
@@ -123,7 +62,7 @@ function snapshotChangedError(
   afterFingerprint: string,
   changedComponents: readonly SnapshotChangedComponent[],
 ): SnapshotChangedError {
-  return Object.assign(new Error("repository changed while fileSpec was being checked"), {
+  return Object.assign(new Error("repository changed while layout was being checked"), {
     afterFingerprint,
     beforeFingerprint,
     changedComponents,
@@ -132,11 +71,11 @@ function snapshotChangedError(
   });
 }
 
-function isDirectoryNode(node: FileSpecNode | undefined): node is FileSpec {
+function isDirectoryNode(node: LayoutNode | undefined): node is Layout {
   return typeof node === "object";
 }
 
-function insertGitPath(spec: FileSpec, path: string): FileSpec {
+function insertGitPath(spec: Layout, path: string): Layout {
   const segments = path.split("/");
   const [segment] = segments;
 
@@ -170,8 +109,8 @@ function insertGitPath(spec: FileSpec, path: string): FileSpec {
   };
 }
 
-function fileSpec(paths: readonly string[]): FileSpec {
-  let spec: FileSpec = {};
+function layout(paths: readonly string[]): Layout {
+  let spec: Layout = {};
 
   for (const path of paths) {
     spec = insertGitPath(spec, path);
@@ -184,7 +123,7 @@ function isErrorRecord(error: unknown): error is Error & Readonly<Record<string,
   return typeof error === "object" && error !== null && error instanceof Error;
 }
 
-function isFileSpecError(error: unknown): error is FileSpecError {
+function isLayoutError(error: unknown): error is LayoutError {
   if (!isErrorRecord(error)) {
     return false;
   }
@@ -199,38 +138,19 @@ function isFileSpecError(error: unknown): error is FileSpecError {
   );
 }
 
-function isConformanceViolation(error: unknown): error is ConformanceViolation {
-  return isFileSpecError(error) && error.kind === "conformance";
-}
-
 function isToolExecutionError(error: unknown): error is ToolExecutionError {
-  return isFileSpecError(error) && error.kind === "toolExecution";
+  return isLayoutError(error) && error.kind === "toolExecution";
 }
 
 export {
-  CUE_PATH_SCHEMA_NAME,
   CUE_SCHEMA_NAME,
-  FILE_SPEC_SCHEMA_FILE_NAME,
+  LAYOUT_SCHEMA_FILE_NAME,
   conformanceViolation,
-  fileSpec,
+  layout,
   inputDecodeError,
   internalInvariantError,
-  isConformanceViolation,
-  isFileSpecError,
+  isLayoutError,
   isToolExecutionError,
   snapshotChangedError,
   toolExecutionError,
-};
-export type {
-  ConformanceViolation,
-  FileSpec,
-  FileSpecCommand,
-  FileSpecError,
-  InputDecodeError,
-  InternalInvariantError,
-  RepositorySnapshot,
-  SnapshotChangedComponent,
-  SnapshotChangedError,
-  ToolIdentity,
-  ToolExecutionError,
 };

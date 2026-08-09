@@ -155,7 +155,7 @@ describe("CI change impact discovery", (): void => {
       checksFromChangedFiles(
         [
           ".github/ci/impact.ts",
-          "fileSpec.cue",
+          "layout.cue",
           "homeModules/codex.nix",
           "packages/minerU/package.nix",
           "packages/paseo/check.nix",

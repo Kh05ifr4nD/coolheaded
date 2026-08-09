@@ -37,10 +37,10 @@ describe("Deno task topology", (): void => {
       tasks["check:types"],
       "deno check .github/ci/**/*.ts packages/*/update.ts lib/ts/**/*.ts tests/**/*.ts",
     );
-    assertEquals(tasks["check"], "deno task check:types && deno task check:fileSpec");
+    assertEquals(tasks["check"], "deno task check:types && deno task check:layout");
     assertEquals(
       tasks["test:pure"],
-      "deno test --allow-env=FAST_CHECK_SEED,FAST_CHECK_PATH,FAST_CHECK_RUNS tests/ci/changeImpact.ts tests/ci/coverage.ts tests/ci/coveragePolicy.ts tests/ci/pullRequest.ts tests/ci/pullRequestControl.ts tests/ci/pullRequestFailure.ts tests/ci/runtimePermissions.ts tests/ci/updateControl.ts tests/ci/updateDiscovery.ts tests/ci/updateState.ts tests/core/commandRunner.ts tests/core/fastCheck.ts tests/core/version.ts tests/nix/denoDependencies.ts tests/nix/denoSnapshot.ts tests/npm/packageHash.ts tests/npm/platformHash.ts tests/npm/registry.ts tests/pin/packageHashConfig.ts tests/pin/sriHash.ts tests/repo/fileSpecCli.ts tests/repo/pathProperty.ts tests/source/jsonClient.ts tests/source/version.ts tests/update/checksumManifest.ts tests/update/rustPackage.ts tests/update/stateProperty.ts",
+      "deno test --allow-env=FAST_CHECK_SEED,FAST_CHECK_PATH,FAST_CHECK_RUNS tests/ci/changeImpact.ts tests/ci/coverage.ts tests/ci/coveragePolicy.ts tests/ci/pullRequest.ts tests/ci/pullRequestControl.ts tests/ci/pullRequestFailure.ts tests/ci/runtimePermissions.ts tests/ci/updateControl.ts tests/ci/updateDiscovery.ts tests/ci/updateState.ts tests/core/commandRunner.ts tests/core/fastCheck.ts tests/core/version.ts tests/nix/denoDependencies.ts tests/nix/denoSnapshot.ts tests/npm/packageHash.ts tests/npm/platformHash.ts tests/npm/registry.ts tests/pin/packageHashConfig.ts tests/pin/sriHash.ts tests/repo/layoutCli.ts tests/repo/pathProperty.ts tests/source/jsonClient.ts tests/source/version.ts tests/update/checksumManifest.ts tests/update/rustPackage.ts tests/update/stateProperty.ts",
     );
     assertEquals(
       tasks["test:integration:env"],
@@ -60,7 +60,7 @@ describe("Deno task topology", (): void => {
     );
     assertEquals(
       tasks["test:integration:repo"],
-      "deno test --allow-env=PATH,COOLHEADED_CUE,COOLHEADED_GIT --allow-read=.,$TMPDIR,$COOLHEADED_DENO,$COOLHEADED_CUE,$COOLHEADED_GIT,$COOLHEADED_GIT_DIR --allow-run=$COOLHEADED_DENO,$COOLHEADED_CUE,$COOLHEADED_GIT --allow-write=$TMPDIR tests/repo/fileSpec/*.ts",
+      "deno test --allow-env=PATH,COOLHEADED_CUE,COOLHEADED_GIT --allow-read=.,$TMPDIR,$COOLHEADED_DENO,$COOLHEADED_CUE,$COOLHEADED_GIT,$COOLHEADED_GIT_DIR --allow-run=$COOLHEADED_DENO,$COOLHEADED_CUE,$COOLHEADED_GIT --allow-write=$TMPDIR tests/repo/layout/*.ts",
     );
     assertEquals(
       tasks["test:integration:update"],

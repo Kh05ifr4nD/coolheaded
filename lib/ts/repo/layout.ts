@@ -1,15 +1,15 @@
-import { checkedFileSpec } from "coolheaded/repo/fileSpec/check.ts";
+import { checkedLayout } from "coolheaded/repo/layout/check.ts";
 
-type FileSpecRunOutcome =
+type LayoutRunOutcome =
   | Readonly<{ readonly kind: "passed" }>
   | Readonly<{ readonly kind: "skipped" }>
   | Readonly<{ readonly exitCode: 1; readonly kind: "failed"; readonly stderr: string }>;
 
-async function fileSpecRun(
+async function layoutRun(
   moduleUrl: string,
   mainModule: string,
   checker: () => Promise<void>,
-): Promise<FileSpecRunOutcome> {
+): Promise<LayoutRunOutcome> {
   if (mainModule !== moduleUrl) {
     return { kind: "skipped" };
   }
@@ -24,7 +24,7 @@ async function fileSpecRun(
 }
 
 async function main(moduleUrl: string): Promise<void> {
-  const outcome = await fileSpecRun(moduleUrl, Deno.mainModule, checkedFileSpec);
+  const outcome = await layoutRun(moduleUrl, Deno.mainModule, checkedLayout);
   if (outcome.kind === "failed") {
     await Deno.stderr.write(new globalThis.TextEncoder().encode(outcome.stderr));
     Deno.exit(outcome.exitCode);
@@ -33,6 +33,6 @@ async function main(moduleUrl: string): Promise<void> {
 
 void main(import.meta.url);
 
-export { checkedFileSpec, checkFileSpec } from "coolheaded/repo/fileSpec/check.ts";
-export { fileSpecRun };
-export type { FileSpecRunOutcome };
+export { checkedLayout, checkLayout } from "coolheaded/repo/layout/check.ts";
+export { layoutRun };
+export type { LayoutRunOutcome };

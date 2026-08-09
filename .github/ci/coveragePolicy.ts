@@ -27,6 +27,7 @@ const TYPE_ONLY_SOURCE_PATHS = new Set([
   "lib/ts/core/commandRunner.ts",
   "lib/ts/core/httpClient.ts",
   "lib/ts/npm/metadata.ts",
+  "lib/ts/repo/layout/types.ts",
 ]);
 
 const DECLARATIVE_SOURCE_ENGINES = {
@@ -71,10 +72,11 @@ const SOURCE_CATEGORIES: Readonly<Record<string, "adapter" | "pure">> = {
   "lib/ts/pin/packageHashConfig.ts": "pure",
   "lib/ts/pin/sriHash.ts": "pure",
   "lib/ts/repo/denoSnapshot.ts": "adapter",
-  "lib/ts/repo/fileSpec.ts": "adapter",
-  "lib/ts/repo/fileSpec/check.ts": "adapter",
-  "lib/ts/repo/fileSpec/git.ts": "adapter",
-  "lib/ts/repo/fileSpec/model.ts": "pure",
+  "lib/ts/repo/layout.ts": "adapter",
+  "lib/ts/repo/layout/check.ts": "adapter",
+  "lib/ts/repo/layout/command.ts": "adapter",
+  "lib/ts/repo/layout/git.ts": "adapter",
+  "lib/ts/repo/layout/model.ts": "pure",
   "lib/ts/source/github.ts": "adapter",
   "lib/ts/source/githubVersion.ts": "adapter",
   "lib/ts/source/version.ts": "adapter",

@@ -7,11 +7,12 @@ import {
 } from "./fixture.ts";
 import { assertEquals, assertInstanceOf, assertRejects } from "@jsr/std__assert";
 import { describe, it } from "@jsr/std__testing/bdd";
-import type { FileSpecCommand } from "coolheaded/repo/fileSpec/model.ts";
-import { commandOutput } from "coolheaded/repo/fileSpec/git.ts";
+import type { LayoutCommand } from "coolheaded/repo/layout/types.ts";
+import { commandOutput } from "coolheaded/repo/layout/command.ts";
+import { repositoryRoot } from "coolheaded/repo/layout/git.ts";
 
 type ToolCase = Readonly<{
-  readonly command: FileSpecCommand;
+  readonly command: LayoutCommand;
   readonly environmentVariable: "COOLHEADED_CUE" | "COOLHEADED_GIT";
   readonly versionArguments: readonly string[];
 }>;
@@ -58,13 +59,13 @@ async function nonexistentToolError(
 ): Promise<Readonly<Record<string, unknown>>> {
   const probePath = await Deno.makeTempFile({ prefix: "coolheaded-tool-probe-" });
   try {
-    const gitModule = new globalThis.URL(
-      "lib/ts/repo/fileSpec/git.ts",
+    const commandModule = new globalThis.URL(
+      "lib/ts/repo/layout/command.ts",
       new globalThis.URL(`file://${REPOSITORY_ROOT_PATH}/`),
     ).href;
     await Deno.writeTextFile(
       probePath,
-      `import { commandOutput } from ${JSON.stringify(gitModule)};
+      `import { commandOutput } from ${JSON.stringify(commandModule)};
 try {
   await commandOutput(${JSON.stringify(tool.command)}, ${JSON.stringify(tool.versionArguments)});
   Deno.exit(0);
@@ -110,7 +111,7 @@ try {
   }
 }
 
-describe("FileSpec tool process boundaries", (): void => {
+describe("Layout tool process boundaries", (): void => {
   it("isolates subprocesses from loader environment variables", async (): Promise<void> => {
     await withTemporaryDirectory(async (directoryPath: string): Promise<void> => {
       await writeRepositoryFixture(directoryPath, { gitignore: "environment\n" });
@@ -125,7 +126,7 @@ describe("FileSpec tool process boundaries", (): void => {
           "--allow-read",
           `--allow-run=${requiredToolPath("COOLHEADED_CUE")},${requiredToolPath("COOLHEADED_GIT")}`,
           "--allow-write",
-          `${REPOSITORY_ROOT_PATH}/lib/ts/repo/fileSpec.ts`,
+          `${REPOSITORY_ROOT_PATH}/lib/ts/repo/layout.ts`,
         ],
         clearEnv: true,
         cwd: directoryPath,
@@ -146,6 +147,7 @@ describe("FileSpec tool process boundaries", (): void => {
     const cueVersion = await commandOutput("cue", ["version"]);
     assertEquals(gitVersion.length > 0, true);
     assertEquals(cueVersion.length > 0, true);
+    assertEquals(await repositoryRoot(), await Deno.realPath("."));
   });
 
   it("classifies missing, relative, and nonexistent configured tools", async (): Promise<void> => {

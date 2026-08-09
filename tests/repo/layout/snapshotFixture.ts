@@ -1,5 +1,5 @@
 import { REPOSITORY_ROOT_PATH, requiredToolPath } from "./fixture.ts";
-import type { RepositorySnapshot, ToolIdentity } from "coolheaded/repo/fileSpec/model.ts";
+import type { RepositorySnapshot, ToolIdentity } from "coolheaded/repo/layout/types.ts";
 import { dirname } from "@jsr/std__path";
 
 type ToolEnvironment = Readonly<{
@@ -32,9 +32,8 @@ function parseRepositorySnapshot(value: unknown): RepositorySnapshot {
   if (
     !isRecord(value) ||
     typeof value["enumerationSha256"] !== "string" ||
-    typeof value["fileSpecSha256"] !== "string" ||
+    typeof value["layoutSha256"] !== "string" ||
     typeof value["head"] !== "string" ||
-    typeof value["ignoreSourcesSha256"] !== "string" ||
     typeof value["indexTree"] !== "string" ||
     !isRecord(value["tools"])
   ) {
@@ -43,10 +42,9 @@ function parseRepositorySnapshot(value: unknown): RepositorySnapshot {
 
   return {
     enumerationSha256: value["enumerationSha256"],
-    fileSpecSha256: value["fileSpecSha256"],
     head: value["head"],
-    ignoreSourcesSha256: value["ignoreSourcesSha256"],
     indexTree: value["indexTree"],
+    layoutSha256: value["layoutSha256"],
     tools: {
       cue: parseToolIdentity(value["tools"]["cue"]),
       deno: parseToolIdentity(value["tools"]["deno"]),
@@ -65,15 +63,14 @@ async function runSnapshotProbe(
     const temporaryRoot = dirname(probePath);
     const temporaryAccessRoot = dirname(await Deno.realPath(probePath));
     const gitModule = new globalThis.URL(
-      "lib/ts/repo/fileSpec/git.ts",
+      "lib/ts/repo/layout/git.ts",
       new globalThis.URL(`file://${REPOSITORY_ROOT_PATH}/`),
     ).href;
     await Deno.writeTextFile(
       probePath,
       `import { repositorySnapshot } from ${JSON.stringify(gitModule)};
 const snapshot = await repositorySnapshot(Deno.args[0] ?? "", {
-  ignoredPaths: [],
-  indexPaths: [".gitignore", "fileSpec.cue"],
+  indexPaths: [".gitignore", "layout.cue"],
   visiblePaths: [],
 });
 console.log(JSON.stringify(snapshot));

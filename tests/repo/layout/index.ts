@@ -7,9 +7,9 @@ import {
 } from "./fixture.ts";
 import { assertEquals, assertInstanceOf, assertRejects } from "@jsr/std__assert";
 import { describe, it } from "@jsr/std__testing/bdd";
-import { checkFileSpec } from "coolheaded/repo/fileSpec/check.ts";
-import { gitIndexEntriesFrom } from "coolheaded/repo/fileSpec/git.ts";
-import { isFileSpecError } from "coolheaded/repo/fileSpec/model.ts";
+import { checkLayout } from "coolheaded/repo/layout/check.ts";
+import { gitIndexEntriesFrom } from "coolheaded/repo/layout/git.ts";
+import { isLayoutError } from "coolheaded/repo/layout/model.ts";
 
 const INVALID_UTF8_BYTE = 255;
 
@@ -23,16 +23,12 @@ describe("Git index hardening", (): void => {
       });
       await Deno.chmod(`${repositoryRoot}/executable`, EXECUTABLE_MODE);
       await runGit(repositoryRoot, ["add", "executable"]);
-      await checkFileSpec(repositoryRoot);
+      await checkLayout(repositoryRoot);
       const blobOutput = await runGit(repositoryRoot, ["hash-object", "-w", "--stdin"], "target");
       const blob = blobOutput.trim();
 
       await runGit(repositoryRoot, ["update-index", "--add", "--cacheinfo", `120000,${blob},link`]);
-      await assertRejects(
-        (): Promise<void> => checkFileSpec(repositoryRoot),
-        Error,
-        "kind symlink",
-      );
+      await assertRejects((): Promise<void> => checkLayout(repositoryRoot), Error, "kind symlink");
     });
   });
 
@@ -44,7 +40,7 @@ describe("Git index hardening", (): void => {
         requiredFields: "\tgitlink?: #RegularFile\n\ttracked?: #RegularFile",
       });
       await runGit(repositoryRoot, ["config", "user.email", "tests@example.invalid"]);
-      await runGit(repositoryRoot, ["config", "user.name", "FileSpec Tests"]);
+      await runGit(repositoryRoot, ["config", "user.name", "Layout Tests"]);
       await runGit(repositoryRoot, ["add", "tracked"]);
       await runGit(repositoryRoot, ["commit", "-m", "fixture"]);
       const commitOutput = await runGit(repositoryRoot, ["rev-parse", "HEAD"]);
@@ -56,11 +52,7 @@ describe("Git index hardening", (): void => {
         `160000,${commit},gitlink`,
       ]);
 
-      await assertRejects(
-        (): Promise<void> => checkFileSpec(repositoryRoot),
-        Error,
-        "kind gitlink",
-      );
+      await assertRejects((): Promise<void> => checkLayout(repositoryRoot), Error, "kind gitlink");
     });
   });
 
@@ -81,7 +73,7 @@ describe("Git index hardening", (): void => {
       );
 
       await assertRejects(
-        (): Promise<void> => checkFileSpec(repositoryRoot),
+        (): Promise<void> => checkLayout(repositoryRoot),
         Error,
         "unresolved stage",
       );
@@ -104,8 +96,8 @@ describe("Git index hardening", (): void => {
         (): Promise<readonly unknown[]> => gitIndexEntriesFrom(repositoryRoot),
       );
       assertInstanceOf(error, Error);
-      assertEquals(isFileSpecError(error), true);
-      if (!isFileSpecError(error) || error.kind !== "inputDecode") {
+      assertEquals(isLayoutError(error), true);
+      if (!isLayoutError(error) || error.kind !== "inputDecode") {
         throw new Error("expected InputDecodeError");
       }
       assertEquals(error.name, "InputDecodeError");
