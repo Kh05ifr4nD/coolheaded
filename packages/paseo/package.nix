@@ -11,6 +11,11 @@ let
   upstreamPackage = callPackage (source + "/nix/package.nix") { npmDepsHash = pin.npmVendorHash; };
 in
 upstreamPackage.overrideAttrs (oldAttrs: {
+  postPatch = (oldAttrs.postPatch or "") + ''
+    mv scripts/trace-daemon.mjs scripts/trace-daemon-upstream.mjs
+    cp ${./script/runtimeClosure.mjs} scripts/trace-daemon.mjs
+  '';
+
   nativeInstallCheckInputs = (oldAttrs.nativeInstallCheckInputs or [ ]) ++ [
     packageLib.versionCheckHook
   ];
@@ -35,6 +40,7 @@ upstreamPackage.overrideAttrs (oldAttrs: {
 
       assertFileExists "$out/lib/paseo/package.json"
       assertFileExists "$out/lib/paseo/packages/cli/dist/index.js"
+      assertFileExists "$out/lib/paseo/packages/server/dist/server/server/daemon-worker.js"
       assertFileExists "$out/lib/paseo/packages/server/dist/scripts/supervisor-entrypoint.js"
     '';
   };
