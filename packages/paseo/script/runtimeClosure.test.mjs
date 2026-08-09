@@ -5,7 +5,10 @@ import {
 } from "./runtimeContract.mjs";
 import { materializeRuntimeManifest, parseRuntimeManifest } from "./runtimeManifest.mjs";
 import { describe as nodeDescribe, it as nodeIt } from "node:test";
+import { deepStrictEqual as nodeDeepStrictEqual } from "node:assert/strict";
 
+/** @type {(actual: unknown, expected: unknown) => void} */
+const assertDeepEqual = nodeDeepStrictEqual;
 /** @type {(name: string, body: () => void) => void} */
 const describe = nodeDescribe;
 /** @type {(name: string, body: () => void) => void} */
@@ -86,18 +89,6 @@ function assertRuntimeError(operation, message) {
   }
   if (!(result instanceof RuntimeClosureError) || !result.message.includes(message)) {
     throw new Error(`expected RuntimeClosureError containing ${JSON.stringify(message)}`);
-  }
-}
-
-/**
- * @param {unknown} actual
- * @param {unknown} expected
- */
-function assertDeepEqual(actual, expected) {
-  const actualJson = JSON.stringify(actual);
-  const expectedJson = JSON.stringify(expected);
-  if (actualJson !== expectedJson) {
-    throw new Error(`expected ${expectedJson}, received ${actualJson}`);
   }
 }
 
