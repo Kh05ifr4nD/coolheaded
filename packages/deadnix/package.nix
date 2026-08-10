@@ -50,7 +50,7 @@ rustPlatform.buildRustPackage (finalAttrs: {
 
   meta = {
     homepage = "https://github.com/astro/deadnix";
-    license = lib.licenses.gpl3Only;
+    license = lib.licenses.gpl3Plus;
     description = "Scan Nix files for dead code";
     mainProgram = pname;
     platforms = lib.platforms.unix;

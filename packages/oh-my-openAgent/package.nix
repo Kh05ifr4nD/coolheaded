@@ -103,7 +103,7 @@ packageLib.mkBinaryPackage {
   meta = {
     homepage = "https://github.com/code-yeongyu/oh-my-openagent";
     changelog = "https://github.com/code-yeongyu/oh-my-openagent/releases/tag/v${pin.version}";
-    license = lib.licenses.unfree;
+    license = lib.licenses.sustainableUse;
     platforms = packageLib.supportedSystems;
     description = "Coding agent for tokenmaxxers";
   };

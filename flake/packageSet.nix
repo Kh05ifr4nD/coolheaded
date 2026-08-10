@@ -10,6 +10,12 @@
 }:
 
 let
+  cacheDistributionPolicy = import ./cacheDistribution.nix;
+  cacheDistributionStatuses = [
+    "allow"
+    "conditional"
+    "denyPendingAudit"
+  ];
   packageDirectories = lib.filterAttrs (
     name: type: type == "directory" && builtins.pathExists (../packages + "/${name}/package.nix")
   ) (builtins.readDir ../packages);
@@ -91,5 +97,46 @@ let
     minerUFull = basePackages.minerU.override { withAll = true; };
     oxlintMinimal = basePackages.oxlint.override { withTypecheck = false; };
   };
+  packages = basePackages // packageVariants;
+  packageNames = builtins.attrNames packages;
+  policyNames = builtins.attrNames cacheDistributionPolicy;
+  invalidPolicyNames = builtins.attrNames (
+    lib.filterAttrs (
+      _name: status: !(lib.elem status cacheDistributionStatuses)
+    ) cacheDistributionPolicy
+  );
+  packageLicenses = package: lib.toList (package.meta.license or [ ]);
+  incompleteLicenseMetadataNames = builtins.attrNames (
+    lib.filterAttrs (
+      _name: package:
+      let
+        licenses = packageLicenses package;
+      in
+      licenses == [ ] || lib.any (license: !(license ? free) || !(license ? redistributable)) licenses
+    ) packages
+  );
+  nonRedistributableAllowedNames = builtins.attrNames (
+    lib.filterAttrs (
+      name: package:
+      cacheDistributionPolicy.${name} == "allow"
+      && lib.any (license: !license.redistributable) (packageLicenses package)
+    ) packages
+  );
+  withCacheDistribution =
+    name: package:
+    package.overrideAttrs (oldAttrs: {
+      passthru = (oldAttrs.passthru or { }) // {
+        cacheDistribution = cacheDistributionPolicy.${name};
+      };
+    });
 in
-basePackages // packageVariants
+if packageNames != policyNames then
+  throw "cache distribution policy must cover exactly: ${lib.concatStringsSep ", " packageNames}"
+else if invalidPolicyNames != [ ] then
+  throw "invalid cache distribution status for: ${lib.concatStringsSep ", " invalidPolicyNames}"
+else if incompleteLicenseMetadataNames != [ ] then
+  throw "packages need explicit free and redistributable license metadata: ${lib.concatStringsSep ", " incompleteLicenseMetadataNames}"
+else if nonRedistributableAllowedNames != [ ] then
+  throw "non-redistributable packages cannot use allow: ${lib.concatStringsSep ", " nonRedistributableAllowedNames}"
+else
+  lib.mapAttrs withCacheDistribution packages

@@ -307,7 +307,16 @@ packageLib.mkUvApplication {
 
   meta = pin: {
     homepage = "https://github.com/opendatalab/MinerU";
-    license = lib.licenses.unfreeRedistributable;
+    license = {
+      deprecated = false;
+      free = false;
+      fullName = "MinerU Open Source License";
+      licenseType = "simple";
+      redistributable = true;
+      shortName = "minerU";
+      spdxId = "LicenseRef-MinerU-Open-Source-License";
+      url = "https://github.com/opendatalab/MinerU/blob/mineru-${pin.version}-released/LICENSE.md";
+    };
     description = "Transforms complex documents like PDFs and Office docs into LLM-ready markdown/JSON for your Agentic workflows";
     changelog = "https://github.com/opendatalab/MinerU/releases/tag/mineru-${pin.version}-released";
   };

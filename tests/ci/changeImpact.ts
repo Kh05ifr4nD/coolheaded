@@ -30,9 +30,10 @@ describe("CI change impact discovery", (): void => {
     assertEquals(checksFromInput(""), []);
   });
 
-  it("compares checked-out merge bases for protected queue events", (): void => {
+  it("compares checked-out bases for review and main-branch events", (): void => {
     assertEquals(comparesCheckedOutBase("pull_request"), true);
     assertEquals(comparesCheckedOutBase("merge_group"), true);
+    assertEquals(comparesCheckedOutBase("push"), true);
     assertEquals(comparesCheckedOutBase("workflow_dispatch"), false);
     assertEquals(comparesCheckedOutBase(), false);
   });
