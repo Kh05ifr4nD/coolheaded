@@ -199,7 +199,7 @@ async function checkedOutBaseChangedChecks(
 }
 
 function comparesCheckedOutBase(eventName?: string): boolean {
-  return eventName === "merge_group" || eventName === "pull_request";
+  return eventName === "merge_group" || eventName === "pull_request" || eventName === "push";
 }
 
 async function requestedActivatedChecks(

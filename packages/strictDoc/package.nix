@@ -12,8 +12,6 @@ let
     package.overrideAttrs (oldAttrs: {
       postInstall = (oldAttrs.postInstall or "") + ''
         rm -rf \
-          "$out/${sitePackages}/LICENSE" \
-          "$out/${sitePackages}/NOTICE" \
           "$out/${sitePackages}/README.md" \
           "$out/${sitePackages}/pyproject.toml" \
           "$out/${sitePackages}/tests"
