@@ -1,4 +1,5 @@
-type CoverageCategory = "adapter" | "declarative" | "pure";
+type CoverageCategory = "adapter" | "pure";
+type SourceClassification = CoverageCategory | "excluded" | "typeOnly" | undefined;
 type CoverageCounters = Readonly<{ covered: number; total: number }>;
 type CategoryCoverage = Readonly<Record<"branches" | "lines", CoverageCounters>>;
 type SourceCoverage = Readonly<CategoryCoverage & { path: string }>;
@@ -29,27 +30,6 @@ const TYPE_ONLY_SOURCE_PATHS = new Set([
   "lib/ts/npm/metadata.ts",
   "lib/ts/repo/layout/types.ts",
 ]);
-
-const DECLARATIVE_SOURCE_ENGINES = {
-  "packages/actionlint/update.ts": "releaseHashUpdateProgram",
-  "packages/codex/update.ts": "npmPlatformPackageHashUpdateProgram",
-  "packages/cue/update.ts": "releaseHashUpdateProgram",
-  "packages/deadnix/update.ts": "updateGitHubRustPackagePin",
-  "packages/fff/update.ts": "releaseHashUpdateProgram",
-  "packages/lazyCodexAi/update.ts": "npmPackageHashUpdateProgram",
-  "packages/minerU/update.ts": "updateVersionedNixpkgsPythonUvLock",
-  "packages/ohMyPi/update.ts": "releaseHashUpdateProgram",
-  "packages/openCode/update.ts": "releaseHashUpdateProgram",
-  "packages/oxlint/update.ts": "releaseHashUpdateProgram",
-  "packages/rtk/update.ts": "updateGitHubRustPackagePin",
-  "packages/rumdl/update.ts": "releaseHashUpdateProgram",
-  "packages/semble/update.ts": "updateGitHubSourcePin",
-  "packages/shellCheck/update.ts": "releaseHashUpdateProgram",
-  "packages/shfmt/update.ts": "releaseHashUpdateProgram",
-  "packages/skills/update.ts": "updateNpmTarballPackage",
-  "packages/specKit/update.ts": "updateVersionedNixpkgsPythonUvLock",
-  "packages/strictDoc/update.ts": "updateVersionedNixpkgsPythonUvLock",
-} as const;
 
 const SOURCE_CATEGORIES: Readonly<Record<string, "adapter" | "pure">> = {
   ".github/ci/coverage.ts": "adapter",
@@ -87,18 +67,6 @@ const SOURCE_CATEGORIES: Readonly<Record<string, "adapter" | "pure">> = {
   "lib/ts/update/uvLock.ts": "adapter",
 };
 
-const PROTECTED_PACKAGE_ADAPTER_PATHS = new Set([
-  "packages/codeGraph/update.ts",
-  "packages/deno/update.ts",
-  "packages/entire/update.ts",
-  "packages/grokBuild/update.ts",
-  "packages/nixfmt/update.ts",
-  "packages/oh-my-openAgent/update.ts",
-  "packages/oxfmt/update.ts",
-  "packages/paseo/update.ts",
-  "packages/qmd/update.ts",
-]);
-
 const ADAPTER_BRANCH_THRESHOLD = 80;
 const ADAPTER_LINE_THRESHOLD = 85;
 const PURE_BRANCH_THRESHOLD = 90;
@@ -108,28 +76,15 @@ const THRESHOLDS = {
   pure: { branches: PURE_BRANCH_THRESHOLD, lines: PURE_LINE_THRESHOLD },
 } as const;
 
-function validateClassification(
-  path: string,
-  classification: CoverageCategory | "typeOnly" | undefined,
-): void {
-  if (classification === "declarative" && PROTECTED_PACKAGE_ADAPTER_PATHS.has(path)) {
-    throw new CoveragePolicyError("invalidClassification", {
-      path,
-      rule: "protectedPackageAdapter",
-    });
-  }
-}
-
-function sourceClassification(path: string): CoverageCategory | "typeOnly" | undefined {
-  let classification: CoverageCategory | "typeOnly" | undefined = SOURCE_CATEGORIES[path];
+function sourceClassification(path: string): SourceClassification {
+  let classification: SourceClassification = SOURCE_CATEGORIES[path];
   if (TYPE_ONLY_SOURCE_PATHS.has(path)) {
     classification = "typeOnly";
-  } else if (Object.hasOwn(DECLARATIVE_SOURCE_ENGINES, path)) {
-    classification = "declarative";
-  } else if (/^(?:packages\/[^/]+\/update|\.github\/ci\/update\/.*)\.ts$/u.test(path)) {
+  } else if (/^packages\/[^/]+\/update\.ts$/u.test(path)) {
+    classification = "excluded";
+  } else if (/^\.github\/ci\/update\/.*\.ts$/u.test(path)) {
     classification = "adapter";
   }
-  validateClassification(path, classification);
   return classification;
 }
 
@@ -190,7 +145,7 @@ function evaluateCoverage(
     const classification = sourceClassification(path);
     if (classification === undefined) {
       unclassified.push(path);
-    } else if (classification !== "typeOnly") {
+    } else if (classification === "adapter" || classification === "pure") {
       classifications.set(path, classification);
     }
   }
@@ -209,8 +164,8 @@ function evaluateCoverage(
 
   const recordByPath = new Map(records.map((record) => [record.path, record]));
   const unloaded: string[] = [];
-  for (const [path, category] of classifications) {
-    if (category !== "declarative" && (recordByPath.get(path)?.lines.total ?? 0) === 0) {
+  for (const path of classifications.keys()) {
+    if ((recordByPath.get(path)?.lines.total ?? 0) === 0) {
       unloaded.push(path);
     }
   }
@@ -240,11 +195,5 @@ function evaluateCoverage(
   return summary;
 }
 
-export {
-  CoveragePolicyError,
-  DECLARATIVE_SOURCE_ENGINES,
-  evaluateCoverage,
-  sourceClassification,
-  validateClassification,
-};
-export type { SourceCoverage };
+export { CoveragePolicyError, evaluateCoverage, sourceClassification };
+export type { SourceClassification, SourceCoverage };

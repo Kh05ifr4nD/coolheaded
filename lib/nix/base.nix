@@ -33,17 +33,6 @@ let
       }) systemTargetsConfig
     );
 
-  mkTargets =
-    targets:
-    let
-      expectedTargets = builtins.length supportedSystems;
-      actualTargets = builtins.length targets;
-    in
-    if actualTargets != expectedTargets then
-      throw "mkTargets expects ${toString expectedTargets} targets, got ${toString actualTargets}"
-    else
-      lib.listToAttrs (lib.zipListsWith (name: value: { inherit name value; }) supportedSystems targets);
-
   systemTargets = targetAttrs "system";
 
   rustTargetTriples = targetAttrs "rustTargetTriple";
@@ -249,7 +238,6 @@ in
     mkBinaryPackage
     mkInstallCheckPhase
     mkReleaseBinaryPackage
-    mkTargets
     npmReleaseTargets
     packageDirectory
     packageShell

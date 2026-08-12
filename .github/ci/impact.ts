@@ -14,6 +14,10 @@ type CheckDrvPaths = Readonly<Record<string, string>>;
 type CheckDrvPathsBySystem = Readonly<Record<string, CheckDrvPaths>>;
 type SystemTarget = (typeof SYSTEM_TARGETS)[number];
 type ActivatedCheck = ReturnType<typeof activatedCheck>;
+type ChangeEvent = Readonly<{
+  readonly before?: string;
+  readonly name?: string;
+}>;
 
 function checksFromInput(value: string | undefined): readonly string[] {
   return [
@@ -25,9 +29,16 @@ function localGitFlakeRef(rev: string): string {
   return `git+${toFileUrl(Deno.cwd()).href}?rev=${encodeURIComponent(rev)}`;
 }
 
-async function checkedOutBaseFlakeRef(runner: CommandRunner): Promise<string> {
-  const result = await run(runner, ["git", "rev-parse", "HEAD^1"], { capture: true });
-  return localGitFlakeRef(result.stdout);
+function selectBaselineRevision(eventName?: string, eventBefore?: string): string {
+  if (
+    eventName === "push" &&
+    eventBefore !== undefined &&
+    /^[0-9a-f]{40}$/iu.test(eventBefore) &&
+    !/^0{40}$/u.test(eventBefore)
+  ) {
+    return eventBefore;
+  }
+  return "HEAD^1";
 }
 
 async function checkDrvPaths(
@@ -172,14 +183,42 @@ function checksFromChangedFiles(
   return everyPrefixMatched ? requested : available;
 }
 
+async function resolvedBaselineRevision(
+  baselineRevision: string,
+  runner: CommandRunner,
+): Promise<string | undefined> {
+  try {
+    const result = await run(
+      runner,
+      ["git", "rev-parse", "--verify", `${baselineRevision}^{commit}`],
+      { capture: true },
+    );
+    return result.stdout.trim();
+  } catch (error: unknown) {
+    const errorMessage = error instanceof Error ? error.message : String(error);
+    const errorSummary = errorMessage.trim().split("\n").at(-1) ?? errorMessage;
+    await writeStderr(`Baseline resolution failed; activating all checks: ${errorSummary}`);
+    return undefined;
+  }
+}
+
 async function checkedOutBaseChangedChecks(
   currentDrvPathsBySystem: CheckDrvPathsBySystem,
   availableBySystem: Readonly<Record<string, readonly string[]>>,
+  baselineRevision: string,
   runner: CommandRunner,
 ): Promise<readonly ActivatedCheck[]> {
+  const resolvedRevision = await resolvedBaselineRevision(baselineRevision, runner);
+  if (resolvedRevision === undefined) {
+    return buildMatrix(
+      [...new Set(Object.values(availableBySystem).flat())].toSorted(),
+      availableBySystem,
+    );
+  }
+
   try {
     return changedActivatedChecks(
-      await checkDrvPathsBySystem(await checkedOutBaseFlakeRef(runner), runner),
+      await checkDrvPathsBySystem(localGitFlakeRef(resolvedRevision), runner),
       currentDrvPathsBySystem,
     );
   } catch (error: unknown) {
@@ -188,9 +227,11 @@ async function checkedOutBaseChangedChecks(
     await writeStderr(
       `Base check evaluation failed; falling back to changed-path impact: ${errorSummary}`,
     );
-    const result = await run(runner, ["git", "diff", "--name-only", "HEAD^1", "HEAD", "--"], {
-      capture: true,
-    });
+    const result = await run(
+      runner,
+      ["git", "diff", "--name-only", resolvedRevision, "HEAD", "--"],
+      { capture: true },
+    );
     const changedFiles = result.stdout
       .split("\n")
       .filter((file: string): boolean => file.length > 0);
@@ -203,7 +244,7 @@ function comparesCheckedOutBase(eventName?: string): boolean {
 }
 
 async function requestedActivatedChecks(
-  eventName: string | undefined,
+  event: ChangeEvent,
   checksInput: string | undefined,
   activateAllChecks: string | undefined,
   availableBySystem: Readonly<Record<string, readonly string[]>>,
@@ -226,8 +267,13 @@ async function requestedActivatedChecks(
     return buildMatrix(explicit, availableBySystem);
   }
 
-  if (comparesCheckedOutBase(eventName)) {
-    return await checkedOutBaseChangedChecks(currentDrvPathsBySystem, availableBySystem, runner);
+  if (comparesCheckedOutBase(event.name)) {
+    return await checkedOutBaseChangedChecks(
+      currentDrvPathsBySystem,
+      availableBySystem,
+      selectBaselineRevision(event.name, event.before),
+      runner,
+    );
   }
 
   return [];
@@ -236,9 +282,15 @@ async function requestedActivatedChecks(
 async function discoverChangeImpact(runner: CommandRunner): Promise<void> {
   const currentDrvPathsBySystem = await checkDrvPathsBySystem(".", runner);
   const availableBySystem = availableChecksBySystem(currentDrvPathsBySystem);
+  const eventName = Deno.env.get("GITHUB_EVENT_NAME");
+  const eventBefore = Deno.env.get("GITHUB_EVENT_BEFORE");
+  const event: ChangeEvent = {
+    ...(eventBefore === undefined ? {} : { before: eventBefore }),
+    ...(eventName === undefined ? {} : { name: eventName }),
+  };
 
   const include = await requestedActivatedChecks(
-    Deno.env.get("GITHUB_EVENT_NAME"),
+    event,
     Deno.env.get("CHECKS"),
     Deno.env.get("ACTIVATE_ALL_CHECKS"),
     availableBySystem,
@@ -262,5 +314,6 @@ export {
   comparesCheckedOutBase,
   checksFromInput,
   requestedActivatedChecks,
+  selectBaselineRevision,
 };
 export { SYSTEM_TARGETS } from "coolheaded/system/target.ts";

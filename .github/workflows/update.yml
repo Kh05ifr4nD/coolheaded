@@ -35,6 +35,7 @@ on:
     - cron: "0 0,12 * * *"
 jobs:
   discover:
+    if: github.event_name != 'workflow_dispatch' || github.ref == 'refs/heads/main'
     runs-on: ubuntu-24.04
     outputs:
       hasUpdates: ${{ steps.discover.outputs.hasUpdates }}
@@ -42,6 +43,7 @@ jobs:
     steps:
       - uses: actions/checkout@df4cb1c069e1874edd31b4311f1884172cec0e10 # v6
         with:
+          ref: main
           persist-credentials: false
       - uses: cachix/install-nix-action@b97f05dcb019ddea06450a50ef6203d2fdc19fee # v31
       - id: discover
@@ -65,12 +67,13 @@ jobs:
       - uses: actions/checkout@df4cb1c069e1874edd31b4311f1884172cec0e10 # v6
         with:
           fetch-depth: 0
+          ref: main
           persist-credentials: false
       - uses: cachix/install-nix-action@b97f05dcb019ddea06450a50ef6203d2fdc19fee # v31
       - name: Prepare update branch
         env:
           UPDATE_BRANCH: ${{ matrix.kind == 'package' && format('update/package/{0}', matrix.name) || matrix.kind == 'flakeInput' && format('update/flakeInput/{0}', matrix.name) || 'update/denoDependencies' }}
-          UPDATE_BASE_REF: ${{ github.event_name == 'workflow_dispatch' && github.ref_name || 'main' }}
+          UPDATE_BASE_REF: main
         run: nix develop -c deno run --allow-run .github/ci/update/branch.ts "$UPDATE_BRANCH" "$UPDATE_BASE_REF"
       - id: update
         name: Run update
@@ -107,10 +110,10 @@ jobs:
         name: Create update patch
         env:
           ARTIFACT: ${{ runner.temp }}/update-artifact
-          UPDATE_BASE_REF: ${{ github.event_name == 'workflow_dispatch' && github.ref_name || 'main' }}
+          UPDATE_BASE_REF: main
         run: |
           mkdir -p "$ARTIFACT"
-          git diff --binary "origin/$UPDATE_BASE_REF" -- . > "$ARTIFACT/update.patch"
+          git diff --binary origin/main -- . > "$ARTIFACT/update.patch"
           test -s "$ARTIFACT/update.patch"
       - name: Write update metadata
         env:
@@ -145,7 +148,7 @@ jobs:
         with:
           fetch-depth: 0
           persist-credentials: false
-          ref: ${{ github.event_name == 'workflow_dispatch' && github.ref_name || 'main' }}
+          ref: main
       - uses: cachix/install-nix-action@b97f05dcb019ddea06450a50ef6203d2fdc19fee # v31
       - name: Compile trusted publisher
         run: >-
@@ -232,18 +235,3 @@ jobs:
             --body "$body" \
             --labels "$UPDATE_LABELS" \
             --auto-merge "${{ (github.event_name != 'workflow_dispatch' || inputs.autoMerge != false) && steps.artifact.outputs.formatExpanded != 'true' }}"
-  summary:
-    needs: [discover, prepare, publish]
-    runs-on: ubuntu-24.04
-    if: always() && needs.discover.outputs.hasUpdates == 'true'
-    steps:
-      - run: |
-          echo "## Update Summary" >> "$GITHUB_STEP_SUMMARY"
-          echo "" >> "$GITHUB_STEP_SUMMARY"
-          if [ "${{ needs.prepare.result }}" = failure ] || [ "${{ needs.publish.result }}" = failure ]; then
-            echo "Some update jobs failed." >> "$GITHUB_STEP_SUMMARY"
-          else
-            echo "All update jobs completed." >> "$GITHUB_STEP_SUMMARY"
-          fi
-          echo "" >> "$GITHUB_STEP_SUMMARY"
-          echo "Auto-merge: ${{ github.event_name != 'workflow_dispatch' || inputs.autoMerge != false }}" >> "$GITHUB_STEP_SUMMARY"

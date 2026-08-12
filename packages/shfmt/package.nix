@@ -4,11 +4,11 @@ packageLib.mkGitHubReleaseBinaryPackage {
   owner = "mvdan";
   repo = "sh";
 
-  targets = packageLib.mkTargets [
-    "darwin_arm64"
-    "linux_arm64"
-    "linux_amd64"
-  ];
+  targets = {
+    aarch64-darwin = "darwin_arm64";
+    aarch64-linux = "linux_arm64";
+    x86_64-linux = "linux_amd64";
+  };
   asset = { version, target }: "shfmt_v${version}_${target}";
 
   dontUnpack = true;

@@ -2,11 +2,11 @@
 packageLib.mkReleaseBinaryPackage {
   pname = "grok";
 
-  targets = packageLib.mkTargets [
-    "macos-aarch64"
-    "linux-aarch64"
-    "linux-x86_64"
-  ];
+  targets = {
+    aarch64-darwin = "macos-aarch64";
+    aarch64-linux = "linux-aarch64";
+    x86_64-linux = "linux-x86_64";
+  };
   asset = { version, target }: "grok-${version}-${target}";
   url = { releaseAsset, ... }: "https://x.ai/cli/${releaseAsset}";
   changelog = _: "https://x.ai/build/changelog";
