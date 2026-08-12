@@ -57,14 +57,14 @@ async function runDenoDependencyUpdate(
   const lockChanged = await gitHasChanges(runner, ["deno.lock"]);
   await updateDenoSnapshotHash(await currentSystem(runner), runner, snapshotFilePath);
 
-  if (!lockChanged && !(await gitHasChanges(runner, [DENO_SNAPSHOT_HASH_FILE_PATH]))) {
+  if (!lockChanged && !(await gitHasChanges(runner, [snapshotFilePath]))) {
     await writeOutput("updated", "false");
     return;
   }
 
   assertOnlyChangedFiles(
     await changedFiles(runner),
-    (file: string): boolean => file === "deno.lock" || file === DENO_SNAPSHOT_HASH_FILE_PATH,
+    (file: string): boolean => file === lockFilePath || file === snapshotFilePath,
   );
   const after = directSpecifierVersions(await readJson(lockFilePath));
   await writeOutput("updated", "true");

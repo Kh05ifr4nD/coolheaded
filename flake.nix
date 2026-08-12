@@ -112,7 +112,7 @@
             inherit (pkgs) lib;
           };
           devShells.default = import ./flake/devShell.nix { inherit config pkgs; };
-          packages = import ./flake/packages.nix {
+          packages = import ./flake/packageSet.nix {
             lib = pkgs.lib;
             inherit
               pkgs

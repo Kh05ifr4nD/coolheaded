@@ -6,6 +6,7 @@ import type {
 } from "coolheaded/core/httpClient.ts";
 import { UpdateError, updateNewerPinVersion } from "coolheaded/core/updateScript.ts";
 import { Effect } from "effect";
+import type { VersionScheme } from "coolheaded/core/version.ts";
 import { formatSriHash } from "coolheaded/pin/sriHash.ts";
 import { parsePackageHashConfig } from "coolheaded/pin/packageHashConfig.ts";
 import { systemRecord } from "coolheaded/system/target.ts";
@@ -29,6 +30,7 @@ interface ReleaseHashUpdateOptions<LatestVersionError extends Error> {
   readonly pinFilePath: string;
   readonly source: ReleaseHashSource;
   readonly urlsForVersion: (version: string) => ReleaseUrls;
+  readonly versionScheme?: VersionScheme;
 }
 
 function httpRequest(url: string): HttpRequest {
@@ -176,6 +178,7 @@ function releaseHashUpdateProgram<LatestVersionError extends Error>(
         ),
         (config): Effect.Effect<void> => writePackageHashConfig(options.pinFilePath, config),
       ),
+    options.versionScheme,
   );
 }
 

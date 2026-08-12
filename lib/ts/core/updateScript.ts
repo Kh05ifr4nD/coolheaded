@@ -172,9 +172,10 @@ function updateNewerPinVersion<LatestError extends Error, UpdateVersionError ext
   latestVersion: () => Effect.Effect<string, LatestError>,
   pinPath: string,
   updateVersion: (version: string) => Effect.Effect<void, UpdateVersionError>,
+  versionScheme: VersionScheme = semverVersionScheme,
 ): Effect.Effect<void, LatestError | UpdateError | UpdateVersionError> {
   return Effect.flatMap(
-    requestedOrNewerPinVersion(args, latestVersion, pinPath),
+    requestedOrNewerPinVersion(args, latestVersion, pinPath, versionScheme),
     (version: string | undefined): Effect.Effect<void, UpdateError | UpdateVersionError> =>
       version === undefined ? Effect.void : updateVersion(version),
   );

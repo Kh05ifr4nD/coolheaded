@@ -16,8 +16,6 @@
 ### JSR & NPM
 
 - [@std/assert](https://jsr.io/@std/assert)
-- [@std/cli](https://jsr.io/@std/cli)
-- [@std/fs](https://jsr.io/@std/fs)
 - [@std/jsonc](https://jsr.io/@std/jsonc)
 - [@std/path](https://jsr.io/@std/path)
 - [@std/testing](https://jsr.io/@std/testing)
@@ -32,18 +30,6 @@
 - aarch64-darwin
 - aarch64-linux
 - x86_64-linux
-
-## 二进制缓存
-
-CI 只向公共 Cachix 发布 `passthru.cacheDistribution = "allow"` 的包闭包。SUL 包需要单独确认非商业分发条件；`grokBuild` 与 `minerUFull` 在来源或闭包审计完成前不会发布。`strictDoc` 的二进制输出保留其上游 `LICENSE` 与 `NOTICE`。
-
-仓库管理员需要把公共 cache 名写入 GitHub Actions 变量 `CACHIX_CACHE_NAME`，把写入 token 写入 secret `CACHIX_AUTH_TOKEN`。消费者随后运行：
-
-```console
-nix run nixpkgs#cachix -- use <CACHIX_CACHE_NAME>
-```
-
-公共 cache 建立并取得真实公钥后，再把 substituter 和公钥写入本 flake；公钥不得使用占位值。
 
 ## 相关项目
 

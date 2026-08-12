@@ -10,11 +10,11 @@ packageLib.mkGitHubReleaseBinaryPackage {
   repo = "cli";
   versionCheckProgramArg = "version";
 
-  targets = packageLib.mkTargets [
-    "entire_darwin_arm64.tar.gz"
-    "entire_linux_arm64.tar.gz"
-    "entire_linux_amd64.tar.gz"
-  ];
+  targets = {
+    aarch64-darwin = "entire_darwin_arm64.tar.gz";
+    aarch64-linux = "entire_linux_arm64.tar.gz";
+    x86_64-linux = "entire_linux_amd64.tar.gz";
+  };
   asset = { target, ... }: target;
 
   nativeBuildInputs = [

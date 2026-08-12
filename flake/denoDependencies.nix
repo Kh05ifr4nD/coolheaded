@@ -5,7 +5,7 @@
 }:
 
 let
-  hash = "sha256-t1/jJYZD5asPO6OlUM7po2lp7NORHP/wW6dm3TJddyo=";
+  hash = "sha256-RtUYGTN8w9/OZzMZNUAVFoxCVn2ktg9U/HDJ/R1ZAGM=";
 
   source = lib.fileset.toSource {
     root = ../.;

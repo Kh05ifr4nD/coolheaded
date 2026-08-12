@@ -11,11 +11,11 @@
 
 let
   pname = "yt-dlp";
-  targets = packageLib.mkTargets [
-    "yt-dlp_macos"
-    "yt-dlp_linux_aarch64"
-    "yt-dlp_linux"
-  ];
+  targets = {
+    aarch64-darwin = "yt-dlp_macos";
+    aarch64-linux = "yt-dlp_linux_aarch64";
+    x86_64-linux = "yt-dlp_linux";
+  };
   runtimePath = lib.makeBinPath [
     ffmpeg-headless
     nodejs-slim

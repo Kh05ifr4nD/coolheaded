@@ -14,11 +14,11 @@
 let
   pname = "codex";
   npmTargets = packageLib.npmReleaseTargets;
-  vendorTargets = packageLib.mkTargets [
-    "aarch64-apple-darwin"
-    "aarch64-unknown-linux-musl"
-    "x86_64-unknown-linux-musl"
-  ];
+  vendorTargets = {
+    aarch64-darwin = "aarch64-apple-darwin";
+    aarch64-linux = "aarch64-unknown-linux-musl";
+    x86_64-linux = "x86_64-unknown-linux-musl";
+  };
   vendorTarget = packageLib.releaseTarget pname vendorTargets;
 
   wrapperInputs = (

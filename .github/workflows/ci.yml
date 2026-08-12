@@ -41,6 +41,7 @@ jobs:
           ACTIVATE_ALL_CHECKS: ${{ github.event_name == 'schedule' || (github.event_name == 'workflow_dispatch' && inputs.activateAllChecks) }}
           CHECKS: ${{ inputs.checks }}
           GITHUB_EVENT_NAME: ${{ github.event_name }}
+          GITHUB_EVENT_BEFORE: ${{ github.event.before }}
         run: nix develop -c deno run --allow-env --allow-read --allow-run --allow-write="$GITHUB_OUTPUT" .github/ci/impact.ts
   discoverQualityTarget:
     runs-on: ubuntu-24.04
@@ -99,61 +100,13 @@ jobs:
     strategy:
       fail-fast: false
       matrix: ${{ fromJson(needs.discoverChangeImpact.outputs.matrix) }}
-    env:
-      CACHIX_AUTH_TOKEN: ${{ secrets.CACHIX_AUTH_TOKEN }}
-      CACHIX_CACHE_NAME: ${{ vars.CACHIX_CACHE_NAME }}
     steps:
       - uses: actions/checkout@df4cb1c069e1874edd31b4311f1884172cec0e10 # v6
         with:
           persist-credentials: false
       - uses: cachix/install-nix-action@b97f05dcb019ddea06450a50ef6203d2fdc19fee # v31
-      - name: Use public binary cache
-        if: env.CACHIX_CACHE_NAME != ''
-        uses: cachix/cachix-action@5f2d7c5294214f71b873db4b969586b980625e71 # v17
-        with:
-          name: ${{ env.CACHIX_CACHE_NAME }}
-          skipPush: true
-      - id: distribution
-        name: Resolve cache distribution policy
-        env:
-          CHECK_KIND: ${{ matrix.kind }}
-          PACKAGE_NAME: ${{ matrix.name }}
-          SYSTEM: ${{ matrix.system }}
-        run: |
-          status="$(nix eval --impure --raw --expr '
-            let
-              flake = builtins.getFlake (toString ./.);
-              kind = builtins.getEnv "CHECK_KIND";
-              packages = builtins.getAttr (builtins.getEnv "SYSTEM") flake.packages;
-              name = builtins.getEnv "PACKAGE_NAME";
-            in
-            if kind == "package" && builtins.hasAttr name packages then
-              (builtins.getAttr name packages).passthru.cacheDistribution
-            else
-              "notPackage"
-          ')"
-          echo "status=$status" >> "$GITHUB_OUTPUT"
-      - id: build
-        name: Build activated check
-        run: |
-          paths="$(nix build ".#checks.${{ matrix.system }}.${{ matrix.name }}" --no-link --print-build-logs --print-out-paths)"
-          {
-            echo 'paths<<COOLHEADED_PATHS'
-            echo "$paths"
-            echo 'COOLHEADED_PATHS'
-          } >> "$GITHUB_OUTPUT"
-      - name: Publish allowed package closure
-        if: >-
-          steps.distribution.outputs.status == 'allow' &&
-          env.CACHIX_CACHE_NAME != '' &&
-          env.CACHIX_AUTH_TOKEN != '' &&
-          (github.event_name == 'push' || github.event_name == 'schedule' || github.event_name == 'workflow_dispatch')
-        uses: cachix/cachix-action@5f2d7c5294214f71b873db4b969586b980625e71 # v17
-        with:
-          authToken: ${{ env.CACHIX_AUTH_TOKEN }}
-          name: ${{ env.CACHIX_CACHE_NAME }}
-          pathsToPush: ${{ steps.build.outputs.paths }}
-          useDaemon: false
+      - name: Build activated check
+        run: nix build ".#checks.${{ matrix.system }}.${{ matrix.name }}" --no-link --print-build-logs
   activatedCheckGate:
     needs:
       - discoverChangeImpact
