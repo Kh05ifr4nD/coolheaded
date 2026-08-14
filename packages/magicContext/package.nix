@@ -48,7 +48,7 @@ packageLib.mkNpmCliPackage {
     installCheckHome="$PWD/installCheckHome"
     installCheckRoot="$PWD/installCheckXdg"
     installCheckTmp="$PWD/installCheckTmp"
-    mkdir -p "$installCheckHome" "$installCheckRoot/cache" "$installCheckRoot/config" "$installCheckRoot/data" "$installCheckRoot/state" "$installCheckTmp"
+    mkdir -p "$installCheckHome" "$installCheckRoot/cache" "$installCheckRoot/config" "$installCheckRoot/data" "$installCheckRoot/path" "$installCheckRoot/state" "$installCheckTmp"
 
     assertFileExists "$packageRoot/dist/index.js"
     jq -e '.name == "@cortexkit/magic-context" and .bin["magic-context"] == "dist/index.js"' "$packageRoot/package.json" > /dev/null \
@@ -91,6 +91,14 @@ packageLib.mkNpmCliPackage {
     case "$invalidHarnessOutput" in
       *"Invalid --harness value: unsupported (expected opencode, pi, or omp)"*) ;;
       *) failCheck "unexpected invalid --harness output" ;;
+    esac
+
+    if missingOmpOutput="$(PATH="$installCheckRoot/path" runMagicContext setup --harness omp --dry-run 2>&1)"; then
+      failCheck "magic-context accepted a missing OMP harness"
+    fi
+    case "$missingOmpOutput" in
+      *"Magic Context setup (dry run)"*"Oh My Pi (OMP) not found"*) ;;
+      *) failCheck "unexpected missing OMP setup output" ;;
     esac
 
     repairDbHelpOutput="$(runMagicContext doctor repair-db --help 2>&1)"
