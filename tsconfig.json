@@ -1,6 +1,7 @@
 {
   "compilerOptions": {
     "allowImportingTsExtensions": true,
+    "allowJs": true,
     "allowSyntheticDefaultImports": true,
     "allowUnreachableCode": false,
     "allowUnusedLabels": false,
@@ -42,6 +43,7 @@
   "include": [
     ".generated/deno.d.ts",
     ".github/ci/**/*.ts",
+    "packages/*/script/*.mjs",
     "packages/*/update.ts",
     "lib/ts/**/*.ts",
     "tests/**/*.ts",

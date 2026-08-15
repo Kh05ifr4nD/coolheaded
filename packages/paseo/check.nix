@@ -286,6 +286,15 @@ in
         test ! -L ${paseoHome}/config.json
         test "$(stat -c %a ${paseoHome}/config.json)" = 600
         jq -e '.daemon.mcp == { "enabled": true, "injectIntoAgents": false }' ${paseoHome}/config.json >/dev/null
+        ${package}/bin/paseo terminal create \
+          --host "$listen" \
+          --cwd "$TMPDIR" \
+          --name runtime-closure-smoke \
+          --json >"$TMPDIR/terminal.json"
+        jq -e \
+          '.id != "" and .name == "runtime-closure-smoke" and .cwd == $cwd' \
+          --arg cwd "$TMPDIR" \
+          "$TMPDIR/terminal.json" >/dev/null
         stopDaemon
 
         jq '.daemon.mcp.enabled = false' ${paseoHome}/config.json >"$TMPDIR/mutated-config.json"

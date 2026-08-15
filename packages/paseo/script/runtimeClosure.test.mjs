@@ -3,9 +3,14 @@ import {
   enforceTraceWarningPolicy,
   parseTraceWarnings,
 } from "./runtimeContract.mjs";
-import { materializeRuntimeManifest, parseRuntimeManifest } from "./runtimeManifest.mjs";
+import {
+  addExplicitRuntimeFiles,
+  materializeRuntimeManifest,
+  parseRuntimeManifest,
+} from "./runtimeManifest.mjs";
 import { describe as nodeDescribe, it as nodeIt } from "node:test";
 import { deepStrictEqual as nodeDeepStrictEqual } from "node:assert/strict";
+import nodeProcess from "node:process";
 
 /** @type {(actual: unknown, expected: unknown) => void} */
 const assertDeepEqual = nodeDeepStrictEqual;
@@ -14,12 +19,14 @@ const describe = nodeDescribe;
 /** @type {(name: string, body: () => void) => void} */
 const it = nodeIt;
 
-const MANIFEST = [
+const UPSTREAM_MANIFEST = [
   "node_modules/ws/lib/buffer-util.js",
   "node_modules/ws/lib/validation.js",
   "packages/server/dist/server/server/daemon-worker.js",
   "packages/server/dist/server/terminal/shell-integration/zsh/.zshenv",
 ];
+const MANIFEST = addExplicitRuntimeFiles(UPSTREAM_MANIFEST);
+const NODE_PTY_PREBUILD_ROOT = "packages/server/node_modules/node-pty/prebuilds";
 
 const WARNINGS = [
   "Failed to parse /build/source/packages/server/src/server/daemon-worker.ts as module:\nUnexpected token (7:12)",
@@ -89,6 +96,25 @@ function assertRuntimeError(operation, message) {
 }
 
 describe("Paseo runtime closure policy", () => {
+  it("adds platform-native node-pty files omitted by static tracing", () => {
+    assertDeepEqual(addExplicitRuntimeFiles(UPSTREAM_MANIFEST, "linux", "x64"), [
+      ...UPSTREAM_MANIFEST,
+      `${NODE_PTY_PREBUILD_ROOT}/linux-x64/pty.node`,
+    ]);
+    assertDeepEqual(addExplicitRuntimeFiles(UPSTREAM_MANIFEST, "darwin", "arm64"), [
+      ...UPSTREAM_MANIFEST,
+      `${NODE_PTY_PREBUILD_ROOT}/darwin-arm64/pty.node`,
+      `${NODE_PTY_PREBUILD_ROOT}/darwin-arm64/spawn-helper`,
+    ]);
+    assertDeepEqual(addExplicitRuntimeFiles(MANIFEST), MANIFEST);
+    assertDeepEqual(
+      MANIFEST.includes(
+        `${NODE_PTY_PREBUILD_ROOT}/${nodeProcess.platform}-${nodeProcess.arch}/pty.node`,
+      ),
+      true,
+    );
+  });
+
   it("parses only prefixed trace warnings", () => {
     const stderr = WARNINGS.map((warning) => `trace warning: ${warning}`).join("\n");
 

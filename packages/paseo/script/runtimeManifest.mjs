@@ -1,6 +1,7 @@
 import { RuntimeClosureError } from "./runtimeContract.mjs";
 import fs from "node:fs";
 import nodePath from "node:path";
+import nodeProcess from "node:process";
 
 /**
  * @typedef {{ isDirectory(): boolean, isFile(): boolean, isSymbolicLink(): boolean }} FileStatus
@@ -29,6 +30,29 @@ import nodePath from "node:path";
 const nodeFileSystem = fs;
 /** @type {Path} */
 const path = nodePath;
+
+/**
+ * Node-pty loads its native addon through a computed CommonJS require, which
+ * static tracing cannot observe. The dependency lives in the server workspace,
+ * while the upstream trace assumes a root-level workspace dependency.
+ *
+ * @param {readonly string[]} manifest
+ * @param {string} [platform]
+ * @param {string} [arch]
+ * @returns {readonly string[]}
+ */
+function addExplicitRuntimeFiles(
+  manifest,
+  platform = nodeProcess.platform,
+  arch = nodeProcess.arch,
+) {
+  const prebuildRoot = `packages/server/node_modules/node-pty/prebuilds/${platform}-${arch}`;
+  const nativeFiles = [`${prebuildRoot}/pty.node`];
+  if (platform === "darwin") {
+    nativeFiles.push(`${prebuildRoot}/spawn-helper`);
+  }
+  return [...new Set([...manifest, ...nativeFiles])].toSorted();
+}
 
 /**
  * @param {string} stdout
@@ -160,4 +184,4 @@ function materializeRuntimeManifest(sourceRoot, manifest, fileSystem = nodeFileS
   return leafEntries;
 }
 
-export { materializeRuntimeManifest, parseRuntimeManifest };
+export { addExplicitRuntimeFiles, materializeRuntimeManifest, parseRuntimeManifest };

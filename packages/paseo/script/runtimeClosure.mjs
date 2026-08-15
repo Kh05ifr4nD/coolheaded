@@ -3,7 +3,11 @@ import {
   enforceTraceWarningPolicy,
   parseTraceWarnings,
 } from "./runtimeContract.mjs";
-import { materializeRuntimeManifest, parseRuntimeManifest } from "./runtimeManifest.mjs";
+import {
+  addExplicitRuntimeFiles,
+  materializeRuntimeManifest,
+  parseRuntimeManifest,
+} from "./runtimeManifest.mjs";
 import childProcess from "node:child_process";
 import nodePath from "node:path";
 import nodeProcess from "node:process";
@@ -71,7 +75,10 @@ function traceRuntimeClosure(sourceRoot) {
     throw new RuntimeClosureError("upstream runtime trace returned non-text output");
   }
 
-  const manifest = materializeRuntimeManifest(sourceRoot, parseRuntimeManifest(result.stdout));
+  const manifest = materializeRuntimeManifest(
+    sourceRoot,
+    addExplicitRuntimeFiles(parseRuntimeManifest(result.stdout)),
+  );
   enforceTraceWarningPolicy(parseTraceWarnings(result.stderr), manifest);
   return `${manifest.join("\n")}\n`;
 }
