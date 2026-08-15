@@ -1,5 +1,6 @@
 {
   lib,
+  bun,
   buildNpmPackage,
   fetchNpmDeps,
   jq,
@@ -16,6 +17,10 @@ packageLib.mkNpmCliPackage {
     ;
 
   nodejs = nodejs-slim;
+  runtimeInputs = [
+    bun
+    nodejs-slim
+  ];
 
   pname = "magic-context";
   packageName = "@cortexkit/magic-context";
@@ -99,6 +104,69 @@ packageLib.mkNpmCliPackage {
     case "$missingOmpOutput" in
       *"Magic Context setup (dry run)"*"Oh My Pi (OMP) not found"*) ;;
       *) failCheck "unexpected missing OMP setup output" ;;
+    esac
+
+    ompPackageRoot="$PWD/installCheckOmpPackage"
+    ompFixtureState="$PWD/installCheckOmpFixtureState"
+    ompInstallMarker="$PWD/installCheckOmpInstall"
+    ompPluginRoot="$PWD/installCheckOmpPlugin"
+    mkdir -p "$ompPackageRoot/dist" "$ompPluginRoot"
+    cat > "$ompPackageRoot/package.json" <<'EOF'
+    {"name":"@oh-my-pi/pi-coding-agent"}
+    EOF
+    cat > "$ompPluginRoot/package.json" <<'EOF'
+    {"omp":{"extensions":["./dist/index.js"]}}
+    EOF
+    cat > "$ompPackageRoot/dist/cli.js" <<'EOF'
+    import { existsSync, writeFileSync } from "node:fs";
+
+    const args = process.argv.slice(2);
+    if (args[0] === "--version") {
+      console.log("omp/17.1.7");
+    } else if (args.join(" ") === "plugin list --json") {
+      console.log(JSON.stringify({
+        npm: existsSync(process.env.OMP_FIXTURE_STATE)
+          ? [{
+            name: "@cortexkit/pi-magic-context",
+            version: "0.36.1",
+            enabled: true,
+            path: process.env.OMP_FIXTURE_PLUGIN,
+          }]
+          : [],
+      }));
+    } else if (args.join(" ") === "plugin install @cortexkit/pi-magic-context") {
+      const installerRuntime = Bun.spawnSync(["bun", "-e", "console.log(process.execPath)"]);
+      if (installerRuntime.exitCode !== 0) process.exit(installerRuntime.exitCode);
+      writeFileSync(process.env.OMP_FIXTURE_STATE, "installed");
+      writeFileSync(
+        process.env.OMP_INSTALL_MARKER,
+        `''${process.execPath}\n''${installerRuntime.stdout.toString().trim()}\n''${args.join(" ")}`,
+      );
+    } else if (args.join(" ") === "config get compaction.enabled --json") {
+      console.log('{"value":false}');
+    } else if (args.join(" ") === "config get memory.backend --json") {
+      console.log('{"value":"off"}');
+    } else if (args.join(" ") === "config path") {
+      console.log(`''${process.env.HOME}/.omp/agent`);
+    } else {
+      console.error(`unexpected OMP fixture arguments: ''${args.join(" ")}`);
+      process.exit(1);
+    }
+    EOF
+    if ! fixtureOmpOutput="$(
+      PI_PACKAGE_DIR="$ompPackageRoot" \
+        OMP_FIXTURE_PLUGIN="$ompPluginRoot" \
+        OMP_FIXTURE_STATE="$ompFixtureState" \
+        OMP_INSTALL_MARKER="$ompInstallMarker" \
+        runMagicContext doctor --harness omp --force 2>&1
+    )"; then
+      failCheck "magic-context failed to repair a valid OMP fixture: $fixtureOmpOutput"
+    fi
+    assertFileExists "$ompInstallMarker"
+    ompInstallInvocation="$(cat "$ompInstallMarker")"
+    case "$ompInstallInvocation" in
+      "${bun}/bin/bun"$'\n'"${bun}/bin/bun"$'\n'"plugin install @cortexkit/pi-magic-context") ;;
+      *) failCheck "unexpected OMP plugin installation invocation: $ompInstallInvocation" ;;
     esac
 
     repairDbHelpOutput="$(runMagicContext doctor repair-db --help 2>&1)"
