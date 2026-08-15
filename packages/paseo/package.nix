@@ -49,6 +49,9 @@ upstreamPackage.overrideAttrs (oldAttrs: {
       assertFileExists "$out/lib/paseo/packages/cli/dist/index.js"
       assertFileExists "$out/lib/paseo/packages/server/dist/server/server/daemon-worker.js"
       assertFileExists "$out/lib/paseo/packages/server/dist/scripts/supervisor-entrypoint.js"
+      assertFileExists "$out/lib/paseo/packages/server/dist/server/terminal/terminal-worker-process.js"
+      ptyBinary="$(find "$out/lib/paseo/packages/server/node_modules/node-pty/prebuilds" -type f -name pty.node -print -quit)"
+      [ -n "$ptyBinary" ] || failCheck "missing node-pty native addon"
     '';
   };
 
