@@ -19,12 +19,6 @@ const WARNING_POLICIES = [
       /^Failed to parse .*\/packages\/server\/src\/server\/daemon-worker\.ts as module:\nUnexpected token \(\d+:\d+\)$/u,
   },
   {
-    id: "Parcel watcher native package",
-    manifestPattern: /^node_modules\/@parcel\/watcher-[^/]+\/watcher\.node$/u,
-    warningPattern:
-      /^Failed to resolve dependency "(?:\.\/build\/(?:Release|Debug)\/watcher\.node|@parcel\/watcher-[^"]+)":\nCannot find module .* loaded from .*\/node_modules\/@parcel\/watcher\/index\.js$/u,
-  },
-  {
     id: "ws buffer fallback",
     manifestPattern: /^node_modules\/ws\/lib\/buffer-util\.js$/u,
     warningPattern:
