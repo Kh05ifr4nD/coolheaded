@@ -172,6 +172,7 @@ stdenv.mkDerivation (finalAttrs: {
     chmod -R u+w "$packageRoot/node_modules"
     find "$packageRoot/node_modules" -depth \( -type d -name .github -o -type f \( -name package-lock.json -o -name pnpm-lock.yaml -o -name yarn.lock \) \) -exec rm -rf {} +
     rm -f "$packageRoot/node_modules/better-sqlite3/prebuilds/linuxmusl-x64.node"
+    rm -f "$packageRoot/node_modules/better-sqlite3/prebuilds/linuxmusl-arm64.node"
 
     keepOnlyMatchingChildren "$packageRoot/node_modules" "sqlite-vec-" '${prebuild.sqliteVec}'
     keepOnlyMatchingChildren "$packageRoot/node_modules/@reflink" "reflink-" '${prebuild.reflink}'
