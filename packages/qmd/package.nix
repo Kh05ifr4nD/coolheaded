@@ -125,7 +125,31 @@ stdenv.mkDerivation (finalAttrs: {
         'export async function detectGlibc({ platform }) {
     if (platform === "linux")
         return true;'
-    patch -p1 < ${./patch/nodeLlamaCppNixCompat.patch}
+    substituteInPlace node_modules/node-llama-cpp/dist/config.js \
+      --replace-fail \
+        'export const llamaToolchainsDirectory = path.join(llamaDirectory, "toolchains");' \
+        'export const llamaToolchainsDirectory = path.join(os.homedir(), ".cache", "node-llama-cpp", "toolchains");' \
+      --replace-fail \
+        'export const llamaLocalBuildBinsDirectory = path.join(llamaDirectory, "localBuilds");' \
+        'export const llamaLocalBuildBinsDirectory = path.join(os.homedir(), ".cache", "node-llama-cpp", "localBuilds");' \
+      --replace-fail \
+        'export const localTempDirectory = path.join(__dirname, "..", ".temp");' \
+        'export const localTempDirectory = path.join(os.homedir(), ".cache", "node-llama-cpp", ".temp");' \
+      --replace-fail \
+        'export const llamaCppDirectory = path.join(llamaDirectory, "llama.cpp");' \
+        'export const llamaCppDirectory = path.join(os.homedir(), ".cache", "node-llama-cpp", "llama.cpp");' \
+      --replace-fail \
+        'export const llamaCppGrammarsDirectory = path.join(llamaDirectory, "llama.cpp", "grammars");' \
+        'export const llamaCppGrammarsDirectory = path.join(os.homedir(), ".cache", "node-llama-cpp", "llama.cpp", "grammars");' \
+      --replace-fail \
+        'export const lastBuildInfoJsonPath = path.join(llamaDirectory, "lastBuild.json");' \
+        'export const lastBuildInfoJsonPath = path.join(os.homedir(), ".cache", "node-llama-cpp", "lastBuild.json");' \
+      --replace-fail \
+        'export const llamaCppDirectoryInfoFilePath = path.join(llamaDirectory, "llama.cpp.info.json");' \
+        'export const llamaCppDirectoryInfoFilePath = path.join(os.homedir(), ".cache", "node-llama-cpp", "llama.cpp.info.json");' \
+      --replace-fail \
+        'export const xpackDirectory = path.join(llamaDirectory, "xpack");' \
+        'export const xpackDirectory = path.join(os.homedir(), ".cache", "node-llama-cpp", "xpack");'
     (
       cd node_modules/better-sqlite3
       node-gyp rebuild --release
@@ -147,6 +171,7 @@ stdenv.mkDerivation (finalAttrs: {
     cp -R node_modules skills src package.json "$packageRoot/"
     chmod -R u+w "$packageRoot/node_modules"
     find "$packageRoot/node_modules" -depth \( -type d -name .github -o -type f \( -name package-lock.json -o -name pnpm-lock.yaml -o -name yarn.lock \) \) -exec rm -rf {} +
+    rm -f "$packageRoot/node_modules/better-sqlite3/prebuilds/linuxmusl-x64.node"
 
     keepOnlyMatchingChildren "$packageRoot/node_modules" "sqlite-vec-" '${prebuild.sqliteVec}'
     keepOnlyMatchingChildren "$packageRoot/node_modules/@reflink" "reflink-" '${prebuild.reflink}'
