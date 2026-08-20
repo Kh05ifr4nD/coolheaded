@@ -60,6 +60,7 @@ packageLib.mkNpmTarballPackage {
     packageRoot="$out/libexec/codex"
     mkdir -p "$packageRoot/bin" "$packageRoot/codex-resources/zsh/bin" "$out/bin"
     install -Dm755 "vendor/${vendorTarget}/bin/codex" "$packageRoot/bin/codex"
+    install -Dm755 "vendor/${vendorTarget}/bin/codex-code-mode-host" "$packageRoot/bin/codex-code-mode-host"
     install -Dm755 "vendor/${vendorTarget}/codex-resources/zsh/bin/zsh" "$packageRoot/codex-resources/zsh/bin/zsh"
     install -Dm644 "vendor/${vendorTarget}/codex-package.json" "$packageRoot/codex-package.json"
 
@@ -119,8 +120,10 @@ packageLib.mkNpmTarballPackage {
     assertFileExists "$out/share/bash-completion/completions/codex.bash"
     assertFileExists "$out/share/fish/vendor_completions.d/codex.fish"
     assertFileExists "$out/share/zsh/site-functions/_codex"
+    assertFileExists "$out/libexec/codex/bin/codex-code-mode-host"
 
     "$out/libexec/codex/codex-resources/zsh/bin/zsh" --version
+    "$out/libexec/codex/bin/codex-code-mode-host" --help > /dev/null
     ${
       if wrapperNeeded then
         ''
