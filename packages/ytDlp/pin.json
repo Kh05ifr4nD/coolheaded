@@ -1,8 +1,8 @@
 {
-  "version": "2026.07.04",
+  "version": "2026.08.19",
   "platformPackageHashes": {
-    "aarch64-darwin": "sha256-SYvQ2uF4VcWZ03HWjsW6/EOanYZA6Di+JcdlqXkvJhs=",
-    "aarch64-linux": "sha256-ts6XZGdzBw16f/1ru9yuy0fEhIOQnFTJFb8Ip6m14LE=",
-    "x86_64-linux": "sha256-a7s9MUzeT+vjbl+h1VRi4pyXT2NETnB4cYNPbYzCEK4="
+    "aarch64-darwin": "sha256-DxkrfsFHq2KIiF1jUdmrZzZ2QAKbQ3dXbvRt15z3sgI=",
+    "aarch64-linux": "sha256-sW5NqzaKgWzQXUd9aYpgWmrofM7hyP/Tj6IdclQUH8w=",
+    "x86_64-linux": "sha256-WBYvm/3CdFjqR7/LMRz0cCjxfYFUqL99aJhh1GOZIwo="
   }
 }
