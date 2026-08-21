@@ -88,6 +88,8 @@ packageLib.mkGitHubReleaseBinaryPackage {
       *) failCheck "unexpected omp --smoke-test output" ;;
     esac
 
+    HOME="$installCheckHome" "$out/bin/omp" stats --summary > /dev/null
+
     assertFileExists "$out/share/bash-completion/completions/omp.bash"
     assertFileExists "$out/share/fish/vendor_completions.d/omp.fish"
     assertFileExists "$out/share/zsh/site-functions/_omp"
