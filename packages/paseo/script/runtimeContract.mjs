@@ -31,6 +31,12 @@ const WARNING_POLICIES = [
       /^Failed to resolve dependency "utf-8-validate":\nCannot find module 'utf-8-validate' loaded from .*\/node_modules\/ws\/lib\/validation\.js$/u,
   },
   {
+    id: "esbuild PnP fallback",
+    manifestPattern: /^node_modules\/esbuild\/lib\/main\.js$/u,
+    warningPattern:
+      /^Failed to resolve dependency "pnpapi":\nCannot find module 'pnpapi' loaded from .*\/node_modules\/esbuild\/lib\/main\.js$/u,
+  },
+  {
     id: "Zsh integration asset",
     manifestPattern:
       /^packages\/server\/dist\/server\/terminal\/shell-integration\/zsh\/\.zshenv$/u,
