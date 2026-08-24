@@ -32,9 +32,10 @@ const nodeFileSystem = fs;
 const path = nodePath;
 
 /**
- * Node-pty loads its native addon through a computed CommonJS require, which
- * static tracing cannot observe. The dependency lives in the server workspace,
- * while the upstream trace assumes a root-level workspace dependency.
+ * Esbuild probes optional `pnpapi` support, while node-pty loads its native
+ * addon through a computed CommonJS require. Static tracing cannot observe
+ * these runtime files; node-pty also lives in the server workspace while the
+ * upstream trace assumes a root-level workspace dependency.
  *
  * @param {readonly string[]} manifest
  * @param {string} [platform]
@@ -51,7 +52,7 @@ function addExplicitRuntimeFiles(
   if (platform === "darwin") {
     nativeFiles.push(`${prebuildRoot}/spawn-helper`);
   }
-  return [...new Set([...manifest, ...nativeFiles])].toSorted();
+  return [...new Set(["node_modules/esbuild/lib/main.js", ...manifest, ...nativeFiles])].toSorted();
 }
 
 /**

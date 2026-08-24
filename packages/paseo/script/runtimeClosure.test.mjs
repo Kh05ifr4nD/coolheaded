@@ -20,7 +20,6 @@ const describe = nodeDescribe;
 const it = nodeIt;
 
 const UPSTREAM_MANIFEST = [
-  "node_modules/esbuild/lib/main.js",
   "node_modules/ws/lib/buffer-util.js",
   "node_modules/ws/lib/validation.js",
   "packages/server/dist/server/server/daemon-worker.js",
@@ -28,6 +27,7 @@ const UPSTREAM_MANIFEST = [
 ];
 const MANIFEST = addExplicitRuntimeFiles(UPSTREAM_MANIFEST);
 const NODE_PTY_PREBUILD_ROOT = "packages/server/node_modules/node-pty/prebuilds";
+const ESBUILD_RUNTIME_FILE = "node_modules/esbuild/lib/main.js";
 
 const WARNINGS = [
   "Failed to resolve dependency \"pnpapi\":\nCannot find module 'pnpapi' loaded from /build/source/packages/server/node_modules/esbuild/lib/main.js",
@@ -100,10 +100,12 @@ function assertRuntimeError(operation, message) {
 describe("Paseo runtime closure policy", () => {
   it("adds platform-native node-pty files omitted by static tracing", () => {
     assertDeepEqual(addExplicitRuntimeFiles(UPSTREAM_MANIFEST, "linux", "x64"), [
+      ESBUILD_RUNTIME_FILE,
       ...UPSTREAM_MANIFEST,
       `${NODE_PTY_PREBUILD_ROOT}/linux-x64/pty.node`,
     ]);
     assertDeepEqual(addExplicitRuntimeFiles(UPSTREAM_MANIFEST, "darwin", "arm64"), [
+      ESBUILD_RUNTIME_FILE,
       ...UPSTREAM_MANIFEST,
       `${NODE_PTY_PREBUILD_ROOT}/darwin-arm64/pty.node`,
       `${NODE_PTY_PREBUILD_ROOT}/darwin-arm64/spawn-helper`,
