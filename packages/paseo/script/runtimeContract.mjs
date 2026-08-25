@@ -40,7 +40,7 @@ const WARNING_POLICIES = [
     id: "esbuild native binary",
     manifestPattern: /^packages\/server\/node_modules\/@esbuild\/[^/]+\/bin\/esbuild$/u,
     warningPattern:
-      /^Failed to parse .*\/packages\/server\/node_modules\/@esbuild\/[^/]+\/bin\/esbuild as script:\nUnexpected character .+ \(1:0\)$/u,
+      /^Failed to parse .*\/packages\/server\/node_modules\/@esbuild\/[^/]+\/bin\/esbuild as (?:module|script):\nUnexpected character .+ \(1:0\)$/u,
   },
   {
     id: "Zsh integration asset",

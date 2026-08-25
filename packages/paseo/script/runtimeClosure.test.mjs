@@ -23,6 +23,7 @@ const UPSTREAM_MANIFEST = [
   "node_modules/ws/lib/buffer-util.js",
   "node_modules/ws/lib/validation.js",
   "packages/server/node_modules/@esbuild/linux-arm64/bin/esbuild",
+  "packages/server/node_modules/@esbuild/linux-x64/bin/esbuild",
   "packages/server/dist/server/server/daemon-worker.js",
   "packages/server/dist/server/terminal/shell-integration/zsh/.zshenv",
 ];
@@ -30,10 +31,12 @@ const MANIFEST = addExplicitRuntimeFiles(UPSTREAM_MANIFEST);
 const NODE_PTY_PREBUILD_ROOT = "packages/server/node_modules/node-pty/prebuilds";
 const ESBUILD_RUNTIME_FILE = "node_modules/esbuild/lib/main.js";
 const ESBUILD_NATIVE_RUNTIME_FILE = "packages/server/node_modules/@esbuild/linux-arm64/bin/esbuild";
+const ESBUILD_X64_RUNTIME_FILE = "packages/server/node_modules/@esbuild/linux-x64/bin/esbuild";
 
 const WARNINGS = [
   "Failed to resolve dependency \"pnpapi\":\nCannot find module 'pnpapi' loaded from /build/source/packages/server/node_modules/esbuild/lib/main.js",
   "Failed to parse /build/source/packages/server/node_modules/@esbuild/linux-arm64/bin/esbuild as script:\nUnexpected character '\u007F' (1:0)",
+  "Failed to parse /build/source/packages/server/node_modules/@esbuild/linux-x64/bin/esbuild as module:\nUnexpected character '\u007F' (1:0)",
   "Failed to parse /build/source/packages/server/src/server/daemon-worker.ts as module:\nUnexpected token (7:12)",
   "Failed to resolve dependency \"utf-8-validate\":\nCannot find module 'utf-8-validate' loaded from /build/source/node_modules/ws/lib/validation.js",
   "Failed to resolve dependency \"bufferutil\":\nCannot find module 'bufferutil' loaded from /build/source/node_modules/ws/lib/buffer-util.js",
@@ -109,6 +112,7 @@ describe("Paseo runtime closure policy", () => {
       "packages/server/dist/server/server/daemon-worker.js",
       "packages/server/dist/server/terminal/shell-integration/zsh/.zshenv",
       ESBUILD_NATIVE_RUNTIME_FILE,
+      ESBUILD_X64_RUNTIME_FILE,
       `${NODE_PTY_PREBUILD_ROOT}/linux-x64/pty.node`,
     ]);
     assertDeepEqual(addExplicitRuntimeFiles(UPSTREAM_MANIFEST, "darwin", "arm64"), [
@@ -118,6 +122,7 @@ describe("Paseo runtime closure policy", () => {
       "packages/server/dist/server/server/daemon-worker.js",
       "packages/server/dist/server/terminal/shell-integration/zsh/.zshenv",
       ESBUILD_NATIVE_RUNTIME_FILE,
+      ESBUILD_X64_RUNTIME_FILE,
       `${NODE_PTY_PREBUILD_ROOT}/darwin-arm64/pty.node`,
       `${NODE_PTY_PREBUILD_ROOT}/darwin-arm64/spawn-helper`,
     ]);
@@ -162,7 +167,7 @@ describe("Paseo runtime closure policy", () => {
     }, "missing trace warning for esbuild PnP fallback");
     assertRuntimeError(() => {
       enforceTraceWarningPolicy(
-        WARNINGS.filter((warning) => !warning.includes("@esbuild/linux-arm64")),
+        WARNINGS.filter((warning) => !warning.includes("@esbuild/")),
         MANIFEST,
       );
     }, "missing trace warning for esbuild native binary");
