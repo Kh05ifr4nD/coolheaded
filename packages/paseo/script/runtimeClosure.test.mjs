@@ -33,7 +33,7 @@ const ESBUILD_NATIVE_RUNTIME_FILE = "packages/server/node_modules/@esbuild/linux
 
 const WARNINGS = [
   "Failed to resolve dependency \"pnpapi\":\nCannot find module 'pnpapi' loaded from /build/source/packages/server/node_modules/esbuild/lib/main.js",
-  "Failed to parse /build/source/packages/server/node_modules/@esbuild/linux-arm64/bin/esbuild as script:\nUnexpected character '\u007f' (1:0)",
+  "Failed to parse /build/source/packages/server/node_modules/@esbuild/linux-arm64/bin/esbuild as script:\nUnexpected character '\u007F' (1:0)",
   "Failed to parse /build/source/packages/server/src/server/daemon-worker.ts as module:\nUnexpected token (7:12)",
   "Failed to resolve dependency \"utf-8-validate\":\nCannot find module 'utf-8-validate' loaded from /build/source/node_modules/ws/lib/validation.js",
   "Failed to resolve dependency \"bufferutil\":\nCannot find module 'bufferutil' loaded from /build/source/node_modules/ws/lib/buffer-util.js",
