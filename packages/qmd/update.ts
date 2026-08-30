@@ -15,6 +15,7 @@ import { Effect } from "effect";
 import type { JsonClient } from "coolheaded/core/httpClient.ts";
 import { fetchJsonClient } from "coolheaded/core/fetchHttpClient.ts";
 import { latestGitHubVersion } from "coolheaded/source/githubVersion.ts";
+import { sanitizePackageJson } from "coolheaded/npm/tarball.ts";
 import { withTemporaryDirectory } from "coolheaded/core/temporaryDirectory.ts";
 import { writePinJson } from "coolheaded/pin/json.ts";
 
@@ -37,6 +38,25 @@ interface UpdateDependencies {
 
 function latestVersion(jsonClient: JsonClient): ReturnType<typeof latestGitHubVersion> {
   return latestGitHubVersion({ owner: GITHUB_SOURCE.owner, repo: GITHUB_SOURCE.repo }, jsonClient);
+}
+
+const BUN_NIX_HELPERS = ["copyPathToStore", "fetchFromGitHub", "fetchgit", "fetchurl"] as const;
+
+function normalizeGeneratedBunNix(contents: string): string {
+  const headerMatch = /^\{\n(?: {2}[^,\n]+,\n)+ {2}\.\.\.\n\}:/u.exec(contents);
+  if (headerMatch === null) {
+    return contents;
+  }
+
+  const body = contents.slice(headerMatch[0].length);
+  const usedHelpers = BUN_NIX_HELPERS.filter((helper: string): boolean =>
+    new RegExp(`\\b${helper}\\b`, "u").test(body),
+  );
+  const normalizedHeader = `{
+${usedHelpers.map((helper: string): string => `  ${helper},\n`).join("")}  ...
+}:`;
+
+  return `${normalizedHeader}${body}`;
 }
 
 function bun2nixOutPath(dependencies: Readonly<UpdateDependencies>): Effect.Effect<string, Error> {
@@ -63,6 +83,24 @@ function generatedBunNixFromWorkspace(
       version,
       dependencies.runner,
     );
+    yield* sanitizePackageJson(`${workspacePath}/package.json`);
+    yield* Effect.asVoid(
+      commandOutput(
+        dependencies.runner,
+        "nix",
+        [
+          "run",
+          "--inputs-from",
+          dependencies.repositoryRootPath,
+          "nixpkgs#bun",
+          "--",
+          "install",
+          "--lockfile-only",
+          "--ignore-scripts",
+        ],
+        workspacePath,
+      ),
+    );
     yield* commandOutput(
       dependencies.runner,
       bun2nixPath,
@@ -70,9 +108,10 @@ function generatedBunNixFromWorkspace(
       workspacePath,
     );
 
-    return yield* commandOutput(dependencies.runner, "cat", [
+    const generatedPackageNix = yield* commandOutput(dependencies.runner, "cat", [
       `${workspacePath}/generatedPackage.nix`,
     ]);
+    return normalizeGeneratedBunNix(generatedPackageNix);
   });
 }
 

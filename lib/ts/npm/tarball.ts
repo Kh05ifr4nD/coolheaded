@@ -149,5 +149,5 @@ function updateNpmTarballPackage(options: NpmTarballPackageUpdate): Effect.Effec
   );
 }
 
-export { updateNpmTarballPackage };
+export { sanitizePackageJson, updateNpmTarballPackage };
 export type { NpmTarballPackageUpdate };
