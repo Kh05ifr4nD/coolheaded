@@ -44,11 +44,7 @@ let
   );
   managedEditsFile = pkgs.writeText "codex-managed-edits.json" (builtins.toJSON managedEdits);
 
-  configDirectory =
-    if config.home.preferXdgDirectories then
-      "${config.xdg.configHome}/codex"
-    else
-      "${config.home.homeDirectory}/.codex";
+  configDirectory = "${config.home.homeDirectory}/.codex";
   configFile = "${configDirectory}/config.toml";
 
   reconcileConfig = pkgs.writeShellApplication {
@@ -353,10 +349,6 @@ in
   config = lib.mkIf cfg.enable {
     home = {
       packages = [ cfg.package ];
-      sessionVariables = lib.optionalAttrs config.home.preferXdgDirectories {
-        CODEX_HOME = configDirectory;
-      };
-
       activation.codexConfig = {
         after = [ "linkGeneration" ];
         before = [ ];
