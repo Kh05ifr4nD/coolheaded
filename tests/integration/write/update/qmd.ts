@@ -11,6 +11,7 @@ const COMMAND_FAILURE = 23;
 const COMMAND_OK = { code: 0, stderr: "", stdout: "" };
 const BUN2NIX_OUT = "/nix/store/bun2nix";
 const BUN_NIX = "{ fetchurl }: fetchurl {}";
+const PACKAGE_JSON = '{"name":"qmd","devDependencies":{"vitest":"3.2.7"}}\n';
 const SOURCE_HASH = "sha256-SOURCE";
 const PIN_SENTINEL_BYTE = 255;
 const GENERATED_SENTINEL_BYTE = 254;
@@ -84,6 +85,46 @@ Deno.test("QMD update generates bun package, source pin, and format request", as
           cwd: workspacePath,
         });
       },
+      effect: async (request: CommandRequest): Promise<void> => {
+        const workspacePath = request.cwd;
+        if (workspacePath === undefined) {
+          throw new TypeError("tar request requires cwd");
+        }
+        await Deno.writeTextFile(`${workspacePath}/package.json`, PACKAGE_JSON);
+      },
+      result: COMMAND_OK,
+    },
+    {
+      assertRequest(request: CommandRequest): void {
+        const workspacePath = request.cwd;
+        if (workspacePath === undefined) {
+          throw new TypeError("bun request requires cwd");
+        }
+        assertEquals(request, {
+          command: [
+            "nix",
+            "run",
+            "--inputs-from",
+            directory,
+            "nixpkgs#bun",
+            "--",
+            "install",
+            "--lockfile-only",
+            "--ignore-scripts",
+          ],
+          cwd: workspacePath,
+        });
+      },
+      effect: async (request: CommandRequest): Promise<void> => {
+        const workspacePath = request.cwd;
+        if (workspacePath === undefined) {
+          throw new TypeError("bun request requires cwd");
+        }
+        assertEquals(
+          await Deno.readTextFile(`${workspacePath}/package.json`),
+          '{\n  "name": "qmd"\n}\n',
+        );
+      },
       result: COMMAND_OK,
     },
     {
@@ -138,7 +179,8 @@ Deno.test("QMD update generates bun package, source pin, and format request", as
     const workspacePath = calls[2]?.cwd;
     assertEquals(calls[1]?.command.at(-1), `${workspacePath}/source.tgz`);
     assertEquals(calls[3]?.cwd, workspacePath);
-    assertEquals(calls[4]?.command[1], `${workspacePath}/generatedPackage.nix`);
+    assertEquals(calls[4]?.cwd, workspacePath);
+    assertEquals(calls[5]?.command[1], `${workspacePath}/generatedPackage.nix`);
     runner.assertExhausted();
   } finally {
     await Deno.remove(directory, { recursive: true });
