@@ -28,7 +28,7 @@ let
   wrapperPath = lib.makeBinPath wrapperInputs;
   wrapperNeeded = wrapperInputs != [ ];
   wrapperArgs = lib.optionals wrapperNeeded [
-    "--suffix"
+    "--prefix"
     "PATH"
     ":"
     wrapperPath

@@ -12,7 +12,7 @@ let
   testHome = "/tmp/lazycodex-ai-home-module-${
     builtins.substring 0 12 (builtins.hashString "sha256" package.outPath)
   }";
-  codexHome = "${testHome}/.config/codex";
+  codexHome = "${testHome}/.codex";
   statePackage = "state/lazycodex-ai-package";
   stateInstallFingerprint = "state/lazycodex-ai-install-fingerprint";
 
@@ -46,10 +46,6 @@ let
 
       home = {
         homeDirectory = lib.mkOption { type = lib.types.str; };
-        preferXdgDirectories = lib.mkOption {
-          type = lib.types.bool;
-          default = false;
-        };
         packages = lib.mkOption {
           type = lib.types.listOf lib.types.package;
           default = [ ];
@@ -68,7 +64,6 @@ let
         };
       };
 
-      xdg.configHome = lib.mkOption { type = lib.types.str; };
     };
   };
 
@@ -86,9 +81,7 @@ let
         {
           home = {
             homeDirectory = testHome;
-            preferXdgDirectories = true;
           };
-          xdg.configHome = "${testHome}/.config";
         }
         module
       ];
@@ -161,9 +154,7 @@ let
       {
         home = {
           homeDirectory = testHome;
-          preferXdgDirectories = true;
         };
-        xdg.configHome = "${testHome}/.config";
         programs.lazyCodexAi.enable = true;
       }
     ];
@@ -183,7 +174,6 @@ let
     (lib.length activeConfig.home.packages == 2)
     (lib.elem package activeConfig.home.packages)
     (lib.elem packages.codex activeConfig.home.packages)
-    (activeConfig.home.sessionVariables.CODEX_HOME == codexHome)
     (activeEvaluation.options.programs.codex ? settings)
     (!(activeEvaluation.options.programs.codex ? config))
     (

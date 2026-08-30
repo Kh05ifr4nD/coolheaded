@@ -11,11 +11,7 @@ let
   cfg = config.programs.lazyCodexAi;
   statePackage = "state/lazycodex-ai-package";
   stateInstallFingerprint = "state/lazycodex-ai-install-fingerprint";
-  codexHome =
-    if config.home.preferXdgDirectories then
-      "${config.xdg.configHome}/codex"
-    else
-      "${config.home.homeDirectory}/.codex";
+  codexHome = "${config.home.homeDirectory}/.codex";
   installArguments = [
     "${cfg.package}/bin/lazycodex-ai"
     "install"

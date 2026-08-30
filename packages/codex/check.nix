@@ -12,7 +12,6 @@ let
     builtins.substring 0 12 (builtins.hashString "sha256" package.outPath)
   }";
   testHome = "/__${testHomeName}__";
-
   codexModule = import ../../homeModules/codex.nix { self.packages.${system}.codex = package; };
   bundledCodexModule = {
     key = "${fakeHomeManagerModulesPath}/programs/codex";
@@ -22,10 +21,6 @@ let
     options = {
       home = {
         homeDirectory = lib.mkOption { type = lib.types.str; };
-        preferXdgDirectories = lib.mkOption {
-          type = lib.types.bool;
-          default = false;
-        };
         packages = lib.mkOption {
           type = lib.types.listOf lib.types.package;
           default = [ ];
@@ -39,7 +34,6 @@ let
           default = { };
         };
       };
-      xdg.configHome = lib.mkOption { type = lib.types.str; };
     };
   };
 
@@ -52,7 +46,7 @@ let
     projects."/tmp/a.b".trust_level = "trusted";
   };
   mkEvaluation =
-    { preferXdgDirectories, settings }:
+    { settings }:
     lib.evalModules {
       specialArgs = {
         inherit pkgs;
@@ -65,9 +59,7 @@ let
         {
           home = {
             homeDirectory = testHome;
-            inherit preferXdgDirectories;
           };
-          xdg.configHome = "${testHome}/.config";
           programs.codex = {
             enable = true;
             inherit settings;
@@ -76,18 +68,8 @@ let
       ];
     };
 
-  xdgEvaluation = mkEvaluation {
-    preferXdgDirectories = true;
-    settings = declaredSettings;
-  };
-  emptyEvaluation = mkEvaluation {
-    preferXdgDirectories = true;
-    settings = { };
-  };
-  legacyEvaluation = mkEvaluation {
-    preferXdgDirectories = false;
-    settings = declaredSettings;
-  };
+  declaredEvaluation = mkEvaluation { settings = declaredSettings; };
+  emptyEvaluation = mkEvaluation { settings = { }; };
 
   mkActivation =
     name: evaluation:
@@ -103,9 +85,8 @@ let
       fi
       ${evaluation.config.home.activation.codexConfig.data}
     '';
-  xdgActivation = mkActivation "activate-codex-xdg-home-module" xdgEvaluation;
+  declaredActivation = mkActivation "activate-codex-home-module" declaredEvaluation;
   emptyActivation = mkActivation "activate-codex-empty-home-module" emptyEvaluation;
-  legacyActivation = mkActivation "activate-codex-legacy-home-module" legacyEvaluation;
 
   initialConfig = pkgs.writeText "codex-initial-config.toml" ''
     # app-owned header
@@ -183,26 +164,21 @@ let
     apps = true
     memories = true
   '';
-  legacyConfig = pkgs.writeText "codex-legacy-config.toml" ''
-    model = "legacy-model"
-  '';
   oldManagedPaths = pkgs.writeText "codex-old-managed-paths.json" (
     builtins.toJSON [ ''"features"."memories"'' ]
   );
 in
 {
   codexHomeModule =
-    assert builtins.attrNames xdgEvaluation.config.home.activation == [ "codexConfig" ];
-    assert xdgEvaluation.config.home.activation.codexConfig.after == [ "linkGeneration" ];
+    assert builtins.attrNames declaredEvaluation.config.home.activation == [ "codexConfig" ];
+    assert declaredEvaluation.config.home.activation.codexConfig.after == [ "linkGeneration" ];
     assert
-      builtins.attrNames xdgEvaluation.options.programs.codex == [
+      builtins.attrNames declaredEvaluation.options.programs.codex == [
         "enable"
         "package"
         "settings"
       ];
-    assert xdgEvaluation.config.home.sessionVariables.CODEX_HOME == "${testHome}/.config/codex";
-    assert !(legacyEvaluation.config.home.sessionVariables ? CODEX_HOME);
-    assert lib.elem package xdgEvaluation.config.home.packages;
+    assert lib.elem package declaredEvaluation.config.home.packages;
     pkgs.runCommand "codex-home-module-check" { } ''
       shopt -s nullglob
       testHome="$NIX_BUILD_TOP/${testHomeName}"
@@ -214,19 +190,15 @@ in
           ;;
       esac
 
-      xdgActivation="$TMPDIR/activate-codex-xdg-home-module"
+      declaredActivation="$TMPDIR/activate-codex-home-module"
       emptyActivation="$TMPDIR/activate-codex-empty-home-module"
-      legacyActivation="$TMPDIR/activate-codex-legacy-home-module"
-      substitute ${xdgActivation} "$xdgActivation" \
+      substitute ${declaredActivation} "$declaredActivation" \
         --replace-fail ${lib.escapeShellArg testHome} "$testHome"
       substitute ${emptyActivation} "$emptyActivation" \
         --replace-fail ${lib.escapeShellArg testHome} "$testHome"
-      substitute ${legacyActivation} "$legacyActivation" \
-        --replace-fail ${lib.escapeShellArg testHome} "$testHome"
-      chmod +x "$xdgActivation" "$emptyActivation" "$legacyActivation"
+      chmod +x "$declaredActivation" "$emptyActivation"
 
-      target="$testHome/.config/codex/config.toml"
-      legacyTarget="$testHome/.codex/config.toml"
+      target="$testHome/.codex/config.toml"
       cleanupTestHome() {
         ${lib.optionalString pkgs.stdenv.hostPlatform.isDarwin ''
           if [[ -d "$testHome" ]]; then
@@ -245,30 +217,26 @@ in
       }
 
       cleanupTestHome
-      mkdir -p "$(dirname "$target")" "$(dirname "$legacyTarget")" "$TMPDIR/old-generation/state"
+      mkdir -p "$(dirname "$target")" "$TMPDIR/old-generation/state"
       install -m 640 ${initialConfig} "$target"
-      install -m 600 ${legacyConfig} "$legacyTarget"
       install -m 444 ${oldManagedPaths} "$TMPDIR/old-generation/state/codex-managed-paths.json"
-      legacyHash="$(${pkgs.coreutils}/bin/sha256sum "$legacyTarget" | cut -d ' ' -f 1)"
 
-      "$xdgActivation" "$TMPDIR/old-generation"
+      "$declaredActivation" "$TMPDIR/old-generation"
       diff -u ${expectedConfig} "$target"
       test "$(${pkgs.coreutils}/bin/stat -c %a "$target")" = 640
-      test "$(${pkgs.coreutils}/bin/sha256sum "$legacyTarget" | cut -d ' ' -f 1)" = "$legacyHash"
       test ! -L "$testHome/.codex"
       assertNoTransactionArtifacts
 
       inode="$(${pkgs.coreutils}/bin/stat -c %i "$target")"
-      "$xdgActivation" "$TMPDIR/old-generation"
+      "$declaredActivation" "$TMPDIR/old-generation"
       diff -u ${expectedConfig} "$target"
       test "$(${pkgs.coreutils}/bin/stat -c %i "$target")" = "$inode"
       assertNoTransactionArtifacts
 
       cleanupTestHome
-      "$xdgActivation"
+      "$declaredActivation"
       diff -u ${freshExpectedConfig} "$target"
       test "$(${pkgs.coreutils}/bin/stat -c %a "$target")" = 600
-      test ! -e "$testHome/.codex"
       assertNoTransactionArtifacts
 
       cleanupTestHome
@@ -285,7 +253,7 @@ in
       install -m 600 /dev/null "$target"
       printf 'model =\\n' > "$target"
       invalidHash="$(${pkgs.coreutils}/bin/sha256sum "$target" | cut -d ' ' -f 1)"
-      if "$xdgActivation" >"$TMPDIR/invalid.out" 2>"$TMPDIR/invalid.err"; then
+      if "$declaredActivation" >"$TMPDIR/invalid.out" 2>"$TMPDIR/invalid.err"; then
         echo "Codex reconciliation accepted invalid TOML" >&2
         exit 1
       fi
@@ -298,7 +266,7 @@ in
       install -m 600 ${initialConfig} "$victim"
       victimHash="$(${pkgs.coreutils}/bin/sha256sum "$victim" | cut -d ' ' -f 1)"
       ln -s "$victim" "$target"
-      if "$xdgActivation" >"$TMPDIR/symlink.out" 2>"$TMPDIR/symlink.err"; then
+      if "$declaredActivation" >"$TMPDIR/symlink.out" 2>"$TMPDIR/symlink.err"; then
         echo "Codex reconciliation accepted a config symlink" >&2
         exit 1
       fi
@@ -308,17 +276,11 @@ in
 
       cleanupTestHome
       mkdir -p "$target"
-      if "$xdgActivation" >"$TMPDIR/non-regular.out" 2>"$TMPDIR/non-regular.err"; then
+      if "$declaredActivation" >"$TMPDIR/non-regular.out" 2>"$TMPDIR/non-regular.err"; then
         echo "Codex reconciliation accepted a non-regular config path" >&2
         exit 1
       fi
       test -d "$target"
-
-      cleanupTestHome
-      mkdir -p "$(dirname "$legacyTarget")"
-      "$legacyActivation"
-      diff -u ${freshExpectedConfig} "$legacyTarget"
-      test ! -e "$target"
 
       cleanupTestHome
       touch "$out"
