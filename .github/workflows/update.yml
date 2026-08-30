@@ -32,7 +32,10 @@ on:
         type: boolean
         default: true
   schedule:
+    # Package releases change frequently; check them twice daily.
     - cron: "0 0,12 * * *"
+    # Flake and Deno lock inputs change less often; check them weekly.
+    - cron: "0 6 * * 0"
 jobs:
   discover:
     if: github.event_name != 'workflow_dispatch' || github.ref == 'refs/heads/main'
@@ -50,9 +53,9 @@ jobs:
         env:
           INPUTS: ${{ inputs.inputs }}
           PACKAGES: ${{ inputs.packages }}
-          UPDATE_DENO_DEPENDENCIES: ${{ github.event_name != 'workflow_dispatch' || inputs.updateDenoDependencies != false }}
-          UPDATE_FLAKE_INPUTS: ${{ github.event_name != 'workflow_dispatch' || inputs.updateFlakeInputs != false }}
-          UPDATE_PACKAGES: ${{ github.event_name != 'workflow_dispatch' || inputs.updatePackages != false }}
+          UPDATE_DENO_DEPENDENCIES: ${{ github.event_name == 'workflow_dispatch' && inputs.updateDenoDependencies != false || github.event.schedule == '0 6 * * 0' }}
+          UPDATE_FLAKE_INPUTS: ${{ github.event_name == 'workflow_dispatch' && inputs.updateFlakeInputs != false || github.event.schedule == '0 6 * * 0' }}
+          UPDATE_PACKAGES: ${{ github.event_name == 'workflow_dispatch' && inputs.updatePackages != false || github.event.schedule == '0 0,12 * * *' }}
         run: nix develop -c deno run --allow-env --allow-read --allow-run --allow-write .github/ci/update/discover.ts
   prepare:
     needs: discover
