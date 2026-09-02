@@ -20,15 +20,26 @@ const TRACE_WARNING_PREFIX = "trace warning: ";
  * )} TraceWarningPolicy
  */
 
+class RuntimeClosureError extends Error {
+  /**
+   * @param {string} message
+   * @param {{ readonly cause?: unknown }} [options]
+   */
+  constructor(message, options) {
+    super(message, options);
+    this.name = "RuntimeClosureError";
+  }
+}
+
 const TYPESCRIPT_SOURCE_WARNING_PATTERN =
   /^Failed to parse .+\/packages\/server\/src\/(?![^\n]*\.d\.(?:cts|mts|tsx?) as (?:module|script):\n)[^\n]+\.(?:cts|mts|tsx?) as (?:module|script):\n[\s\S]+$/u;
 const TYPESCRIPT_SOURCE_PATH_PATTERN =
-  /^Failed to parse .+\/(packages\/server\/src\/[^\n]+) as (?:module|script):\n/u;
+  /^Failed to parse .+\/(?<sourcePath>packages\/server\/src\/[^\n]+) as (?:module|script):\n/u;
 
 /** @param {string} warning */
 function deriveTypeScriptRuntimeEntry(warning) {
-  const match = warning.match(TYPESCRIPT_SOURCE_PATH_PATTERN);
-  const sourcePath = match?.[1];
+  const match = TYPESCRIPT_SOURCE_PATH_PATTERN.exec(warning);
+  const sourcePath = match?.groups?.sourcePath;
   if (sourcePath === undefined) {
     throw new RuntimeClosureError(`invalid TypeScript source warning:\n${warning}`);
   }
@@ -41,8 +52,12 @@ function deriveTypeScriptRuntimeEntry(warning) {
   }
 
   const sourceExtension = relativePath.slice(extensionIndex);
-  const outputExtension =
-    sourceExtension === ".mts" ? ".mjs" : sourceExtension === ".cts" ? ".cjs" : ".js";
+  let outputExtension = ".js";
+  if (sourceExtension === ".mts") {
+    outputExtension = ".mjs";
+  } else if (sourceExtension === ".cts") {
+    outputExtension = ".cjs";
+  }
   return `packages/server/dist/server/${relativePath.slice(0, extensionIndex)}${outputExtension}`;
 }
 
@@ -97,17 +112,6 @@ const WARNING_POLICIES = [
   },
 ];
 
-class RuntimeClosureError extends Error {
-  /**
-   * @param {string} message
-   * @param {{ readonly cause?: unknown }} [options]
-   */
-  constructor(message, options) {
-    super(message, options);
-    this.name = "RuntimeClosureError";
-  }
-}
-
 /**
  * @param {string} stderr
  * @returns {readonly string[]}
@@ -142,7 +146,10 @@ function enforceTraceWarningPolicy(warnings, manifest) {
       throw new RuntimeClosureError(`unknown trace warning:\n${warning}`);
     }
 
-    const [policy] = policies;
+    const policy = policies[0];
+    if (policy === undefined) {
+      throw new RuntimeClosureError(`unknown trace warning:\n${warning}`);
+    }
     matchedPolicyIds.add(policy.id);
     switch (policy.effect) {
       case "ignore": {
