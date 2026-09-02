@@ -50,6 +50,7 @@ function response(): JsonResponse {
 function workspaceEffect(
   packageJson: string,
   packageLock?: string,
+  expectedPackageJson = `{\n  "name": "example"\n}\n`,
 ): (request: CommandRequest) => Promise<void> {
   return async (request: CommandRequest): Promise<void> => {
     const workspacePath = request.cwd;
@@ -59,10 +60,7 @@ function workspaceEffect(
     if (request.command[0] === "tar") {
       await Deno.writeTextFile(`${workspacePath}/package.json`, packageJson);
     } else if (packageLock !== undefined) {
-      assertEquals(
-        await Deno.readTextFile(`${workspacePath}/package.json`),
-        `{\n  "name": "example"\n}\n`,
-      );
+      assertEquals(await Deno.readTextFile(`${workspacePath}/package.json`), expectedPackageJson);
       await Deno.writeTextFile(`${workspacePath}/package-lock.json`, packageLock);
     }
   };
@@ -72,6 +70,7 @@ function requests(
   repositoryRootPath: string,
   packageJson: string,
   packageLock?: string,
+  expectedPackageJson?: string,
 ): readonly ConstructorParameters<typeof FakeCommandRunner>[0][number][] {
   return [
     {
@@ -150,7 +149,7 @@ function requests(
                 cwd: workspacePath,
               });
             },
-            effect: workspaceEffect(packageJson, packageLock),
+            effect: workspaceEffect(packageJson, packageLock, expectedPackageJson),
             result: COMMAND_OK,
           },
           {
@@ -205,6 +204,51 @@ Deno.test("npm tarball update writes sanitized lock and exact pin", async (): Pr
     runner.assertExhausted();
     json.assertExhausted();
     await assertRejects(() => Deno.stat(workspacePath ?? ""));
+  } finally {
+    await Deno.remove(directory, { recursive: true });
+  }
+});
+
+Deno.test("npm tarball update removes selected runtime dependencies", async (): Promise<void> => {
+  const directory = await Deno.makeTempDir();
+  const packageDirectory = `${directory}/packages/example`;
+  const repositoryRootPath = `${directory}/`;
+  const packageJson =
+    '{"name":"example","dependencies":{"remove-me":"1","keep-me":"1"},"optionalDependencies":{"remove-me-too":"1","keep-me-too":"1"}}';
+  const expectedPackageJson = `{
+  "name": "example",
+  "dependencies": {
+    "keep-me": "1"
+  },
+  "optionalDependencies": {
+    "keep-me-too": "1"
+  }
+}
+`;
+  await Deno.mkdir(packageDirectory, { recursive: true });
+  const runner = new FakeCommandRunner(
+    requests(repositoryRootPath, packageJson, PACKAGE_LOCK, expectedPackageJson),
+  );
+  const json = strictJsonClient([
+    {
+      effect: (): Effect.Effect<ReturnType<typeof response>> => Effect.succeed(response()),
+      request: REGISTRY_REQUEST,
+    },
+  ]);
+  try {
+    await Effect.runPromise(
+      updateNpmTarballPackage({
+        args: [VERSION],
+        importMetaUrl: `file://${packageDirectory}/update.ts`,
+        jsonClient: json.client,
+        packageName: PACKAGE_NAME,
+        removeDependencies: ["remove-me", "remove-me-too"],
+        runner,
+        tarballBaseName: "example",
+      }),
+    );
+    runner.assertExhausted();
+    json.assertExhausted();
   } finally {
     await Deno.remove(directory, { recursive: true });
   }

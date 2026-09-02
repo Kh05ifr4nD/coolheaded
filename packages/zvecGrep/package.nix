@@ -7,6 +7,7 @@
   makeWrapper,
   nodejs-slim,
   packageLib,
+  ripgrep,
   stdenv,
 }:
 let
@@ -16,21 +17,18 @@ let
     {
       aarch64-darwin = {
         llamaCpp = "mac-arm64-metal";
-        ripgrep = "ripgrep-darwin-arm64";
         sharp = "sharp-darwin-arm64";
         sharpLibvips = "sharp-libvips-darwin-arm64";
         zvec = "bindings-darwin-arm64";
       };
       aarch64-linux = {
         llamaCpp = "linux-arm64";
-        ripgrep = "ripgrep-linux-arm64";
         sharp = "sharp-linux-arm64";
         sharpLibvips = "sharp-libvips-linux-arm64";
         zvec = "bindings-linux-arm64";
       };
       x86_64-linux = {
         llamaCpp = "linux-x64";
-        ripgrep = "ripgrep-linux-x64";
         sharp = "sharp-linux-x64";
         sharpLibvips = "sharp-libvips-linux-x64";
         zvec = "bindings-linux-x64";
@@ -61,6 +59,10 @@ let
       "dist"
       "node_modules"
       "package.json"
+    ];
+    runtimeInputs = [
+      nodejs-slim
+      ripgrep
     ];
     extraNativeBuildInputs = lib.optionals stdenv.hostPlatform.isLinux [ autoPatchelfHook ];
     preVersionCheck = ''
@@ -113,6 +115,22 @@ let
         XDG_DATA_HOME="$installCheckRoot/data" \
         XDG_STATE_HOME="$installCheckRoot/state" \
         "$out/bin/zg" status > /dev/null
+
+      installCheckProject="$installCheckRoot/project"
+      mkdir -p "$installCheckProject"
+      printf '%s\n' nix-ripgrep-smoke > "$installCheckProject/fixture.txt"
+      rgOutput="$(
+        HOME="$installCheckHome" \
+          XDG_CACHE_HOME="$installCheckRoot/cache" \
+          XDG_CONFIG_HOME="$installCheckRoot/config" \
+          XDG_DATA_HOME="$installCheckRoot/data" \
+          XDG_STATE_HOME="$installCheckRoot/state" \
+          "$out/bin/zg" query --rg -F nix-ripgrep-smoke "$installCheckProject" 2>&1
+      )"
+      case "$rgOutput" in
+        *"fixture.txt"*) ;;
+        *) failCheck "unexpected Nix ripgrep query output" ;;
+      esac
     '';
     meta = {
       homepage = "https://github.com/zvec-ai/zvec-grep";
@@ -135,8 +153,6 @@ package.overrideAttrs (oldAttrs: {
       "${platform.sharp}" "${platform.sharpLibvips}"
     keepOnlyMatchingChildren "$packageRoot/node_modules/@node-llama-cpp" "" \
       "${platform.llamaCpp}"
-    keepOnlyMatchingChildren "$packageRoot/node_modules/@vscode" "ripgrep-" \
-      "${platform.ripgrep}"
     keepOnlyMatchingChildren "$packageRoot/node_modules/@zvec" "bindings-" \
       "${platform.zvec}"
   '';
