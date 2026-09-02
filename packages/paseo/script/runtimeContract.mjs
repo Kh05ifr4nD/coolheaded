@@ -1,55 +1,24 @@
 const TRACE_WARNING_PREFIX = "trace warning: ";
 
 /**
- * Each accepted warning names the concrete runtime artifact that makes the
- * static-analysis gap safe. Warnings, policies, and compensations must remain
- * mutually supported so upstream drift cannot leave stale exceptions behind.
+ * Each policy classifies one trace warning and declares how the warning is
+ * handled. Runtime gaps require a static or derived manifest compensation;
+ * non-runtime diagnostics are ignored. Policies that require compensation
+ * must appear in every trace so upstream drift cannot leave stale exceptions
+ * behind.
  *
- * @type {readonly Readonly<{
+ * @typedef {Readonly<{
  *   id: string,
- *   manifestPattern: RegExp,
  *   warningPattern: RegExp,
- * }>[]}
+ * }> & (
+ *   | Readonly<{ effect: "ignore" }>
+ *   | Readonly<{ effect: "require-manifest", manifestPattern: RegExp }>
+ *   | Readonly<{
+ *       deriveManifestEntry: (warning: string) => string,
+ *       effect: "require-derived-manifest",
+ *     }>
+ * )} TraceWarningPolicy
  */
-const WARNING_POLICIES = [
-  {
-    id: "development daemon source",
-    manifestPattern: /^packages\/server\/dist\/server\/server\/daemon-worker\.js$/u,
-    warningPattern:
-      /^Failed to parse .*\/packages\/server\/src\/server\/daemon-worker\.ts as module:\nUnexpected token \(\d+:\d+\)$/u,
-  },
-  {
-    id: "ws buffer fallback",
-    manifestPattern: /^node_modules\/ws\/lib\/buffer-util\.js$/u,
-    warningPattern:
-      /^Failed to resolve dependency "bufferutil":\nCannot find module 'bufferutil' loaded from .*\/node_modules\/ws\/lib\/buffer-util\.js$/u,
-  },
-  {
-    id: "ws UTF-8 fallback",
-    manifestPattern: /^node_modules\/ws\/lib\/validation\.js$/u,
-    warningPattern:
-      /^Failed to resolve dependency "utf-8-validate":\nCannot find module 'utf-8-validate' loaded from .*\/node_modules\/ws\/lib\/validation\.js$/u,
-  },
-  {
-    id: "esbuild PnP fallback",
-    manifestPattern: /^node_modules\/esbuild\/lib\/main\.js$/u,
-    warningPattern:
-      /^Failed to resolve dependency "pnpapi":\nCannot find module 'pnpapi' loaded from .*\/node_modules\/esbuild\/lib\/main\.js$/u,
-  },
-  {
-    id: "esbuild native binary",
-    manifestPattern: /^packages\/server\/node_modules\/@esbuild\/[^/]+\/bin\/esbuild$/u,
-    warningPattern:
-      /^Failed to parse .*\/packages\/server\/node_modules\/@esbuild\/[^/]+\/bin\/esbuild as (?:module|script):\nUnexpected character .+ \(1:0\)$/u,
-  },
-  {
-    id: "Zsh integration asset",
-    manifestPattern:
-      /^packages\/server\/dist\/server\/terminal\/shell-integration\/zsh\/\.zshenv$/u,
-    warningPattern:
-      /^Failed to parse .*\/packages\/server\/dist\/server\/terminal\/shell-integration\/zsh\/\.zshenv as (?:module|script):\nUnexpected token \(\d+:\d+\)$/u,
-  },
-];
 
 class RuntimeClosureError extends Error {
   /**
@@ -61,6 +30,87 @@ class RuntimeClosureError extends Error {
     this.name = "RuntimeClosureError";
   }
 }
+
+const TYPESCRIPT_SOURCE_WARNING_PATTERN =
+  /^Failed to parse .+\/packages\/server\/src\/(?![^\n]*\.d\.(?:cts|mts|tsx?) as (?:module|script):\n)[^\n]+\.(?:cts|mts|tsx?) as (?:module|script):\n[\s\S]+$/u;
+const TYPESCRIPT_SOURCE_PATH_PATTERN =
+  /^Failed to parse .+\/(?<sourcePath>packages\/server\/src\/[^\n]+) as (?:module|script):\n/u;
+
+/** @param {string} warning */
+function deriveTypeScriptRuntimeEntry(warning) {
+  const match = TYPESCRIPT_SOURCE_PATH_PATTERN.exec(warning);
+  const sourcePath = match?.groups?.sourcePath;
+  if (sourcePath === undefined) {
+    throw new RuntimeClosureError(`invalid TypeScript source warning:\n${warning}`);
+  }
+
+  const sourceRoot = "packages/server/src/";
+  const relativePath = sourcePath.slice(sourceRoot.length);
+  const extensionIndex = relativePath.lastIndexOf(".");
+  if (extensionIndex === -1) {
+    throw new RuntimeClosureError(`invalid TypeScript source warning:\n${warning}`);
+  }
+
+  const sourceExtension = relativePath.slice(extensionIndex);
+  let outputExtension = ".js";
+  if (sourceExtension === ".mts") {
+    outputExtension = ".mjs";
+  } else if (sourceExtension === ".cts") {
+    outputExtension = ".cjs";
+  }
+  return `packages/server/dist/server/${relativePath.slice(0, extensionIndex)}${outputExtension}`;
+}
+
+/** @type {readonly TraceWarningPolicy[]} */
+const WARNING_POLICIES = [
+  {
+    deriveManifestEntry: deriveTypeScriptRuntimeEntry,
+    effect: "require-derived-manifest",
+    id: "TypeScript source module",
+    warningPattern: TYPESCRIPT_SOURCE_WARNING_PATTERN,
+  },
+  {
+    effect: "require-manifest",
+    id: "ws buffer fallback",
+    manifestPattern: /^node_modules\/ws\/lib\/buffer-util\.js$/u,
+    warningPattern:
+      /^Failed to resolve dependency "bufferutil":\nCannot find module 'bufferutil' loaded from .*\/node_modules\/ws\/lib\/buffer-util\.js$/u,
+  },
+  {
+    effect: "require-manifest",
+    id: "ws UTF-8 fallback",
+    manifestPattern: /^node_modules\/ws\/lib\/validation\.js$/u,
+    warningPattern:
+      /^Failed to resolve dependency "utf-8-validate":\nCannot find module 'utf-8-validate' loaded from .*\/node_modules\/ws\/lib\/validation\.js$/u,
+  },
+  {
+    effect: "require-manifest",
+    id: "esbuild PnP fallback",
+    manifestPattern: /^node_modules\/esbuild\/lib\/main\.js$/u,
+    warningPattern:
+      /^Failed to resolve dependency "pnpapi":\nCannot find module 'pnpapi' loaded from .*\/node_modules\/esbuild\/lib\/main\.js$/u,
+  },
+  {
+    effect: "require-manifest",
+    id: "esbuild native binary",
+    manifestPattern: /^packages\/server\/node_modules\/@esbuild\/[^/]+\/bin\/esbuild$/u,
+    warningPattern:
+      /^Failed to parse .*\/packages\/server\/node_modules\/@esbuild\/[^/]+\/bin\/esbuild as (?:module|script):\nUnexpected character .+ \(1:0\)$/u,
+  },
+  {
+    effect: "require-manifest",
+    id: "Zsh integration asset",
+    manifestPattern:
+      /^packages\/server\/dist\/server\/terminal\/shell-integration\/zsh\/\.zshenv$/u,
+    warningPattern:
+      /^Failed to parse .*\/packages\/server\/dist\/server\/terminal\/shell-integration\/zsh\/\.zshenv as (?:module|script):\nUnexpected token \(\d+:\d+\)$/u,
+  },
+  {
+    effect: "ignore",
+    id: "TypeScript declaration output",
+    warningPattern: /^Failed to parse .*\.d\.(?:cts|mts|tsx?) as (?:module|script):\n[\s\S]+$/u,
+  },
+];
 
 /**
  * @param {string} stderr
@@ -97,15 +147,57 @@ function enforceTraceWarningPolicy(warnings, manifest) {
     }
 
     const [policy] = policies;
+    if (policy === undefined) {
+      throw new RuntimeClosureError(`unknown trace warning:\n${warning}`);
+    }
     matchedPolicyIds.add(policy.id);
-    if (!manifest.some((entry) => policy.manifestPattern.test(entry))) {
-      throw new RuntimeClosureError(`missing runtime compensation for ${policy.id}:\n${warning}`);
+    switch (policy.effect) {
+      case "ignore": {
+        break;
+      }
+      case "require-manifest": {
+        if (!manifest.some((entry) => policy.manifestPattern.test(entry))) {
+          throw new RuntimeClosureError(
+            `missing runtime compensation for ${policy.id}:\n${warning}`,
+          );
+        }
+        break;
+      }
+      case "require-derived-manifest": {
+        const manifestEntry = policy.deriveManifestEntry(warning);
+        if (!manifest.includes(manifestEntry)) {
+          throw new RuntimeClosureError(
+            `missing runtime compensation for ${policy.id}:\n${warning}`,
+          );
+        }
+        break;
+      }
+      default: {
+        throw new RuntimeClosureError(`unsupported trace warning effect for ${policy.id}`);
+      }
     }
   }
 
   for (const policy of WARNING_POLICIES) {
-    if (!matchedPolicyIds.has(policy.id)) {
-      throw new RuntimeClosureError(`missing trace warning for ${policy.id}`);
+    switch (policy.effect) {
+      case "ignore": {
+        break;
+      }
+      case "require-manifest": {
+        if (!matchedPolicyIds.has(policy.id)) {
+          throw new RuntimeClosureError(`missing trace warning for ${policy.id}`);
+        }
+        break;
+      }
+      case "require-derived-manifest": {
+        if (!matchedPolicyIds.has(policy.id)) {
+          throw new RuntimeClosureError(`missing trace warning for ${policy.id}`);
+        }
+        break;
+      }
+      default: {
+        throw new RuntimeClosureError(`unsupported trace warning effect for ${policy.id}`);
+      }
     }
   }
 }

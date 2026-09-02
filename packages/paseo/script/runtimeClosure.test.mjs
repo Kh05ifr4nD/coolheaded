@@ -28,6 +28,8 @@ const UPSTREAM_MANIFEST = [
   "packages/server/dist/server/terminal/shell-integration/zsh/.zshenv",
 ];
 const MANIFEST = addExplicitRuntimeFiles(UPSTREAM_MANIFEST);
+const SOURCE_RUNTIME_ENTRY = "packages/server/dist/server/server/checkout/status-projection.js";
+const SOURCE_MANIFEST = [...MANIFEST, SOURCE_RUNTIME_ENTRY];
 const NODE_PTY_PREBUILD_ROOT = "packages/server/node_modules/node-pty/prebuilds";
 const ESBUILD_RUNTIME_FILE = "node_modules/esbuild/lib/main.js";
 const ESBUILD_NATIVE_RUNTIME_FILE = "packages/server/node_modules/@esbuild/linux-arm64/bin/esbuild";
@@ -42,6 +44,19 @@ const WARNINGS = [
   "Failed to resolve dependency \"bufferutil\":\nCannot find module 'bufferutil' loaded from /build/source/node_modules/ws/lib/buffer-util.js",
   "Failed to parse /build/source/packages/server/dist/server/terminal/shell-integration/zsh/.zshenv as script:\nUnexpected token (1:11)",
   "Failed to parse /build/source/packages/server/dist/server/terminal/shell-integration/zsh/.zshenv as module:\nUnexpected token (1:11)",
+];
+const NON_RUNTIME_WARNINGS = [
+  "Failed to parse /build/source/packages/server/dist/server/alpha.d.ts as module:\nUnexpected token (1:12)",
+  "Failed to parse /nix/store/paseo-source/packages/server/dist/server/nested/beta.d.ts as script:\nUnexpected token (2:12)",
+  "Failed to parse /build/source/node_modules/example/index.d.ts as module:\nDeclaration syntax error",
+];
+const TYPESCRIPT_SOURCE_WARNINGS = [
+  "Failed to parse /build/source/packages/server/src/server/daemon-worker.ts as module:\nUnexpected token (7:12)",
+  "Failed to parse /nix/store/paseo-source/packages/server/src/server/checkout/status-projection.ts as module:\nUnexpected token (1:12)",
+];
+const UNKNOWN_PARSE_WARNINGS = [
+  "Failed to parse /build/source/packages/server/dist/server/alpha.js as module:\nUnexpected token (1:12)",
+  "Failed to parse /build/source/node_modules/example/index.ts as module:\nUnexpected token (2:12)",
 ];
 
 /** @param {"directory" | "file" | "special" | "symlink"} kind */
@@ -144,7 +159,7 @@ describe("Paseo runtime closure policy", () => {
     }, "unexpected stderr");
   });
 
-  it("accepts audited warnings only with their runtime compensation", () => {
+  it("enforces runtime warning effects and compensation", () => {
     enforceTraceWarningPolicy(WARNINGS, MANIFEST);
 
     assertRuntimeError(() => {
@@ -171,6 +186,28 @@ describe("Paseo runtime closure policy", () => {
         MANIFEST,
       );
     }, "missing trace warning for esbuild native binary");
+  });
+
+  it("requires compiled counterparts for TypeScript source diagnostics", () => {
+    enforceTraceWarningPolicy([...WARNINGS, ...TYPESCRIPT_SOURCE_WARNINGS], SOURCE_MANIFEST);
+    assertRuntimeError(() => {
+      enforceTraceWarningPolicy(
+        [...WARNINGS, ...TYPESCRIPT_SOURCE_WARNINGS],
+        SOURCE_MANIFEST.filter((entry) => entry !== SOURCE_RUNTIME_ENTRY),
+      );
+    }, "missing runtime compensation");
+  });
+
+  it("ignores declaration diagnostics independent of path and parser mode", () => {
+    enforceTraceWarningPolicy([...WARNINGS, ...NON_RUNTIME_WARNINGS], MANIFEST);
+  });
+
+  it("rejects unknown parse diagnostics outside declaration output", () => {
+    for (const warning of UNKNOWN_PARSE_WARNINGS) {
+      assertRuntimeError(() => {
+        enforceTraceWarningPolicy([...WARNINGS, warning], MANIFEST);
+      }, "unknown trace warning");
+    }
   });
 
   it("accepts only deterministic repository-relative manifests", () => {
