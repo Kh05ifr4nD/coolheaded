@@ -43,6 +43,15 @@ const WARNINGS = [
   "Failed to parse /build/source/packages/server/dist/server/terminal/shell-integration/zsh/.zshenv as script:\nUnexpected token (1:11)",
   "Failed to parse /build/source/packages/server/dist/server/terminal/shell-integration/zsh/.zshenv as module:\nUnexpected token (1:11)",
 ];
+const NON_RUNTIME_WARNINGS = [
+  "Failed to parse /build/source/packages/server/dist/server/alpha.d.ts as module:\nUnexpected token (1:12)",
+  "Failed to parse /nix/store/paseo-source/packages/server/dist/server/nested/beta.d.ts as script:\nUnexpected token (2:12)",
+  "Failed to parse /build/source/node_modules/example/index.d.ts as module:\nDeclaration syntax error",
+];
+const UNKNOWN_PARSE_WARNINGS = [
+  "Failed to parse /build/source/packages/server/dist/server/alpha.js as module:\nUnexpected token (1:12)",
+  "Failed to parse /build/source/packages/server/dist/server/nested/beta.ts as module:\nUnexpected token (2:12)",
+];
 
 /** @param {"directory" | "file" | "special" | "symlink"} kind */
 function fileStatus(kind) {
@@ -144,7 +153,7 @@ describe("Paseo runtime closure policy", () => {
     }, "unexpected stderr");
   });
 
-  it("accepts audited warnings only with their runtime compensation", () => {
+  it("enforces runtime warning effects and compensation", () => {
     enforceTraceWarningPolicy(WARNINGS, MANIFEST);
 
     assertRuntimeError(() => {
@@ -171,6 +180,18 @@ describe("Paseo runtime closure policy", () => {
         MANIFEST,
       );
     }, "missing trace warning for esbuild native binary");
+  });
+
+  it("ignores declaration diagnostics independent of path and parser mode", () => {
+    enforceTraceWarningPolicy([...WARNINGS, ...NON_RUNTIME_WARNINGS], MANIFEST);
+  });
+
+  it("rejects unknown parse diagnostics outside declaration output", () => {
+    for (const warning of UNKNOWN_PARSE_WARNINGS) {
+      assertRuntimeError(() => {
+        enforceTraceWarningPolicy([...WARNINGS, warning], MANIFEST);
+      }, "unknown trace warning");
+    }
   });
 
   it("accepts only deterministic repository-relative manifests", () => {
