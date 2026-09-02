@@ -19,12 +19,26 @@ interface NpmTarballPackageUpdate {
   readonly importMetaUrl: string;
   readonly jsonClient: JsonClient;
   readonly packageName: string;
+  readonly removeDependencies?: readonly string[];
   readonly runner: CommandRunner;
   readonly tarballBaseName?: string;
 }
 
 function isRecord(value: unknown): value is Readonly<Record<string, unknown>> {
   return typeof value === "object" && value !== null && !Array.isArray(value);
+}
+
+function withoutDependencies(
+  value: Readonly<Record<string, unknown>>,
+  dependenciesToRemove: readonly string[],
+): Record<string, unknown> {
+  const dependencies: Record<string, unknown> = {};
+  for (const [dependency, version] of Object.entries(value)) {
+    if (!dependenciesToRemove.includes(dependency)) {
+      dependencies[dependency] = version;
+    }
+  }
+  return dependencies;
 }
 
 function parsedPackageJson(
@@ -41,7 +55,11 @@ function parsedPackageJson(
   }
 }
 
-function runtimePackageJson(value: unknown, packageJsonPath: string): Effect.Effect<string, Error> {
+function runtimePackageJson(
+  value: unknown,
+  packageJsonPath: string,
+  removeDependencies: readonly string[],
+): Effect.Effect<string, Error> {
   if (!isRecord(value)) {
     return Effect.fail(new UpdateError(`Invalid package JSON: ${packageJsonPath}`));
   }
@@ -49,11 +67,22 @@ function runtimePackageJson(value: unknown, packageJsonPath: string): Effect.Eff
   const packageJson: Record<string, unknown> = { ...value };
   delete packageJson["devDependencies"];
   delete packageJson["scripts"];
+  if (removeDependencies.length > 0) {
+    for (const dependencyField of ["dependencies", "optionalDependencies"] as const) {
+      const dependencies = packageJson[dependencyField];
+      if (isRecord(dependencies)) {
+        packageJson[dependencyField] = withoutDependencies(dependencies, removeDependencies);
+      }
+    }
+  }
 
   return Effect.succeed(`${JSON.stringify(packageJson, null, 2)}\n`);
 }
 
-function sanitizePackageJson(packageJsonPath: string): Effect.Effect<void, Error> {
+function sanitizePackageJson(
+  packageJsonPath: string,
+  removeDependencies: readonly string[] = [],
+): Effect.Effect<void, Error> {
   return Effect.flatMap(
     readTextFile(packageJsonPath),
     (contents: string): Effect.Effect<void, Error> =>
@@ -61,7 +90,7 @@ function sanitizePackageJson(packageJsonPath: string): Effect.Effect<void, Error
         parsedPackageJson(contents, packageJsonPath),
         (packageJson: unknown): Effect.Effect<void, Error> =>
           Effect.flatMap(
-            runtimePackageJson(packageJson, packageJsonPath),
+            runtimePackageJson(packageJson, packageJsonPath, removeDependencies),
             (runtimeJson: string): Effect.Effect<void, Error> =>
               writeTextFile(packageJsonPath, runtimeJson),
           ),
@@ -112,7 +141,7 @@ function prepareNpmPackageLockWorkspace(
       version,
       workspacePath,
     });
-    yield* sanitizePackageJson(`${workspacePath}/package.json`);
+    yield* sanitizePackageJson(`${workspacePath}/package.json`, options.removeDependencies);
     yield* npmInstallPackageLock(repositoryRootPath, workspacePath, options.runner);
   });
 }

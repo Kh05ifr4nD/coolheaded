@@ -8,6 +8,7 @@ runUpdateScript(import.meta.url, (args, runner) =>
     importMetaUrl: import.meta.url,
     jsonClient: fetchJsonClient,
     packageName: "@zvec/zvec-grep",
+    removeDependencies: ["@vscode/ripgrep"],
     runner,
     tarballBaseName: "zvec-grep",
   }),

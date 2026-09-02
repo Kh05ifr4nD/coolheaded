@@ -153,13 +153,8 @@ package.overrideAttrs (oldAttrs: {
       "${platform.sharp}" "${platform.sharpLibvips}"
     keepOnlyMatchingChildren "$packageRoot/node_modules/@node-llama-cpp" "" \
       "${platform.llamaCpp}"
-    keepOnlyMatchingChildren "$packageRoot/node_modules/@vscode" "ripgrep"
     keepOnlyMatchingChildren "$packageRoot/node_modules/@zvec" "bindings-" \
       "${platform.zvec}"
-
-    jq 'del(.dependencies["@vscode/ripgrep"])' "$packageRoot/package.json" \
-      > "$packageRoot/package.json.tmp"
-    mv "$packageRoot/package.json.tmp" "$packageRoot/package.json"
   '';
   meta = oldAttrs.meta // {
     sourceProvenance = with lib.sourceTypes; [
