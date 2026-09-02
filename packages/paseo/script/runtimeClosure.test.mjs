@@ -24,6 +24,7 @@ const UPSTREAM_MANIFEST = [
   "node_modules/ws/lib/validation.js",
   "packages/server/node_modules/@esbuild/linux-arm64/bin/esbuild",
   "packages/server/node_modules/@esbuild/linux-x64/bin/esbuild",
+  "packages/server/dist/server/server/checkout/status-projection.js",
   "packages/server/dist/server/server/daemon-worker.js",
   "packages/server/dist/server/terminal/shell-integration/zsh/.zshenv",
 ];
@@ -48,9 +49,13 @@ const NON_RUNTIME_WARNINGS = [
   "Failed to parse /nix/store/paseo-source/packages/server/dist/server/nested/beta.d.ts as script:\nUnexpected token (2:12)",
   "Failed to parse /build/source/node_modules/example/index.d.ts as module:\nDeclaration syntax error",
 ];
+const TYPESCRIPT_SOURCE_WARNINGS = [
+  "Failed to parse /build/source/packages/server/src/server/daemon-worker.ts as module:\nUnexpected token (7:12)",
+  "Failed to parse /nix/store/paseo-source/packages/server/src/server/checkout/status-projection.ts as module:\nUnexpected token (1:12)",
+];
 const UNKNOWN_PARSE_WARNINGS = [
   "Failed to parse /build/source/packages/server/dist/server/alpha.js as module:\nUnexpected token (1:12)",
-  "Failed to parse /build/source/packages/server/dist/server/nested/beta.ts as module:\nUnexpected token (2:12)",
+  "Failed to parse /build/source/node_modules/example/index.ts as module:\nUnexpected token (2:12)",
 ];
 
 /** @param {"directory" | "file" | "special" | "symlink"} kind */
@@ -180,6 +185,18 @@ describe("Paseo runtime closure policy", () => {
         MANIFEST,
       );
     }, "missing trace warning for esbuild native binary");
+  });
+
+  it("requires compiled counterparts for TypeScript source diagnostics", () => {
+    enforceTraceWarningPolicy([...WARNINGS, ...TYPESCRIPT_SOURCE_WARNINGS], MANIFEST);
+    assertRuntimeError(() => {
+      enforceTraceWarningPolicy(
+        [...WARNINGS, ...TYPESCRIPT_SOURCE_WARNINGS],
+        MANIFEST.filter(
+          (entry) => entry !== "packages/server/dist/server/server/checkout/status-projection.js",
+        ),
+      );
+    }, "missing runtime compensation");
   });
 
   it("ignores declaration diagnostics independent of path and parser mode", () => {
