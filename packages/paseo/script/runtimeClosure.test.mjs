@@ -24,11 +24,12 @@ const UPSTREAM_MANIFEST = [
   "node_modules/ws/lib/validation.js",
   "packages/server/node_modules/@esbuild/linux-arm64/bin/esbuild",
   "packages/server/node_modules/@esbuild/linux-x64/bin/esbuild",
-  "packages/server/dist/server/server/checkout/status-projection.js",
   "packages/server/dist/server/server/daemon-worker.js",
   "packages/server/dist/server/terminal/shell-integration/zsh/.zshenv",
 ];
 const MANIFEST = addExplicitRuntimeFiles(UPSTREAM_MANIFEST);
+const SOURCE_RUNTIME_ENTRY = "packages/server/dist/server/server/checkout/status-projection.js";
+const SOURCE_MANIFEST = [...MANIFEST, SOURCE_RUNTIME_ENTRY];
 const NODE_PTY_PREBUILD_ROOT = "packages/server/node_modules/node-pty/prebuilds";
 const ESBUILD_RUNTIME_FILE = "node_modules/esbuild/lib/main.js";
 const ESBUILD_NATIVE_RUNTIME_FILE = "packages/server/node_modules/@esbuild/linux-arm64/bin/esbuild";
@@ -188,13 +189,11 @@ describe("Paseo runtime closure policy", () => {
   });
 
   it("requires compiled counterparts for TypeScript source diagnostics", () => {
-    enforceTraceWarningPolicy([...WARNINGS, ...TYPESCRIPT_SOURCE_WARNINGS], MANIFEST);
+    enforceTraceWarningPolicy([...WARNINGS, ...TYPESCRIPT_SOURCE_WARNINGS], SOURCE_MANIFEST);
     assertRuntimeError(() => {
       enforceTraceWarningPolicy(
         [...WARNINGS, ...TYPESCRIPT_SOURCE_WARNINGS],
-        MANIFEST.filter(
-          (entry) => entry !== "packages/server/dist/server/server/checkout/status-projection.js",
-        ),
+        SOURCE_MANIFEST.filter((entry) => entry !== SOURCE_RUNTIME_ENTRY),
       );
     }, "missing runtime compensation");
   });

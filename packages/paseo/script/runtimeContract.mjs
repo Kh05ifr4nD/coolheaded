@@ -146,7 +146,7 @@ function enforceTraceWarningPolicy(warnings, manifest) {
       throw new RuntimeClosureError(`unknown trace warning:\n${warning}`);
     }
 
-    const policy = policies[0];
+    const [policy] = policies;
     if (policy === undefined) {
       throw new RuntimeClosureError(`unknown trace warning:\n${warning}`);
     }
