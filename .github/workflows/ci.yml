@@ -1,6 +1,8 @@
 name: CI
 permissions:
   contents: read
+env:
+  DENO_USE_CGROUPS: "0"
 concurrency:
   group: ci-${{ github.event.pull_request.number || github.ref }}
   cancel-in-progress: true
