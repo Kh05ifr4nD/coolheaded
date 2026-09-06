@@ -101,8 +101,8 @@ async function commandOutput(
   throw toolExecutionError(command, executable, args, output.code, stderr);
 }
 
-async function digestBytes(bytes: Uint8Array): Promise<string> {
-  const digest = await globalThis.crypto.subtle.digest("SHA-256", bytes);
+async function digestBytes(bytes: Readonly<Uint8Array>): Promise<string> {
+  const digest = await globalThis.crypto.subtle.digest("SHA-256", new Uint8Array(bytes));
   return Array.from(new Uint8Array(digest), (byte: number): string =>
     byte.toString(16).padStart(2, "0"),
   ).join("");
