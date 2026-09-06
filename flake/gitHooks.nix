@@ -6,11 +6,11 @@ let
   denoDependencies = import ./denoDependencies.nix {
     inherit pkgs;
     inherit (pkgs) lib;
-    deno = packages.deno;
+    deno = pkgs.deno;
   };
 
   preCommitRootSrc =
-    pkgs.runCommand "coolheaded-pre-commit-source" { nativeBuildInputs = [ packages.deno ]; }
+    pkgs.runCommand "coolheaded-pre-commit-source" { nativeBuildInputs = [ pkgs.deno ]; }
       ''
         cp -a ${pkgs.lib.cleanSource ../.} "$out"
         chmod -R u+w "$out"
@@ -24,15 +24,16 @@ let
     let
       command = pkgs.writeShellScript "coolheaded-deno-task" ''
         export COOLHEADED_CUE=${packages.cue}/bin/cue
-        export COOLHEADED_DENO=${packages.deno}/libexec/deno/bin/deno
+        export COOLHEADED_DENO=${pkgs.deno}/bin/deno
         export COOLHEADED_GIT=${pkgs.git}/bin/git
         export COOLHEADED_GIT_DIR="$(${pkgs.git}/bin/git rev-parse --path-format=absolute --git-common-dir)"
-        exec ${packages.deno}/bin/deno task ${task} "$@"
+        export DENO_V8_FLAGS="--max-old-space-size=4096"
+        exec ${pkgs.deno}/bin/deno task ${task} "$@"
       '';
     in
     {
       enable = true;
-      package = packages.deno;
+      package = pkgs.deno;
       extraPackages = extraPackages ++ [ pkgs.git ];
       entry = "${command}";
       pass_filenames = false;
@@ -76,7 +77,7 @@ in
 
     denolint = {
       enable = true;
-      package = packages.deno;
+      package = pkgs.deno;
       pass_filenames = false;
       always_run = true;
       settings.configPath = "deno.jsonc";
