@@ -1,3 +1,4 @@
+import { fetchHttpClient } from "coolheaded/core/fetchHttpClient.ts";
 import type { HttpClient, HttpClientError, HttpResponse } from "coolheaded/core/httpClient.ts";
 import {
   readTextFile,
@@ -6,7 +7,6 @@ import {
   UpdateError,
   updateNewerPinVersion,
 } from "coolheaded/core/updateScript.ts";
-import { fetchHttpClient } from "coolheaded/core/fetchHttpClient.ts";
 import { calendarVersionScheme } from "coolheaded/core/version.ts";
 import { writePinJson } from "coolheaded/pin/json.ts";
 import { Effect } from "effect";
@@ -17,9 +17,11 @@ const REQUEST_TIMEOUT_MS = 30_000;
 const VERSION_PATTERN =
   /downloads\.cursor\.com\/lab\/(?<version>\d{4}\.\d{2}\.\d{2}-[0-9a-f-]+)\//u;
 
-let latestBinaryVersion: string | undefined;
+let latestBinaryVersion = "";
 
-function installerVersion(response: Readonly<HttpResponse>): Effect.Effect<string, UpdateError> {
+function installerVersion<Response extends HttpResponse>(
+  response: Readonly<Response>,
+): Effect.Effect<string, UpdateError> {
   return Effect.try({
     catch: (): UpdateError => new UpdateError(`Invalid UTF-8 response from ${INSTALLER_URL}`),
     try: (): string => new globalThis.TextDecoder("utf8", { fatal: true }).decode(response.body),
@@ -51,7 +53,7 @@ function latestVersion(
 }
 
 function updateVersion(pinPath: string): Effect.Effect<void, UpdateError> {
-  if (latestBinaryVersion === undefined) {
+  if (latestBinaryVersion === "") {
     return Effect.fail(new UpdateError("Cursor CLI binary version was not resolved"));
   }
 
@@ -62,14 +64,14 @@ function updateVersion(pinPath: string): Effect.Effect<void, UpdateError> {
         catch: (): UpdateError => new UpdateError(`Failed to parse ${pinPath}`),
         try: (): unknown => JSON.parse(contents),
       }).pipe(
-        Effect.flatMap((pin: unknown): Effect.Effect<void, UpdateError> => {
-          if (typeof pin !== "object" || pin === null || Array.isArray(pin)) {
+        Effect.flatMap((value: unknown): Effect.Effect<void, UpdateError> => {
+          if (typeof value !== "object" || value === null || Array.isArray(value)) {
             return Effect.fail(new UpdateError(`Invalid Cursor CLI pin: ${pinPath}`));
           }
 
           return writePinJson(pinPath, {
-            version: latestBinaryVersion.slice(0, 10),
             binaryVersion: latestBinaryVersion,
+            version: latestBinaryVersion.slice(0, 10),
           });
         }),
       ),
