@@ -7,8 +7,8 @@ import {
   updateNewerPinVersion,
 } from "coolheaded/core/updateScript.ts";
 import { Effect } from "effect";
-import { fetchHttpClient } from "coolheaded/core/fetchHttpClient.ts";
 import { calendarVersionScheme } from "coolheaded/core/version.ts";
+import { fetchHttpClient } from "coolheaded/core/fetchHttpClient.ts";
 import { writePinJson } from "coolheaded/pin/json.ts";
 
 const INSTALLER_URL = "https://cursor.com/install";
