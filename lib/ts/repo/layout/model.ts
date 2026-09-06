@@ -14,8 +14,6 @@ const REGULAR_FILE_NODE = true;
 
 const CUE_SCHEMA_NAME = "#Layout";
 const LAYOUT_SCHEMA_FILE_NAME = "layout.cue";
-type MutableLayout = { [name: string]: true | MutableLayout };
-type MutableLayout = { [name: string]: true | MutableLayout };
 
 function conformanceViolation(message: string): ConformanceViolation {
   return Object.assign(new Error(message), {
@@ -77,38 +75,45 @@ function isDirectoryNode(node: LayoutNode | undefined): node is Layout {
   return typeof node === "object";
 }
 
+function insertGitPath(spec: Layout, path: string): Layout {
+  const segments = path.split("/");
+  const [segment] = segments;
+
+  if (typeof segment !== "string" || segment.length === 0) {
+    throw internalInvariantError(`Invalid git path: ${path}`);
+  }
+
+  if (segments.length === 1) {
+    const existingNode = spec[segment];
+    if (isDirectoryNode(existingNode)) {
+      throw internalInvariantError(`Git path conflicts with directory: ${path}`);
+    }
+
+    return {
+      ...spec,
+      [segment]: REGULAR_FILE_NODE,
+    };
+  }
+
+  const existingNode = spec[segment];
+  if (existingNode === REGULAR_FILE_NODE) {
+    throw internalInvariantError(`Git path conflicts with file: ${path}`);
+  }
+
+  const childTree = isDirectoryNode(existingNode) ? existingNode : {};
+  const childPath = segments.slice(1).join("/");
+
+  return {
+    ...spec,
+    [segment]: insertGitPath(childTree, childPath),
+  };
+}
+
 function layout(paths: readonly string[]): Layout {
-  const spec: MutableLayout = {};
+  let spec: Layout = {};
+
   for (const path of paths) {
-    const segments = path.split("/");
-    const [segment] = segments;
-
-    if (typeof segment !== "string" || segment.length === 0) {
-      throw internalInvariantError(`Invalid git path: ${path}`);
-    }
-
-    let tree: MutableLayout = spec;
-    for (const [index, name] of segments.entries()) {
-      const isLeaf = index === segments.length - 1;
-      const existingNode = tree[name];
-
-      if (isLeaf) {
-        if (isDirectoryNode(existingNode)) {
-          throw internalInvariantError(`Git path conflicts with directory: ${path}`);
-        }
-        tree[name] = REGULAR_FILE_NODE;
-        continue;
-      }
-
-      if (existingNode === REGULAR_FILE_NODE) {
-        throw internalInvariantError(`Git path conflicts with file: ${path}`);
-      }
-
-      if (existingNode === undefined) {
-        tree[name] = {};
-      }
-      tree = tree[name] as MutableLayout;
-    }
+    spec = insertGitPath(spec, path);
   }
 
   return spec;

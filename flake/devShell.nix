@@ -17,9 +17,6 @@ pkgs.mkShellNoCC {
     export COOLHEADED_DENO="${pkgs.deno}/bin/deno"
     export COOLHEADED_GIT="${pkgs.git}/bin/git"
     export COOLHEADED_GIT_DIR="$(${pkgs.git}/bin/git rev-parse --path-format=absolute --git-common-dir)"
-    export DENO_V8_FLAGS="--max-old-space-size=4096"
-    export DENO_USE_CGROUPS=0
-
     ${config.pre-commit.shellHook}
 
     generatedDir="$PWD/.generated"
