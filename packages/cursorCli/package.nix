@@ -9,6 +9,14 @@
 }:
 
 let
+  pin = builtins.fromJSON (builtins.readFile ./pin.json);
+  targets = {
+    aarch64-darwin = "darwin/arm64";
+    aarch64-linux = "linux/arm64";
+    x86_64-linux = "linux/x64";
+  };
+  target = targets.${stdenv.hostPlatform.system};
+
   launcher = writeShellApplication {
     name = "cursor-agent";
     runtimeInputs = [
@@ -20,15 +28,26 @@ let
     text = ''
       set -eu
 
-      installedLauncher="$HOME/.local/bin/cursor-agent"
+      versionsRoot="$HOME/.local/share/cursor-agent/versions"
+      versionDirectory="$versionsRoot/${pin.binaryVersion}"
+      installedLauncher="$versionDirectory/cursor-agent"
 
       if [ ! -x "$installedLauncher" ]; then
-        curl --fail --silent --show-error --location https://cursor.com/install | bash
+        rm -rf "$versionDirectory"
+        mkdir -p "$versionsRoot"
+        temporaryDirectory="$(mktemp -d "$versionsRoot/.tmp-${pin.binaryVersion}.XXXXXX")"
+        trap 'rm -rf "$temporaryDirectory"' EXIT
+
+        curl --fail --silent --show-error --location \
+          "https://downloads.cursor.com/lab/${pin.binaryVersion}/${target}/agent-cli-package.tar.gz" \
+          | tar --extract --gzip --strip-components=1 --directory "$temporaryDirectory" --file -
+        mv "$temporaryDirectory" "$versionDirectory"
+        trap - EXIT
       fi
 
       if [ ! -x "$installedLauncher" ]; then
         printf '%s\n' \
-          "Cursor CLI installer completed without creating $installedLauncher" >&2
+          "Cursor CLI package did not create $installedLauncher" >&2
         exit 1
       fi
 
@@ -38,10 +57,12 @@ let
 in
 stdenv.mkDerivation {
   pname = "cursor-cli";
-  version = "0.0.0";
+  inherit (pin) version;
 
   dontUnpack = true;
   dontBuild = true;
+
+  passthru.updateVersionScheme = "calendar";
 
   installPhase = ''
     runHook preInstall
@@ -57,7 +78,7 @@ stdenv.mkDerivation {
     homepage = "https://cursor.com/cli";
     license = lib.licenses.mit;
     mainProgram = "cursor-agent";
-    platforms = lib.platforms.unix;
+    platforms = builtins.attrNames targets;
     description = "Installer wrapper for Cursor CLI, an AI terminal agent for writing, reviewing, and modifying code";
   };
 }
