@@ -1,15 +1,15 @@
-import { fetchHttpClient } from "coolheaded/core/fetchHttpClient.ts";
 import type { HttpClient, HttpClientError, HttpResponse } from "coolheaded/core/httpClient.ts";
 import {
+  UpdateError,
   readTextFile,
   runUpdateScript,
   scriptPath,
-  UpdateError,
   updateNewerPinVersion,
 } from "coolheaded/core/updateScript.ts";
+import { Effect } from "effect";
+import { fetchHttpClient } from "coolheaded/core/fetchHttpClient.ts";
 import { calendarVersionScheme } from "coolheaded/core/version.ts";
 import { writePinJson } from "coolheaded/pin/json.ts";
-import { Effect } from "effect";
 
 const INSTALLER_URL = "https://cursor.com/install";
 const PIN_FILE_PATH = scriptPath("pin.json", import.meta.url);
