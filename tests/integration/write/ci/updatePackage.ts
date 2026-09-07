@@ -11,7 +11,7 @@ describe("package update version gate", (): void => {
   });
 
   it("accepts a calendar release version for a package with that scheme", (): void => {
-    assertVersionAdvanced("ytDlp", "2026.06.09", "2026.07.04", calendarVersionScheme);
+    assertVersionAdvanced("example", "2026.06.09", "2026.07.04", calendarVersionScheme);
   });
 
   it("rejects build metadata as a version advance", (): void => {

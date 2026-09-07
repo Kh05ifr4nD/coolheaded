@@ -185,8 +185,7 @@
         "pyprojectBuildSystems": "pyprojectBuildSystems",
         "pyprojectNix": "pyprojectNix",
         "treefmtNix": "treefmtNix",
-        "uv2nix": "uv2nix",
-        "wrapBuddy": "wrapBuddy"
+        "uv2nix": "uv2nix"
       }
     },
     "systems": {
@@ -265,32 +264,6 @@
       "original": {
         "owner": "pyproject-nix",
         "repo": "uv2nix",
-        "type": "github"
-      }
-    },
-    "wrapBuddy": {
-      "inputs": {
-        "flake-parts": [
-          "flakeParts"
-        ],
-        "nixpkgs": [
-          "nixpkgs"
-        ],
-        "treefmt-nix": [
-          "treefmtNix"
-        ]
-      },
-      "locked": {
-        "lastModified": 1788128056,
-        "narHash": "sha256-zMpldjzoYLAxa7Ig8nhqNs1Zc6PlJsIwCJd4BFjclds=",
-        "owner": "Mic92",
-        "repo": "wrap-buddy",
-        "rev": "159953b03bcb403f49fba3d5ed5f2fc79295a614",
-        "type": "github"
-      },
-      "original": {
-        "owner": "Mic92",
-        "repo": "wrap-buddy",
         "type": "github"
       }
     }

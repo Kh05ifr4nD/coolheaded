@@ -110,7 +110,6 @@ let
       versionCheckProgram ? "${placeholder "out"}/bin/${mainProgram}",
       versionCheckProgramArg ? "--version",
       versionCheckKeepEnvironment ? [ ],
-      wrapBuddyExtraNeeded ? [ ],
     }:
     let
       effectivePreVersionCheck =
@@ -145,7 +144,6 @@ let
           versionCheckKeepEnvironment
           versionCheckProgram
           versionCheckProgramArg
-          wrapBuddyExtraNeeded
           ;
         installCheckPhase = mkInstallCheckPhase (
           {

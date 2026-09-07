@@ -84,12 +84,12 @@ in
 
     actionlint = {
       enable = true;
-      package = packages.actionlint;
+      package = pkgs.actionlint;
     };
 
     deadnix = {
       enable = true;
-      package = packages.deadnix;
+      package = pkgs.deadnix;
     };
 
     oxlint = {
@@ -106,7 +106,7 @@ in
 
     shellcheck = {
       enable = true;
-      package = packages.shellCheck;
+      package = pkgs.shellcheck;
       files = "^lib/package\\.sh$";
     };
 
