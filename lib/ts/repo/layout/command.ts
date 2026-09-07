@@ -101,23 +101,19 @@ async function commandOutput(
   throw toolExecutionError(command, executable, args, output.code, stderr);
 }
 
-async function digestBytes(bytes: readonly number[]): Promise<string> {
-  const view = Uint8Array.from(bytes);
-  const input = new ArrayBuffer(view.byteLength);
-  new Uint8Array(input).set(view);
-  const digest = await globalThis.crypto.subtle.digest("SHA-256", input);
+async function digestBytes(bytes: Readonly<ArrayLike<number>>): Promise<string> {
+  const digest = await globalThis.crypto.subtle.digest("SHA-256", new Uint8Array(bytes));
   return Array.from(new Uint8Array(digest), (byte: number): string =>
     byte.toString(16).padStart(2, "0"),
   ).join("");
 }
 
 async function digestFile(path: string): Promise<string> {
-  const bytes = await Deno.readFile(path);
-  return digestBytes([...bytes]);
+  return await digestBytes(await Deno.readFile(path));
 }
 
 async function digestText(text: string): Promise<string> {
-  return await digestBytes([...new globalThis.TextEncoder().encode(text)]);
+  return await digestBytes(new globalThis.TextEncoder().encode(text));
 }
 
 async function toolExecutableBytes(
@@ -139,7 +135,7 @@ async function toolIdentity(command: LayoutCommand): Promise<ToolIdentity> {
 
   return {
     executable,
-    sha256: await digestBytes([...executableBytes]),
+    sha256: await digestBytes(executableBytes),
     version: version.trim(),
   };
 }
@@ -150,7 +146,7 @@ async function denoToolIdentity(): Promise<ToolIdentity> {
 
   return {
     executable,
-    sha256: await digestBytes([...executableBytes]),
+    sha256: await digestBytes(executableBytes),
     version: Deno.version.deno,
   };
 }

@@ -4,7 +4,7 @@
 
 ## 依赖
 
-项目围绕 Deno、Effect 和 Oxc 生态开发维护，基于 fast-check 框架实现性质基测试。
+项目围绕 Deno、Effect 和 Oxc 生态开发维护，基于 fast-check 框架实现性质基测试。仓库统一使用 `flake.lock` 锁定的 nixpkgs 提供 Deno 运行时，不再导出 Deno 包；项目配置、依赖版本与依赖快照分别由 `deno.jsonc`、`deno.lock` 和 `flake/denoDependencies.nix` 管理。
 
 ### Flake
 
