@@ -69,7 +69,6 @@ stdenv.mkDerivation {
 
     mkdir -p "$out/bin"
     ln -s ${launcher}/bin/cursor-agent "$out/bin/cursor-agent"
-    ln -s cursor-agent "$out/bin/agent"
 
     runHook postInstall
   '';
