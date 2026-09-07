@@ -13,16 +13,40 @@
 
 let
   pin = builtins.fromJSON (builtins.readFile ./pin.json);
+  srcUnfiltered = fetchFromGitHub {
+    owner = "getpaseo";
+    repo = "paseo";
+    tag = "v${pin.version}";
+    hash = pin.sourceHash;
+  };
 in
 buildNpmPackage {
   pname = "paseo";
   inherit (pin) version;
 
-  src = fetchFromGitHub {
-    owner = "getpaseo";
-    repo = "paseo";
-    tag = "v${pin.version}";
-    hash = pin.sourceHash;
+  src = lib.cleanSourceWith {
+    src = srcUnfiltered;
+    filter =
+      path: _type:
+      let
+        baseName = builtins.baseNameOf path;
+        relPath = lib.removePrefix (toString srcUnfiltered) path;
+      in
+      !(lib.hasPrefix "/packages/app/android" relPath)
+      && !(lib.hasPrefix "/packages/app/ios" relPath)
+      && !(lib.hasPrefix "/packages/website/src" relPath)
+      && !(lib.hasPrefix "/packages/website/public" relPath)
+      && !(lib.hasPrefix "/packages/desktop/src" relPath)
+      && !(lib.hasPrefix "/packages/desktop/src-tauri" relPath)
+      && !(lib.hasPrefix "/docs" relPath)
+      && !(lib.hasPrefix "/.github" relPath)
+      && !(lib.hasPrefix "/.agents" relPath)
+      && !(lib.hasPrefix "/.claude" relPath)
+      && !(lib.hasPrefix "/.codex" relPath)
+      && !(lib.hasPrefix "/docker" relPath)
+      && builtins.match "/[^/]+\\.md" relPath == null
+      && !(lib.hasSuffix ".test.ts" baseName)
+      && !(lib.hasSuffix ".e2e.test.ts" baseName);
   };
 
   nodejs = nodejs_22;
