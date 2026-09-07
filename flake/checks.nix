@@ -6,27 +6,18 @@
 
 let
   packageCheckPath = name: ../packages + "/${name}/check.nix";
-  packageCheckOutputs = lib.concatLists (
-    lib.mapAttrsToList (
-      name: package:
-      if builtins.pathExists (packageCheckPath name) then
-        [
-          {
-            owner = name;
-            checks = import (packageCheckPath name) {
-              inherit
-                lib
-                package
-                packages
-                pkgs
-                ;
-            };
-          }
-        ]
-      else
-        [ ]
-    ) packages
+  packageNames = builtins.attrNames (
+    lib.filterAttrs (
+      name: type: type == "directory" && builtins.pathExists (../packages + "/${name}/package.nix")
+    ) (builtins.readDir ../packages)
   );
+  packageCheckOutputs = map (name: {
+    owner = name;
+    checks = import (packageCheckPath name) {
+      inherit lib packages pkgs;
+      package = packages.${name};
+    };
+  }) (lib.filter (name: builtins.pathExists (packageCheckPath name)) packageNames);
   checkNameState =
     lib.foldl'
       (

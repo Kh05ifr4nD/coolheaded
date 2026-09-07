@@ -57,31 +57,34 @@ let
       || (packageFunctionArgs ? pyprojectNix)
       || (packageFunctionArgs ? uv2nix)
     ) pyprojectPackageArgs;
-  basePackages = lib.fix (
-    packages:
-    lib.mapAttrs (
-      name: _type:
-      let
-        packageFunction = import (packageDirectory name + "/package.nix");
-        package = pkgs.callPackage packageFunction (
-          packageDirectoryArgs name
-          // lib.optionalAttrs ((builtins.functionArgs packageFunction) ? coolheaded) {
-            coolheaded = packages;
-          }
-        );
-      in
-      withUpdateScript name package
-    ) packageDirectories
+  scope = lib.makeScope pkgs.newScope (
+    self:
+    let
+      directoryPackages = lib.mapAttrs (
+        name: _type:
+        withUpdateScript name (
+          self.callPackage (packageDirectory name + "/package.nix") (packageDirectoryArgs name)
+        )
+      ) packageDirectories;
+    in
+    directoryPackages
+    // {
+      codexMinimal = withoutUpdateScript (
+        self.codex.override {
+          withBubblewrap = false;
+          withRipgrep = false;
+        }
+      );
+      minerUFull = withoutUpdateScript (self.minerU.override { withAll = true; });
+      oxlintMinimal = withoutUpdateScript (self.oxlint.override { withTypecheck = false; });
+    }
   );
-  packageVariants = lib.mapAttrs (_name: package: withoutUpdateScript package) {
-    codexMinimal = basePackages.codex.override {
-      withBubblewrap = false;
-      withRipgrep = false;
-    };
-    minerUFull = basePackages.minerU.override { withAll = true; };
-    oxlintMinimal = basePackages.oxlint.override { withTypecheck = false; };
-  };
-  packages = basePackages // packageVariants;
+  packages = builtins.removeAttrs scope [
+    "callPackage"
+    "newScope"
+    "overrideScope"
+    "packages"
+  ];
   packageLicenses = package: lib.toList (package.meta.license or [ ]);
   incompleteLicenseMetadataNames = builtins.attrNames (
     lib.filterAttrs (

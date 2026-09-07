@@ -1,27 +1,6 @@
 { base }:
 
 let
-  gitHubTagTarballUrl =
-    {
-      owner,
-      repo,
-      tag,
-    }:
-    "https://github.com/${owner}/${repo}/archive/refs/tags/${tag}.tar.gz";
-
-  fetchGitHubTagTarball =
-    {
-      hash,
-      owner,
-      repo,
-      tag,
-    }:
-    builtins.fetchTree {
-      type = "tarball";
-      url = gitHubTagTarballUrl { inherit owner repo tag; };
-      narHash = hash;
-    };
-
   mkGitHubReleaseBinaryPackage =
     {
       pname,
@@ -55,5 +34,5 @@ let
     );
 in
 {
-  inherit fetchGitHubTagTarball gitHubTagTarballUrl mkGitHubReleaseBinaryPackage;
+  inherit mkGitHubReleaseBinaryPackage;
 }

@@ -1,17 +1,49 @@
-{ callPackage, packageLib }:
+{
+  lib,
+  stdenv,
+  autoPatchelfHook,
+  buildNpmPackage,
+  fetchFromGitHub,
+  libuv,
+  makeWrapper,
+  nodejs_22,
+  packageLib,
+  python3,
+}:
 
 let
   pin = builtins.fromJSON (builtins.readFile ./pin.json);
-  source = packageLib.fetchGitHubTagTarball {
+in
+buildNpmPackage {
+  pname = "paseo";
+  inherit (pin) version;
+
+  src = fetchFromGitHub {
     owner = "getpaseo";
     repo = "paseo";
     tag = "v${pin.version}";
     hash = pin.sourceHash;
   };
-  upstreamPackage = callPackage (source + "/nix/package.nix") { npmDepsHash = pin.npmVendorHash; };
-in
-upstreamPackage.overrideAttrs (oldAttrs: {
-  postPatch = (oldAttrs.postPatch or "") + ''
+
+  nodejs = nodejs_22;
+  npmDepsHash = pin.npmVendorHash;
+  npmRebuildFlags = [ "--ignore-scripts" ];
+
+  nativeBuildInputs = [
+    python3
+    makeWrapper
+  ]
+  ++ lib.optionals stdenv.hostPlatform.isLinux [ autoPatchelfHook ];
+
+  buildInputs = lib.optionals stdenv.hostPlatform.isLinux [
+    libuv
+    stdenv.cc.cc.lib
+  ];
+
+  dontNpmBuild = true;
+
+  postPatch = ''
+    find . \( -name '*.test.ts' -o -name '*.e2e.test.ts' \) -delete
     mv scripts/trace-daemon.mjs scripts/trace-daemon-upstream.mjs
     cp ${./script/runtimeContract.mjs} scripts/runtimeContract.mjs
     cp ${./script/runtimeClosure.mjs} scripts/trace-daemon.mjs
@@ -19,18 +51,49 @@ upstreamPackage.overrideAttrs (oldAttrs: {
     cp ${./script/runtimeManifest.mjs} scripts/runtimeManifest.mjs
   '';
 
-  preBuild = (oldAttrs.preBuild or "") + ''
+  preBuild = ''
     node --test scripts/runtimeClosure.test.mjs
   '';
 
-  nativeInstallCheckInputs = (oldAttrs.nativeInstallCheckInputs or [ ]) ++ [
-    packageLib.versionCheckHook
-  ];
+  buildPhase = ''
+    runHook preBuild
+    npm rebuild node-pty
+    npm run build:server
+    npm run build:daemon-web-ui
+    runHook postBuild
+  '';
 
+  installPhase = ''
+    runHook preInstall
+
+    mkdir -p $out/lib/paseo
+    node scripts/trace-daemon.mjs > daemon-files.txt
+
+    while IFS= read -r path; do
+      [ -z "$path" ] && continue
+      mkdir -p "$out/lib/paseo/$(dirname "$path")"
+      cp -a "$path" "$out/lib/paseo/$path"
+    done < daemon-files.txt
+
+    cp package.json $out/lib/paseo/
+    cp -r packages/server/dist/server/web-ui $out/lib/paseo/packages/server/dist/server/
+
+    mkdir -p $out/bin
+    makeWrapper ${nodejs_22}/bin/node $out/bin/paseo-server \
+      --add-flags "$out/lib/paseo/packages/server/dist/scripts/supervisor-entrypoint.js" \
+      --set PASEO_NODE_ENV production
+
+    makeWrapper ${nodejs_22}/bin/node $out/bin/paseo \
+      --add-flags "$out/lib/paseo/packages/cli/dist/index.js" \
+      --set NODE_PATH "$out/lib/paseo/node_modules"
+
+    runHook postInstall
+  '';
+
+  nativeInstallCheckInputs = [ packageLib.versionCheckHook ];
   doInstallCheck = packageLib.canExecute;
   versionCheckProgram = "${placeholder "out"}/bin/paseo";
   versionCheckProgramArg = "--version";
-
   installCheckPhase = packageLib.mkInstallCheckPhase {
     executable = "$out/bin/paseo";
     expectedExecutables = [
@@ -55,8 +118,13 @@ upstreamPackage.overrideAttrs (oldAttrs: {
     '';
   };
 
-  meta = oldAttrs.meta // {
+  meta = {
+    homepage = "https://github.com/getpaseo/paseo";
+    license = lib.licenses.agpl3Plus;
     changelog = "https://github.com/getpaseo/paseo/releases/tag/v${pin.version}";
     description = "Orchestrate multiple coding agents from desktop and mobile";
+    mainProgram = "paseo";
+    platforms = packageLib.supportedSystems;
+    sourceProvenance = with lib.sourceTypes; [ fromSource ];
   };
-})
+}
