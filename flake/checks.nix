@@ -55,7 +55,7 @@ let
   denoDependencies = import ./denoDependencies.nix {
     inherit pkgs;
     inherit (pkgs) lib;
-    deno = packages.deno;
+    deno = pkgs.deno;
   };
 in
 if duplicateCheckNames != [ ] then

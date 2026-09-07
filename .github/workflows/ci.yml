@@ -54,7 +54,7 @@ jobs:
       - uses: cachix/install-nix-action@b97f05dcb019ddea06450a50ef6203d2fdc19fee # v31
       - id: matrix
         run: |
-          matrix="$(nix shell .#deno -c deno eval 'import { SYSTEM_TARGETS } from "./lib/ts/system/target.ts"; console.log(JSON.stringify({ include: SYSTEM_TARGETS.map(({ runner, system }) => ({ runner, system })) }));')"
+          matrix="$(nix shell --inputs-from . nixpkgs#deno -c deno eval 'import { SYSTEM_TARGETS } from "./lib/ts/system/target.ts"; console.log(JSON.stringify({ include: SYSTEM_TARGETS.map(({ runner, system }) => ({ runner, system })) }));')"
           echo "matrix=$matrix" >> "$GITHUB_OUTPUT"
   checkQuality:
     needs: discoverQualityTarget
