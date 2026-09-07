@@ -31,12 +31,6 @@
       inputs.nixpkgs.follows = "nixpkgs";
       inputs.pyproject-nix.follows = "pyprojectNix";
     };
-    wrapBuddy = {
-      url = "github:Mic92/wrap-buddy";
-      inputs.nixpkgs.follows = "nixpkgs";
-      inputs.flake-parts.follows = "flakeParts";
-      inputs.treefmt-nix.follows = "treefmtNix";
-    };
   };
 
   outputs =
@@ -50,7 +44,6 @@
       self,
       treefmtNix,
       uv2nix,
-      wrapBuddy,
       ...
     }:
     let
@@ -69,7 +62,6 @@
           pyprojectBuildSystems
           pyprojectNix
           uv2nix
-          wrapBuddy
           ;
       };
 
@@ -120,7 +112,6 @@
               pyprojectBuildSystems
               pyprojectNix
               uv2nix
-              wrapBuddy
               ;
           };
           pre-commit.settings = import ./flake/gitHooks.nix { inherit config pkgs; };

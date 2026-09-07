@@ -3,9 +3,11 @@
   stdenv,
   fetchFromGitHub,
   ffmpeg-headless,
+  gh,
   nodejs-slim,
   packageLib,
   python313Packages,
+  yt-dlp,
   coolheaded,
 }:
 
@@ -14,10 +16,10 @@ let
   pin = builtins.fromJSON (builtins.readFile ./pin.json);
   canExecute = stdenv.buildPlatform.canExecute stdenv.hostPlatform;
   runtimeTools = [
-    coolheaded.gh
+    gh
     coolheaded.mcporter
     coolheaded.openCli
-    coolheaded.ytDlp
+    yt-dlp
     ffmpeg-headless
     nodejs-slim
   ];

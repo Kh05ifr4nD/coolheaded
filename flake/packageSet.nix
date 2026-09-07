@@ -5,7 +5,6 @@
   pyprojectBuildSystems,
   pyprojectNix,
   uv2nix,
-  wrapBuddy,
 }:
 
 let
@@ -16,9 +15,6 @@ let
     bun2nix = bun2nix.packages.${pkgs.stdenv.hostPlatform.system}.default;
   };
   pyprojectPackageArgs = { inherit pyprojectBuildSystems pyprojectNix uv2nix; };
-  wrapBuddyPackageArgs = {
-    wrapBuddy = wrapBuddy.packages.${pkgs.stdenv.hostPlatform.system}.wrapBuddy or null;
-  };
   packageDirectory = name: ../packages + "/${name}";
   packageUpdateScript = name: packageDirectory name + "/update.ts";
   withUpdateScript =
@@ -56,7 +52,6 @@ let
     in
     lib.optionalAttrs (packageFunctionArgs ? bun2nix) bunPackageArgs
     // lib.optionalAttrs (packageFunctionArgs ? packageLib) (packageLibArgs name)
-    // lib.optionalAttrs (packageFunctionArgs ? wrapBuddy) wrapBuddyPackageArgs
     // lib.optionalAttrs (
       (packageFunctionArgs ? pyprojectBuildSystems)
       || (packageFunctionArgs ? pyprojectNix)

@@ -3,7 +3,6 @@
   pyprojectBuildSystems,
   pyprojectNix,
   uv2nix,
-  wrapBuddy,
 }:
 
 final: _prev:
@@ -17,7 +16,6 @@ final: _prev:
       pyprojectBuildSystems
       pyprojectNix
       uv2nix
-      wrapBuddy
       ;
   };
 }

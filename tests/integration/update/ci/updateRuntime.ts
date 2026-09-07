@@ -9,7 +9,7 @@ Deno.test("Deno command adapter preserves cwd environment and raw output", async
       command: [
         Deno.execPath(),
         "eval",
-        'console.log(Deno.cwd()); console.log(Deno.env.get("OVERLAY")); console.log(Deno.env.has("PATH")); console.error("err"); Deno.exit(7)',
+        'console.log(Deno.cwd()); console.log(Deno.env.get("OVERLAY")); console.log(Deno.env.has("PATH") ? "has-path" : "no-path"); console.error("err"); Deno.exit(7)',
       ],
       cwd,
       env: { OVERLAY: "value" },
@@ -17,7 +17,7 @@ Deno.test("Deno command adapter preserves cwd environment and raw output", async
     assertEquals(result, {
       code: 7,
       stderr: "err\n",
-      stdout: `${realCwd}\nvalue\ntrue\n`,
+      stdout: `${realCwd}\nvalue\nhas-path\n`,
     });
   } finally {
     await Deno.remove(cwd, { recursive: true });

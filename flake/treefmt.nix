@@ -1,4 +1,4 @@
-{ config, ... }:
+{ config, pkgs }:
 let
   rootMarkdown = [
     "AGENTS.md"
@@ -10,7 +10,7 @@ in
     cue.enable = true;
     nixfmt = {
       enable = true;
-      package = config.packages.nixfmt;
+      package = pkgs.nixfmt;
       strict = true;
     };
     oxfmt = {
@@ -21,12 +21,12 @@ in
     "rumdl-format" = {
       enable = true;
       includes = rootMarkdown;
-      package = config.packages.rumdl;
+      package = pkgs.rumdl;
     };
     shfmt = {
       enable = true;
       includes = [ "lib/package.sh" ];
-      package = config.packages.shfmt;
+      package = pkgs.shfmt;
     };
   };
 
