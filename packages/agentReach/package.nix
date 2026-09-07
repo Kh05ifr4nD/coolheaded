@@ -8,7 +8,8 @@
   packageLib,
   python313Packages,
   yt-dlp,
-  coolheaded,
+  mcporter,
+  openCli,
 }:
 
 let
@@ -17,8 +18,8 @@ let
   canExecute = stdenv.buildPlatform.canExecute stdenv.hostPlatform;
   runtimeTools = [
     gh
-    coolheaded.mcporter
-    coolheaded.openCli
+    mcporter
+    openCli
     yt-dlp
     ffmpeg-headless
     nodejs-slim

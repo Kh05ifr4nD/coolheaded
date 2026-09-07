@@ -2,7 +2,7 @@
   lib,
   stdenv,
   autoPatchelfHook,
-  coolheaded,
+  codeGraph,
   makeWrapper,
   nodejs,
   packageLib,
@@ -35,7 +35,7 @@ let
 
   packageName = "lazycodex-ai";
   packageRoot = "${placeholder "out"}/libexec/lazycodex-ai";
-  codeGraphExecutable = "${coolheaded.codeGraph}/bin/codegraph";
+  codeGraphExecutable = "${codeGraph}/bin/codegraph";
   nodeExecutable = "${nodejs}/bin/node";
   nodePath = lib.makeBinPath [ nodejs ];
 in
