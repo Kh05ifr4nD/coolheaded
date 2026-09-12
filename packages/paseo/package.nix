@@ -1,130 +1,148 @@
 {
-  lib,
-  stdenv,
   autoPatchelfHook,
   buildNpmPackage,
-  fetchFromGitHub,
-  libuv,
+  fetchNpmDeps,
+  git,
+  jq,
+  lib,
   makeWrapper,
-  nodejs_22,
+  nodejs-slim,
   packageLib,
-  python3,
+  stdenv,
 }:
-
 let
+  inherit (stdenv.hostPlatform) system;
   pin = builtins.fromJSON (builtins.readFile ./pin.json);
-in
-buildNpmPackage {
-  pname = "paseo";
-  inherit (pin) version;
 
-  src = fetchFromGitHub {
-    owner = "getpaseo";
-    repo = "paseo";
-    tag = "v${pin.version}";
-    hash = pin.sourceHash;
-  };
+  platform =
+    {
+      aarch64-darwin = {
+        claudeAgentSdk = "darwin-arm64";
+        esbuild = "darwin-arm64";
+        nodePty = "darwin-arm64";
+        sherpa = "darwin-arm64";
+      };
+      aarch64-linux = {
+        claudeAgentSdk = "linux-arm64";
+        esbuild = "linux-arm64";
+        nodePty = "linux-arm64";
+        sherpa = "linux-arm64";
+      };
+      x86_64-linux = {
+        claudeAgentSdk = "linux-x64";
+        esbuild = "linux-x64";
+        nodePty = "linux-x64";
+        sherpa = "linux-x64";
+      };
+    }
+    .${system} or (throw "Unsupported system for paseo: ${system}");
 
-  nodejs = nodejs_22;
-  npmDepsHash = pin.npmVendorHash;
-  npmRebuildFlags = [ "--ignore-scripts" ];
+  package = packageLib.mkNpmCliPackage {
+    inherit
+      buildNpmPackage
+      fetchNpmDeps
+      jq
+      makeWrapper
+      ;
 
-  nativeBuildInputs = [
-    python3
-    makeWrapper
-  ]
-  ++ lib.optionals stdenv.hostPlatform.isLinux [ autoPatchelfHook ];
+    nodejs = nodejs-slim;
 
-  buildInputs = lib.optionals stdenv.hostPlatform.isLinux [
-    libuv
-    stdenv.cc.cc.lib
-  ];
-
-  dontNpmBuild = true;
-
-  postPatch = ''
-    find . \( -name '*.test.ts' -o -name '*.e2e.test.ts' \) -delete
-    mv scripts/trace-daemon.mjs scripts/trace-daemon-upstream.mjs
-    cp ${./script/runtimeContract.mjs} scripts/runtimeContract.mjs
-    cp ${./script/runtimeClosure.mjs} scripts/trace-daemon.mjs
-    cp ${./script/runtimeClosure.test.mjs} scripts/runtimeClosure.test.mjs
-    cp ${./script/runtimeManifest.mjs} scripts/runtimeManifest.mjs
-  '';
-
-  preBuild = ''
-    node --test scripts/runtimeClosure.test.mjs
-  '';
-
-  buildPhase = ''
-    runHook preBuild
-    npm rebuild node-pty
-    npm run build:server
-    npm run build:daemon-web-ui
-    runHook postBuild
-  '';
-
-  installPhase = ''
-    runHook preInstall
-
-    mkdir -p $out/lib/paseo
-    node scripts/trace-daemon.mjs > daemon-files.txt
-
-    while IFS= read -r path; do
-      [ -z "$path" ] && continue
-      mkdir -p "$out/lib/paseo/$(dirname "$path")"
-      cp -a "$path" "$out/lib/paseo/$path"
-    done < daemon-files.txt
-
-    cp package.json $out/lib/paseo/
-    cp -r packages/server/dist/server/web-ui $out/lib/paseo/packages/server/dist/server/
-
-    mkdir -p $out/bin
-    makeWrapper ${nodejs_22}/bin/node $out/bin/paseo-server \
-      --add-flags "$out/lib/paseo/packages/server/dist/scripts/supervisor-entrypoint.js" \
-      --set PASEO_NODE_ENV production
-
-    makeWrapper ${nodejs_22}/bin/node $out/bin/paseo \
-      --add-flags "$out/lib/paseo/packages/cli/dist/index.js" \
-      --set NODE_PATH "$out/lib/paseo/node_modules"
-
-    runHook postInstall
-  '';
-
-  nativeInstallCheckInputs = [ packageLib.versionCheckHook ];
-  doInstallCheck = packageLib.canExecute;
-  versionCheckProgram = "${placeholder "out"}/bin/paseo";
-  versionCheckProgramArg = "--version";
-  installCheckPhase = packageLib.mkInstallCheckPhase {
-    executable = "$out/bin/paseo";
-    expectedExecutables = [
+    pname = "paseo";
+    packageName = "@getpaseo/cli";
+    tarballName = "cli";
+    cliPath = "dist/index.js";
+    launcherNames = [
       "paseo"
       "paseo-server"
     ];
-    helpContains = "Paseo CLI - control your AI coding agents";
-    extra = ''
-      daemonHelpOutput="$("$out/bin/paseo" daemon --help 2>&1)"
+    installItems = [
+      "bin"
+      "dist"
+      "node_modules"
+      "package.json"
+    ];
+    runtimeInputs = [
+      git
+      nodejs-slim
+    ];
+    extraNativeBuildInputs = lib.optionals stdenv.hostPlatform.isLinux [ autoPatchelfHook ];
+    installCheckExtra = ''
+      . ${../../lib/package.sh}
+      packageRoot="$out/libexec/paseo"
+
+      installCheckHome="$PWD/installCheckHome"
+      installCheckRoot="$PWD/installCheckXdg"
+      mkdir -p "$installCheckHome" "$installCheckRoot"/{cache,config,data,state}
+
+      helpOutput="$(HOME="$installCheckHome" XDG_CACHE_HOME="$installCheckRoot/cache" XDG_CONFIG_HOME="$installCheckRoot/config" XDG_DATA_HOME="$installCheckRoot/data" XDG_STATE_HOME="$installCheckRoot/state" "$out/bin/paseo" --help 2>&1)"
+      case "$helpOutput" in
+        *"Paseo CLI - control your AI coding agents"*) ;;
+        *) failCheck "unexpected paseo --help output" ;;
+      esac
+
+      daemonHelpOutput="$(HOME="$installCheckHome" XDG_CACHE_HOME="$installCheckRoot/cache" XDG_CONFIG_HOME="$installCheckRoot/config" XDG_DATA_HOME="$installCheckRoot/data" XDG_STATE_HOME="$installCheckRoot/state" "$out/bin/paseo" daemon --help 2>&1)"
       case "$daemonHelpOutput" in
         *"Manage the Paseo daemon"*) ;;
         *) failCheck "unexpected paseo daemon --help output" ;;
       esac
 
-      assertFileExists "$out/lib/paseo/package.json"
-      assertFileExists "$out/lib/paseo/packages/cli/dist/index.js"
-      assertFileExists "$out/lib/paseo/packages/server/dist/server/server/daemon-worker.js"
-      assertFileExists "$out/lib/paseo/packages/server/dist/scripts/supervisor-entrypoint.js"
-      assertFileExists "$out/lib/paseo/packages/server/dist/server/terminal/terminal-worker-process.js"
-      ptyBinary="$(find "$out/lib/paseo/packages/server/node_modules/node-pty/prebuilds" -type f -name pty.node -print -quit)"
+      assertFileExists "$packageRoot/package.json"
+      assertFileExists "$packageRoot/dist/index.js"
+      assertFileExists "$packageRoot/node_modules/@getpaseo/server/dist/scripts/supervisor-entrypoint.js"
+      assertFileExists "$packageRoot/node_modules/@getpaseo/server/dist/server/server/daemon-worker.js"
+      assertFileExists "$packageRoot/node_modules/@getpaseo/server/dist/server/terminal/terminal-worker-process.js"
+      assertFileExists "$packageRoot/node_modules/@getpaseo/server/dist/server/web-ui/index.html"
+      assertFileExists "$packageRoot/node_modules/@getpaseo/server/dist/server/server/speech/providers/local/sherpa/assets/silero_vad.onnx"
+
+      test -d "$packageRoot/node_modules/@anthropic-ai/claude-agent-sdk-${platform.claudeAgentSdk}" \
+        || failCheck "missing Claude Agent SDK platform package"
+      test -d "$packageRoot/node_modules/@esbuild/${platform.esbuild}" \
+        || failCheck "missing esbuild platform package"
+      test -d "$packageRoot/node_modules/sherpa-onnx-${platform.sherpa}" \
+        || failCheck "missing Sherpa ONNX platform package"
+      ptyBinary="$(find "$packageRoot/node_modules/node-pty/prebuilds/${platform.nodePty}" -type f -name pty.node -print -quit)"
       [ -n "$ptyBinary" ] || failCheck "missing node-pty native addon"
     '';
+    meta = {
+      homepage = "https://github.com/getpaseo/paseo";
+      license = lib.licenses.asl20;
+      changelog = "https://github.com/getpaseo/paseo/releases/tag/v${pin.version}";
+      description = "Orchestrate multiple coding agents from desktop and mobile";
+    };
   };
+in
+package.overrideAttrs (oldAttrs: {
+  buildInputs =
+    (oldAttrs.buildInputs or [ ]) ++ lib.optionals stdenv.hostPlatform.isLinux [ stdenv.cc.cc.lib ];
+  postInstall = (oldAttrs.postInstall or "") + ''
+    packageRoot="$out/libexec/paseo"
 
-  meta = {
-    homepage = "https://github.com/getpaseo/paseo";
-    license = lib.licenses.agpl3Plus;
-    changelog = "https://github.com/getpaseo/paseo/releases/tag/v${pin.version}";
-    description = "Orchestrate multiple coding agents from desktop and mobile";
+    makeWrapper ${nodejs-slim}/bin/node "$out/bin/paseo-server" \
+      --add-flags "$packageRoot/node_modules/@getpaseo/server/dist/scripts/supervisor-entrypoint.js" \
+      --set PASEO_NODE_ENV production \
+      --prefix PATH : "${
+        lib.makeBinPath [
+          git
+          nodejs-slim
+        ]
+      }"
+
+    . ${../../lib/package.sh}
+    keepOnlyMatchingChildren "$packageRoot/node_modules/@anthropic-ai" "claude-agent-sdk-" \
+      "claude-agent-sdk-${platform.claudeAgentSdk}"
+    keepOnlyMatchingChildren "$packageRoot/node_modules/@esbuild" "" \
+      "${platform.esbuild}"
+    keepOnlyMatchingChildren "$packageRoot/node_modules" "sherpa-onnx-" \
+      "sherpa-onnx-node" "sherpa-onnx-${platform.sherpa}"
+    keepOnlyMatchingChildren "$packageRoot/node_modules/node-pty/prebuilds" "" \
+      "${platform.nodePty}"
+  '';
+  meta = oldAttrs.meta // {
     mainProgram = "paseo";
     platforms = packageLib.supportedSystems;
-    sourceProvenance = with lib.sourceTypes; [ fromSource ];
+    sourceProvenance = with lib.sourceTypes; [
+      fromSource
+      binaryNativeCode
+    ];
   };
-}
+})

@@ -8,6 +8,7 @@ import {
 } from "@jsr/std__assert";
 import { Effect } from "effect";
 import { FakeCommandRunner } from "coolheadedTestSupport/commandRunner.ts";
+import { UpdateError } from "coolheaded/core/updateScript.ts";
 import { httpJsonError } from "coolheaded/core/fetchHttpClient.ts";
 import { strictJsonClient } from "coolheadedTestSupport/httpClient.ts";
 import { updateNpmTarballPackage } from "coolheaded/npm/tarball.ts";
@@ -15,6 +16,7 @@ import { updateNpmTarballPackage } from "coolheaded/npm/tarball.ts";
 const VERSION = "1.2.3";
 const PACKAGE_NAME = "@scope/example";
 const COMMAND_OK: CommandResult = { code: 0, stderr: "", stdout: "" };
+const COMMAND_FAILURE = 23;
 const HTTP_OK = 200;
 const NON_TEXT_BYTE = 255;
 const REQUEST_TIMEOUT_MS = 30_000;
@@ -204,6 +206,61 @@ Deno.test("npm tarball update writes sanitized lock and exact pin", async (): Pr
     runner.assertExhausted();
     json.assertExhausted();
     await assertRejects(() => Deno.stat(workspacePath ?? ""));
+  } finally {
+    await Deno.remove(directory, { recursive: true });
+  }
+});
+
+Deno.test("npm tarball update preserves targets when npm lock prefetch fails", async (): Promise<void> => {
+  const directory = await Deno.makeTempDir();
+  const packageDirectory = `${directory}/packages/example`;
+  const repositoryRootPath = `${directory}/`;
+  await Deno.mkdir(packageDirectory, { recursive: true });
+  await Deno.writeFile(`${packageDirectory}/pin.json`, PIN_SENTINEL);
+  await Deno.writeFile(`${packageDirectory}/package-lock.json`, LOCK_SENTINEL);
+  const failureResult = { code: COMMAND_FAILURE, stderr: "prefetch failed", stdout: "" };
+  const json = strictJsonClient([
+    {
+      effect: (): Effect.Effect<ReturnType<typeof response>> => Effect.succeed(response()),
+      request: REGISTRY_REQUEST,
+    },
+  ]);
+  const runner = new FakeCommandRunner([
+    {
+      request: {
+        command: [
+          "nix",
+          "build",
+          "--no-link",
+          "--print-out-paths",
+          "--inputs-from",
+          repositoryRootPath,
+          "nixpkgs#prefetch-npm-deps",
+        ],
+      },
+      result: failureResult,
+    },
+  ]);
+  try {
+    const error = await Effect.runPromise(
+      Effect.flip(
+        updateNpmTarballPackage({
+          args: [VERSION],
+          importMetaUrl: `file://${packageDirectory}/update.ts`,
+          jsonClient: json.client,
+          packageName: PACKAGE_NAME,
+          runner,
+          tarballBaseName: "example",
+        }),
+      ),
+    );
+    assertInstanceOf(error, UpdateError);
+    assertEquals(error.message, "Failed to run nix: exit 23: prefetch failed");
+    assertEquals(await Deno.readFile(`${packageDirectory}/pin.json`), PIN_SENTINEL);
+    assertEquals(await Deno.readFile(`${packageDirectory}/package-lock.json`), LOCK_SENTINEL);
+    assertStrictEquals(runner.observations()[0]?.result, failureResult);
+    runner.assertExhausted();
+    json.assertExhausted();
   } finally {
     await Deno.remove(directory, { recursive: true });
   }
