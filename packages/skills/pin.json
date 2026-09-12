@@ -1,0 +1,9 @@
+{
+  "version": "1.5.24",
+  "platformPackageHashes": {
+    "aarch64-darwin": "sha512-kTt1JKrNTvblLS2cdNOkXXPiyYlkqjlja3/wc5yenDDZuh2lyu2B6oTzNzvEotik5FiFBzXDfAT/MGYHdd6+9Q==",
+    "aarch64-linux": "sha512-kTt1JKrNTvblLS2cdNOkXXPiyYlkqjlja3/wc5yenDDZuh2lyu2B6oTzNzvEotik5FiFBzXDfAT/MGYHdd6+9Q==",
+    "x86_64-linux": "sha512-kTt1JKrNTvblLS2cdNOkXXPiyYlkqjlja3/wc5yenDDZuh2lyu2B6oTzNzvEotik5FiFBzXDfAT/MGYHdd6+9Q=="
+  },
+  "npmVendorHash": "sha256-Mj1/zqclmgsYHW6x0BhfR5QgW3D86UIkgws6TvArI5c="
+}
