@@ -7,6 +7,28 @@
 
 let
   system = pkgs.stdenv.hostPlatform.system;
+  platform =
+    {
+      aarch64-darwin = {
+        claudeAgentSdk = "darwin-arm64";
+        esbuild = "darwin-arm64";
+        nodePty = "darwin-arm64";
+        sherpa = "darwin-arm64";
+      };
+      aarch64-linux = {
+        claudeAgentSdk = "linux-arm64";
+        esbuild = "linux-arm64";
+        nodePty = "linux-arm64";
+        sherpa = "linux-arm64";
+      };
+      x86_64-linux = {
+        claudeAgentSdk = "linux-x64";
+        esbuild = "linux-x64";
+        nodePty = "linux-x64";
+        sherpa = "linux-x64";
+      };
+    }
+    .${system} or (throw "Unsupported system for paseo: ${system}");
   homeDirectory =
     if pkgs.stdenv.hostPlatform.isDarwin then "/Users/paseo-test" else "/home/paseo-test";
   paseoHome = "/tmp/paseo-home-module-${
@@ -233,6 +255,20 @@ in
         export PASEO_VOICE_MODE_ENABLED=false
 
         supervisorPid=""
+        packageRoot=${package}/libexec/paseo
+        test -f "$packageRoot/package.json"
+        test -f "$packageRoot/dist/index.js"
+        test -f "$packageRoot/node_modules/@getpaseo/server/dist/scripts/supervisor-entrypoint.js"
+        test -f "$packageRoot/node_modules/@getpaseo/server/dist/server/server/daemon-worker.js"
+        test -f "$packageRoot/node_modules/@getpaseo/server/dist/server/terminal/terminal-worker-process.js"
+        test -f "$packageRoot/node_modules/@getpaseo/server/dist/server/web-ui/index.html"
+        test -f "$packageRoot/node_modules/@getpaseo/server/dist/server/server/speech/providers/local/sherpa/assets/silero_vad.onnx"
+        test -d "$packageRoot/node_modules/@anthropic-ai/claude-agent-sdk-${platform.claudeAgentSdk}"
+        test -d "$packageRoot/node_modules/@esbuild/${platform.esbuild}"
+        test -d "$packageRoot/node_modules/sherpa-onnx-node"
+        test -d "$packageRoot/node_modules/sherpa-onnx-${platform.sherpa}"
+        test -f "$packageRoot/node_modules/node-pty/prebuilds/${platform.nodePty}/pty.node"
+
         cleanup() {
           if [[ -n "$supervisorPid" ]]; then
             kill -TERM "$supervisorPid" 2>/dev/null || true
