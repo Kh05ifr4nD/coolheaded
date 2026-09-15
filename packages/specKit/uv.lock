@@ -164,8 +164,8 @@ wheels = [
 
 [[package]]
 name = "specify-cli"
-version = "1.0.6"
-source = { git = "https://github.com/github/spec-kit.git?rev=v1.0.6#96c9bd657bfd5de0d651a6165084932b7304ac99" }
+version = "1.0.7"
+source = { git = "https://github.com/github/spec-kit.git?rev=v1.0.7#fe1d00e3ccaf495880aaf90fb0e17679e82f065b" }
 dependencies = [
     { name = "click" },
     { name = "json5" },
@@ -180,14 +180,14 @@ dependencies = [
 
 [[package]]
 name = "speckitproject"
-version = "1.0.6"
+version = "1.0.7"
 source = { virtual = "." }
 dependencies = [
     { name = "specify-cli" },
 ]
 
 [package.metadata]
-requires-dist = [{ name = "specify-cli", git = "https://github.com/github/spec-kit.git?rev=v1.0.6" }]
+requires-dist = [{ name = "specify-cli", git = "https://github.com/github/spec-kit.git?rev=v1.0.7" }]
 
 [[package]]
 name = "typer"
