@@ -16,6 +16,9 @@ runUpdateScript(import.meta.url, (args, runner) =>
     pinFilePath: PIN_FILE_PATH,
     project: (version, pythonMinorVersion) => ({
       dependencies: [`mineru[torch,full]==${version}`],
+      extraBuildDependencies: {
+        jieba: ["setuptools"],
+      },
       pythonMinorVersion,
     }),
     pythonPackage: PYTHON_PACKAGE,

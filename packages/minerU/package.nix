@@ -26,6 +26,9 @@ else
       pin:
       packageLib.mkUvLockProject {
         dependencies = [ "mineru[torch,full]==${pin.version}" ];
+        extraBuildDependencies = {
+          jieba = [ "setuptools" ];
+        };
         python = python313;
       };
 
