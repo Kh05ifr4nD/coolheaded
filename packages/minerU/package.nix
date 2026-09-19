@@ -91,9 +91,25 @@ else
         });
       }
       // lib.optionalAttrs withFull {
+        nvidia-cutlass-dsl-libs-base = prev.nvidia-cutlass-dsl-libs-base.overrideAttrs {
+          autoPatchelfIgnoreMissingDeps = [ "libcuda.so.1" ];
+        };
         opencv-python-headless = prev.opencv-python-headless.overrideAttrs (oldAttrs: {
           postFixup = (oldAttrs.postFixup or "") + ''
             rm -rf "$out/${sitePackages}/cv2"
+          '';
+        });
+        torch-c-dlpack-ext = prev.torch-c-dlpack-ext.overrideAttrs (oldAttrs: {
+          buildInputs = (oldAttrs.buildInputs or [ ]) ++ torchBuildInputs;
+          preFixup = (oldAttrs.preFixup or "") + ''
+            addAutoPatchelfSearchPath ${torchLibraryPath}
+          '';
+        });
+        xgrammar = prev.xgrammar.overrideAttrs (oldAttrs: {
+          buildInputs = (oldAttrs.buildInputs or [ ]) ++ torchBuildInputs ++ [ final.apache-tvm-ffi ];
+          preFixup = (oldAttrs.preFixup or "") + ''
+            addAutoPatchelfSearchPath ${torchLibraryPath}
+            addAutoPatchelfSearchPath ${final.apache-tvm-ffi}/${sitePackages}/tvm_ffi/lib
           '';
         });
       }
@@ -160,7 +176,7 @@ else
           nvidia-cufile-cu12 = prev.nvidia-cufile-cu12.overrideAttrs (oldAttrs: {
             buildInputs = (oldAttrs.buildInputs or [ ]) ++ [ rdma-core ];
           });
-          nvidia-nvshmem-cu12 = prev.nvidia-nvshmem-cu12.overrideAttrs (oldAttrs: {
+          nvidia-nvshmem-cu12 = prev.nvidia-nvshmem-cu12.overrideAttrs {
             autoPatchelfIgnoreMissingDeps = [
               "libfabric.so.1"
               "libmlx5.so.1"
@@ -170,7 +186,7 @@ else
               "libucp.so.0"
               "libucs.so.0"
             ];
-          });
+          };
           nvidia-cudnn-cu12 = prev.nvidia-cudnn-cu12.overrideAttrs (oldAttrs: {
             preFixup = (oldAttrs.preFixup or "") + ''
               addAutoPatchelfSearchPath ${nvidiaLibraryPath final."nvidia-cublas-cu12" "cublas"}
