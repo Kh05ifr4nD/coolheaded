@@ -91,6 +91,11 @@ else
         });
       }
       // lib.optionalAttrs withFull {
+        flashinfer-python = prev.flashinfer-python.overrideAttrs (oldAttrs: {
+          postInstall = (oldAttrs.postInstall or "") + ''
+            rm -f "$out/${sitePackages}/build_backend.py"
+          '';
+        });
         nvidia-cutlass-dsl-libs-base = prev.nvidia-cutlass-dsl-libs-base.overrideAttrs {
           autoPatchelfIgnoreMissingDeps = [ "libcuda.so.1" ];
         };
@@ -103,6 +108,9 @@ else
           buildInputs = (oldAttrs.buildInputs or [ ]) ++ torchBuildInputs;
           preFixup = (oldAttrs.preFixup or "") + ''
             addAutoPatchelfSearchPath ${torchLibraryPath}
+          '';
+          postInstall = (oldAttrs.postInstall or "") + ''
+            rm -f "$out/${sitePackages}/build_backend.py"
           '';
         });
         xgrammar = prev.xgrammar.overrideAttrs (oldAttrs: {
