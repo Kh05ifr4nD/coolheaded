@@ -15,10 +15,9 @@ runUpdateScript(import.meta.url, (args, runner) =>
     latestVersion: () => latestPyPiVersion(PYPI_PACKAGE_NAME, fetchJsonClient),
     pinFilePath: PIN_FILE_PATH,
     project: (version, pythonMinorVersion) => ({
-      dependencies: [`mineru[all]==${version}`],
+      dependencies: [`mineru[torch,full]==${version}`],
       extraBuildDependencies: {
-        pylatexenc: ["setuptools"],
-        xgrammar: ["scikit_build_core"],
+        jieba: ["setuptools"],
       },
       pythonMinorVersion,
     }),

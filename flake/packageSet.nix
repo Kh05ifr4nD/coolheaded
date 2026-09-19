@@ -75,8 +75,11 @@ let
           withRipgrep = false;
         }
       );
-      minerUFull = withoutUpdateScript (self.minerU.override { withAll = true; });
       oxlintMinimal = withoutUpdateScript (self.oxlint.override { withTypecheck = false; });
+    }
+    // lib.optionalAttrs pkgs.stdenv.hostPlatform.isLinux {
+      minerUFull = withoutUpdateScript (self.minerU.override { withFull = true; });
+      minerUTorch = withoutUpdateScript (self.minerU.override { withTorch = true; });
     }
   );
   packages = builtins.removeAttrs scope [

@@ -161,6 +161,7 @@ function defineDerivationTests(): void {
     assertEquals(activatedCheckKind("denoDependencies"), "denoSnapshot");
     assertEquals(activatedCheckKind("deno"), "package");
     assertEquals(activatedCheckKind("minerUFull"), "package");
+    assertEquals(activatedCheckKind("minerUTorch"), "package");
   });
 
   it("selects checks whose derivation identity changed", (): void => {
@@ -266,6 +267,7 @@ function defineChangedFilesTests(): void {
         "codexHomeModule",
         "minerU",
         "minerUFull",
+        "minerUTorch",
         "paseo",
         "paseoHomeModule",
         "unrelated",
@@ -291,6 +293,7 @@ function defineChangedFilesTests(): void {
         "codexMinimal",
         "minerU",
         "minerUFull",
+        "minerUTorch",
         "paseo",
         "paseoHomeModule",
       ],
