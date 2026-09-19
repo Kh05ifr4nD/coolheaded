@@ -8,6 +8,7 @@
   rdma-core,
   sox,
   tbb,
+  vulkan-loader,
   cudaPackages,
   withTorch ? false,
   withFull ? false,
@@ -80,6 +81,9 @@ else
         ];
       in
       {
+        mineru-llama-cpp = prev.mineru-llama-cpp.overrideAttrs (oldAttrs: {
+          buildInputs = (oldAttrs.buildInputs or [ ]) ++ [ vulkan-loader ];
+        });
         modelscope-hub = prev.modelscope-hub.overrideAttrs (oldAttrs: {
           postInstall = (oldAttrs.postInstall or "") + ''
             rm -f "$out/bin/modelscope" "$out/bin/ms"
