@@ -112,6 +112,10 @@ else
           postInstall = (oldAttrs.postInstall or "") + ''
             rm -f "$out/${sitePackages}/build_backend.py"
           '';
+          autoPatchelfIgnoreMissingDeps = lib.optionals (packageLib.system == "aarch64-linux") [
+            "libc10_cuda.so"
+            "libtorch_cuda.so"
+          ];
         });
         xgrammar = prev.xgrammar.overrideAttrs (oldAttrs: {
           buildInputs = (oldAttrs.buildInputs or [ ]) ++ torchBuildInputs ++ [ final.apache-tvm-ffi ];
