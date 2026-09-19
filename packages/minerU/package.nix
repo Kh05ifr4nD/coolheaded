@@ -160,6 +160,17 @@ else
           nvidia-cufile-cu12 = prev.nvidia-cufile-cu12.overrideAttrs (oldAttrs: {
             buildInputs = (oldAttrs.buildInputs or [ ]) ++ [ rdma-core ];
           });
+          nvidia-nvshmem-cu12 = prev.nvidia-nvshmem-cu12.overrideAttrs (oldAttrs: {
+            autoPatchelfIgnoreMissingDeps = [
+              "libfabric.so.1"
+              "libmlx5.so.1"
+              "libmpi.so.40"
+              "liboshmem.so.40"
+              "libpmix.so.2"
+              "libucp.so.0"
+              "libucs.so.0"
+            ];
+          });
           nvidia-cudnn-cu12 = prev.nvidia-cudnn-cu12.overrideAttrs (oldAttrs: {
             preFixup = (oldAttrs.preFixup or "") + ''
               addAutoPatchelfSearchPath ${nvidiaLibraryPath final."nvidia-cublas-cu12" "cublas"}
