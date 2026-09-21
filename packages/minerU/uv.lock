@@ -669,7 +669,7 @@ dependencies = [
 ]
 
 [package.metadata]
-requires-dist = [{ name = "mineru", extras = ["torch", "full"], specifier = "==4.0.4" }]
+requires-dist = [{ name = "mineru", extras = ["torch", "full"], specifier = "==4.0.5" }]
 
 [[package]]
 name = "cryptography"
@@ -827,7 +827,7 @@ wheels = [
 
 [[package]]
 name = "docvortex"
-version = "0.4.17"
+version = "0.4.21"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
     { name = "beautifulsoup4" },
@@ -857,9 +857,9 @@ dependencies = [
     { name = "resvg-py" },
     { name = "ziamath" },
 ]
-sdist = { url = "https://files.pythonhosted.org/packages/07/17/a489c3f79e308a13f5d41597811a69907fbb4006793aeb4fe9e5eac7dbd5/docvortex-0.4.17.tar.gz", hash = "sha256:9b131ca3ed492b0b2dcfa8b48128d0b850380572fa423ce36a2728d3e17c661f", size = 44347419, upload-time = "2026-09-19T17:46:54.678Z" }
+sdist = { url = "https://files.pythonhosted.org/packages/5a/9e/8b83ba952f011f413f35e19cc1fae729f92e0151f094f894ef2661486242/docvortex-0.4.21.tar.gz", hash = "sha256:bc9bc1e5923d15586ef118bffa3fa0dc9a2ffe869833f82cacaf91ae2160a86a", size = 44519053, upload-time = "2026-09-20T18:39:29.187Z" }
 wheels = [
-    { url = "https://files.pythonhosted.org/packages/08/89/7f047705a5dc59872a14707c3bea7be31587e9b9f4c737e11ba188bd0a47/docvortex-0.4.17-py3-none-any.whl", hash = "sha256:1e2749126f5233a7501536fd1eac91b4a51cb918bc31e4fbb09c8ecd110fe3c0", size = 3638209, upload-time = "2026-09-19T17:46:51.92Z" },
+    { url = "https://files.pythonhosted.org/packages/53/66/1564fa2a2368472008eb287df74e41439ee6b53cc1313fe6825561431228/docvortex-0.4.21-py3-none-any.whl", hash = "sha256:285b2604bda094f06136d0c7e0d74983349c8945b27f9af6a85f858e46ba3140", size = 3643724, upload-time = "2026-09-20T18:39:25.263Z" },
 ]
 
 [[package]]
@@ -2077,7 +2077,7 @@ wheels = [
 
 [[package]]
 name = "mineru"
-version = "4.0.4"
+version = "4.0.5"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
     { name = "accelerate", marker = "platform_machine == 'arm64' and sys_platform == 'darwin'" },
@@ -2123,7 +2123,7 @@ dependencies = [
     { name = "watchfiles" },
 ]
 wheels = [
-    { url = "https://files.pythonhosted.org/packages/c0/41/ed48852d2a1dd91216fa2457cc0583b6314933f16244deb290049a09773b/mineru-4.0.4-py3-none-any.whl", hash = "sha256:a753e675b42063aabc19736dfe5afdb4909ebfcecef5a1214bdcd72344eef89d", size = 3513399, upload-time = "2026-09-19T18:01:47.575Z" },
+    { url = "https://files.pythonhosted.org/packages/9d/b4/6cc171b1b945711ae6dac84e971a1d45432263d52eeb30bcfa19403e8c7d/mineru-4.0.5-py3-none-any.whl", hash = "sha256:9c80e3e10ccf9e7d49415a3044196622328eac5bcb54fc557b3846ac9e1d784d", size = 3514145, upload-time = "2026-09-20T16:40:30.25Z" },
 ]
 
 [package.optional-dependencies]
@@ -2265,7 +2265,7 @@ wheels = [
 
 [[package]]
 name = "modelscope-hub"
-version = "0.4.3"
+version = "0.4.4"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
     { name = "cryptography" },
@@ -2274,9 +2274,9 @@ dependencies = [
     { name = "tqdm" },
     { name = "urllib3" },
 ]
-sdist = { url = "https://files.pythonhosted.org/packages/94/d3/d4a21ba8c4365d7590e15ae95f16bd7378562e476bfc4f7fadd6a856f917/modelscope_hub-0.4.3.tar.gz", hash = "sha256:c40bd768d37342ef57e380d5b4656c74a50e86a39d2dadb6f3583e8ff1b7ce34", size = 239991, upload-time = "2026-09-15T12:09:25.245Z" }
+sdist = { url = "https://files.pythonhosted.org/packages/2d/02/91a4ca1becaae93ca8a56efa4d3e866211070c61ba4ee786d330e9bade4e/modelscope_hub-0.4.4.tar.gz", hash = "sha256:52d0220a5f1b1db4948e980e69032cff5ba154a102e6bfb496dcc6edadbae27e", size = 266456, upload-time = "2026-09-20T07:20:08.068Z" }
 wheels = [
-    { url = "https://files.pythonhosted.org/packages/26/31/2a12be4ba9cf11d8023d06ca85e935de2da7042e7553e438cf549bfd1e4f/modelscope_hub-0.4.3-py3-none-any.whl", hash = "sha256:798af1f8474318857ef25112b12e3707e7ae5b40cbfb568efce38af8fb1194a3", size = 204126, upload-time = "2026-09-15T12:09:24.023Z" },
+    { url = "https://files.pythonhosted.org/packages/08/5c/65683744f47b6171a35ba446c7998ceccc425c5c4532a676a542fe2d0180/modelscope_hub-0.4.4-py3-none-any.whl", hash = "sha256:955b04e085b172dc248f098322b7d8ac87299209631f4f43e847be660c32ae8b", size = 218505, upload-time = "2026-09-20T07:20:06.711Z" },
 ]
 
 [[package]]
