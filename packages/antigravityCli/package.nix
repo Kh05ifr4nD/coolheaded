@@ -34,7 +34,7 @@ packageLib.mkReleaseBinaryPackage {
   '';
 
   installCheck = {
-    helpContains = "Usage of antigravity:";
+    helpContains = "Usage of agy:";
     extra = ''
       "$out/bin/agy" help > /dev/null
     '';
