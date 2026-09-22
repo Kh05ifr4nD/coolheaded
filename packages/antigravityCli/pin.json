@@ -1,9 +1,9 @@
 {
-  "version": "1.2.7-6731160148115456",
-  "binaryVersion": "1.2.7",
+  "version": "1.2.8-4907747922280448",
+  "binaryVersion": "1.2.8",
   "platformPackageHashes": {
-    "aarch64-darwin": "sha512-4mAyzkIJhaGOcgtuwcCdg2Cu2FHT4zRRSMmgUreRiYmlK2LdLI20U1meo0G4spcgc3hG/9N92caLa8bs5KBZlA==",
-    "aarch64-linux": "sha512-05+Tn/yAd2v9LcENt7mhobWGUPCBFfohBlwR0QiCxxIQ82jC5gYPJpZtGjPWst0rwZv9ZBBiMFr2VGxR1JRRGg==",
-    "x86_64-linux": "sha512-/sdp1hHEr98K5y04vbJlLI4sjnHk9t6XonuA3aPFBCkWDZ4Dd2o2pZuIV8IOdng8SknLD+uLL1w7+SWwzAO7dw=="
+    "aarch64-darwin": "sha512-DpIsrQSKkrLIULKR4vOgrZnC/T0HzpFweQsjyLcb0rRYCalqLkLkc7WL8QC7dNFqTffJSLSOgDQbe/AVbgXVdA==",
+    "aarch64-linux": "sha512-Sibmy0D2iZXTpValFB62ax3iP6GopkduCi5pdqsZ35wOJXy4bnPEitpjvY0foZcaPoH9Iz2jOpU3dtF0QEPj6g==",
+    "x86_64-linux": "sha512-KND4ZhMWhQ0eH/VB3F93J+Xfbqny0ooMm1VnqmOKd4sh2SKRI8Ze5bXGRtQ5C1iSRbH9wABOmPDNF3SqOBR3Yg=="
   }
 }
