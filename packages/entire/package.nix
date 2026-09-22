@@ -49,7 +49,6 @@ packageLib.mkGitHubReleaseBinaryPackage {
       "entire"
       "git-remote-entire"
     ];
-    helpFlag = "help";
     helpContains = "Usage:";
     extra = ''
       "$out/bin/git-remote-entire" --version > /dev/null
