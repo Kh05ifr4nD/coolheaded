@@ -64,7 +64,6 @@ function requiredEnv(name) {
 
 const pluginRoot = requiredEnv("LAZYCODEX_PLUGIN_ROOT");
 const nodeExecutable = requiredEnv("LAZYCODEX_NODE_EXECUTABLE");
-const codeGraphExecutable = requiredEnv("LAZYCODEX_CODEGRAPH_EXECUTABLE");
 
 /**
  * @param {string} file
@@ -132,21 +131,6 @@ function nixNodeCommand(command) {
 }
 
 /**
- * @param {string} command
- * @returns {string}
- */
-function nixCodeGraphCommand(command) {
-  const next = nixNodeCommand(command);
-  if (!next.includes("components/codegraph/dist/cli.js")) {
-    return next;
-  }
-  const prefix = `OMO_CODEGRAPH_BIN=${codeGraphExecutable} `;
-  return next.startsWith("OMO_CODEGRAPH_BIN=")
-    ? next.replace(/^OMO_CODEGRAPH_BIN=\S+\s+/u, prefix)
-    : prefix + next;
-}
-
-/**
  * @param {unknown} value
  * @param {(record: JsonRecord) => void} visit
  * @returns {void}
@@ -178,7 +162,7 @@ function rewriteCommands(parsed) {
     if (typeof commandValue !== "string") {
       return;
     }
-    const command = nixCodeGraphCommand(commandValue);
+    const command = nixNodeCommand(commandValue);
     if (command !== commandValue) {
       record.command = command;
       changed = true;
@@ -187,35 +171,10 @@ function rewriteCommands(parsed) {
   return changed;
 }
 
-/**
- * @param {unknown} parsed
- * @returns {boolean}
- */
-function stampCodeGraphEnv(parsed) {
-  if (!isRecord(parsed) || !isRecord(parsed.mcpServers)) {
-    return false;
-  }
-  const { codegraph } = parsed.mcpServers;
-  if (!isRecord(codegraph)) {
-    return false;
-  }
-  const env = isEnvironment(codegraph.env) ? codegraph.env : {};
-  if (env.OMO_CODEGRAPH_BIN === codeGraphExecutable) {
-    return false;
-  }
-  codegraph.env = { ...env, OMO_CODEGRAPH_BIN: codeGraphExecutable };
-  return true;
-}
-
 for (const file of runtimeJsonFiles(pluginRoot)) {
   /** @type {unknown} */
   const parsed = JSON.parse(nodeFs.readFileSync(file, "utf8"));
-  const commandsChanged = rewriteCommands(parsed);
-  const codeGraphEnvChanged =
-    file === joinPath(pluginRoot, ".mcp.json") && stampCodeGraphEnv(parsed);
-  const changed = commandsChanged || codeGraphEnvChanged;
-
-  if (changed) {
+  if (rewriteCommands(parsed)) {
     nodeFs.writeFileSync(file, `${JSON.stringify(parsed, null, "\t")}\n`);
   }
 }
