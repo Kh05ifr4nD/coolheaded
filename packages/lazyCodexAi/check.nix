@@ -258,17 +258,11 @@ let
   disabledCodexScript = mkActivationScript "activate-codex-after-lazycodex-ai-disable" disabledConfig.home.activation.codexConfig.data;
   failingLazyScript = mkActivationScript "activate-lazycodex-ai-failing" failingEvaluation.config.home.activation.lazyCodexAi.data;
   idempotentLazyScript = mkActivationScript "activate-lazycodex-ai-idempotent" idempotentEvaluation.config.home.activation.lazyCodexAi.data;
-  darwinManagedPreferencesSandbox = lib.optionalAttrs pkgs.stdenv.hostPlatform.isDarwin {
-    sandboxProfile = ''
-      (allow mach-lookup (global-name "com.apple.cfprefsd.agent"))
-      (allow mach-lookup (global-name "com.apple.cfprefsd.daemon"))
-    '';
-  };
 in
 {
   lazyCodexAiHomeModule =
     assert lib.all (assertion: assertion) commonAssertions;
-    pkgs.runCommand "lazycodex-ai-home-module-check" darwinManagedPreferencesSandbox ''
+    pkgs.runCommand "lazycodex-ai-home-module-check" { } ''
       derivationOutput="$out"
       activeGeneration="$TMPDIR/active-generation"
       defaultGeneration="$TMPDIR/default-generation"

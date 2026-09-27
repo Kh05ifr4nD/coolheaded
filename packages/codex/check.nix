@@ -70,12 +70,6 @@ let
 
   declaredEvaluation = mkEvaluation { settings = declaredSettings; };
   emptyEvaluation = mkEvaluation { settings = { }; };
-  darwinManagedPreferencesSandbox = lib.optionalAttrs pkgs.stdenv.hostPlatform.isDarwin {
-    sandboxProfile = ''
-      (allow mach-lookup (global-name "com.apple.cfprefsd.agent"))
-      (allow mach-lookup (global-name "com.apple.cfprefsd.daemon"))
-    '';
-  };
 
   mkActivation =
     name: evaluation:
@@ -185,7 +179,7 @@ in
         "settings"
       ];
     assert lib.elem package declaredEvaluation.config.home.packages;
-    pkgs.runCommand "codex-home-module-check" darwinManagedPreferencesSandbox ''
+    pkgs.runCommand "codex-home-module-check" { } ''
       shopt -s nullglob
       testHome="$NIX_BUILD_TOP/${testHomeName}"
       case "$testHome" in
