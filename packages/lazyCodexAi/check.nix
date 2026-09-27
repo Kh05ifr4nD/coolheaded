@@ -258,11 +258,17 @@ let
   disabledCodexScript = mkActivationScript "activate-codex-after-lazycodex-ai-disable" disabledConfig.home.activation.codexConfig.data;
   failingLazyScript = mkActivationScript "activate-lazycodex-ai-failing" failingEvaluation.config.home.activation.lazyCodexAi.data;
   idempotentLazyScript = mkActivationScript "activate-lazycodex-ai-idempotent" idempotentEvaluation.config.home.activation.lazyCodexAi.data;
+  runCheck = if pkgs.stdenv.hostPlatform.isDarwin then pkgs.runCommandCC else pkgs.runCommand;
+  darwinAppServer = import ../../lib/nix/codexDarwinAppServer.nix {
+    inherit lib pkgs;
+    codex = packages.codex;
+  };
 in
 {
   lazyCodexAiHomeModule =
     assert lib.all (assertion: assertion) commonAssertions;
-    pkgs.runCommand "lazycodex-ai-home-module-check" { } ''
+    runCheck "lazycodex-ai-home-module-check" { } ''
+      ${darwinAppServer}
       derivationOutput="$out"
       activeGeneration="$TMPDIR/active-generation"
       defaultGeneration="$TMPDIR/default-generation"

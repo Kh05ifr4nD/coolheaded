@@ -156,30 +156,12 @@ let
         local version
 
         : >"$runtime_root/app-server.stderr"
-        codex_fixed_user_home=()
-        if [[ "$(uname)" == Darwin ]]; then
-          # Codex refreshes com.openai.codex through CoreFoundation before it
-          # reads config layers. CoreFoundation uses the directory-services home
-          # before HOME, and Nix build users have /var/empty. CFFIXED_USER_HOME
-          # pins that lookup to this writable isolated home. A real writable
-          # home stays untouched so managed preferences remain visible.
-          passwd_home=""
-          if [[ -x /usr/bin/id ]]; then
-            passwd_home="$(/usr/bin/id -P 2>/dev/null | cut -d : -f 9 || true)"
-          fi
-          case "$passwd_home" in
-            "" | /var/empty | /homeless-shelter)
-              mkdir -p "$runtime_root/home/Library/Preferences"
-              codex_fixed_user_home+=(CFFIXED_USER_HOME="$runtime_root/home")
-              ;;
-          esac
-        fi
+        codex_app_server_bin="''${CODEX_APP_SERVER_BIN:-codex}"
         coproc CODEX_SERVER {
           env \
             HOME="$runtime_root/home" \
             CODEX_HOME="$runtime_root/codex-home" \
-            "''${codex_fixed_user_home[@]}" \
-            codex app-server --disable plugins --listen stdio:// \
+            "$codex_app_server_bin" app-server --disable plugins --listen stdio:// \
             2>"$runtime_root/app-server.stderr"
         }
         server_pid="$CODEX_SERVER_PID"
