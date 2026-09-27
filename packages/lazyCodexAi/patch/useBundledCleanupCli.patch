@@ -1,6 +1,6 @@
 --- a/packages/omo-codex/scripts/install-dist/install-local.mjs
 +++ b/packages/omo-codex/scripts/install-dist/install-local.mjs
-@@ -10656,6 +10656,13 @@
+@@ -23361,6 +23361,13 @@
  function buildDelegatedOmoInvocation(parsed) {
    if (parsed.command === "doctor")
      return buildLazyCodexDoctorInvocation(parsed.args);
@@ -12,5 +12,5 @@
 +    };
 +  }
    if (parsed.command === "install") {
-     const args2 = ["--yes", "oh-my-openagent@latest", parsed.command, "--platform=codex"];
+     const args = ["--yes", "oh-my-openagent@latest", parsed.command, "--platform=codex"];
      if (parsed.noTui)
