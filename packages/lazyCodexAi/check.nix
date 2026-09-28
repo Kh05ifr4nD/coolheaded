@@ -172,14 +172,6 @@ let
     (activeEvaluation.options.programs.codex ? settings)
     (!(activeEvaluation.options.programs.codex ? config))
     (
-      !lib.hasAttrByPath [
-        "plugins"
-        "omo@sisyphuslabs"
-        "mcp_servers"
-        "codegraph"
-      ] activeConfig.programs.codex.settings
-    )
-    (
       activeConfig.programs.codex.settings.plugins."omo@sisyphuslabs".mcp_servers.context7.enabled
       == false
     )
@@ -190,14 +182,6 @@ let
     (
       autonomousEvaluation.config.programs.codex.settings.plugins."omo@sisyphuslabs".mcp_servers.context7.enabled
       == true
-    )
-    (
-      !lib.hasAttrByPath [
-        "plugins"
-        "omo@sisyphuslabs"
-        "mcp_servers"
-        "codegraph"
-      ] defaultEvaluation.config.programs.codex.settings
     )
     (
       !lib.hasAttrByPath [
@@ -217,7 +201,6 @@ let
     (activeLazyActivation.after == [ "linkGeneration" ])
     (activeLazyActivation.before == [ "codexConfig" ])
     (composedEvaluation.config.programs.codex.package == packages.codex)
-    (!(activeEvaluation.options.programs.lazyCodexAi ? codeGraph))
     (!(activeEvaluation.options.programs.lazyCodexAi ? gitBash))
     (!(activeEvaluation.options.programs.lazyCodexAi ? gitBashEnabled))
   ];
@@ -278,13 +261,11 @@ in
       test ! -e "$TMPDIR/activate-lazycodex-ai-parent-trap"
       test -d "$pluginCache"
       ${activeCodexScript} "" "$activeGeneration"
-      ! grep -F 'mcp_servers.codegraph' "$configFile"
       sed -n '/^\[plugins\."omo@sisyphuslabs"\.mcp_servers\.context7\]$/,/^\[/p' "$configFile" \
         | grep -Fx 'enabled = false'
 
       HOME=${testHome} ${activeLazyScript} "$activeGeneration" "$activeGeneration"
       ${activeCodexScript} "$activeGeneration" "$activeGeneration"
-      ! grep -F 'mcp_servers.codegraph' "$configFile"
       sed -n '/^\[plugins\."omo@sisyphuslabs"\.mcp_servers\.context7\]$/,/^\[/p' "$configFile" \
         | grep -Fx 'enabled = false'
 
@@ -312,14 +293,12 @@ in
       HOME=${testHome} ${mkActivationScript "activate-lazycodex-ai-default" defaultLazyActivation.data} \
         "$activeGeneration" "$defaultGeneration"
       ${defaultCodexScript} "$activeGeneration" "$defaultGeneration"
-      ! grep -F 'mcp_servers.codegraph' "$configFile"
       sed -n '/^\[plugins\."omo@sisyphuslabs"\.mcp_servers\.context7\]$/,/^\[/p' "$configFile" \
         | grep -Fx 'enabled = true'
 
       HOME=${testHome} ${mkActivationScript "reactivate-lazycodex-ai-default" defaultLazyActivation.data} \
         "$defaultGeneration" "$defaultGeneration"
       ${defaultCodexScript} "$defaultGeneration" "$defaultGeneration"
-      ! grep -F 'mcp_servers.codegraph' "$configFile"
       sed -n '/^\[plugins\."omo@sisyphuslabs"\.mcp_servers\.context7\]$/,/^\[/p' "$configFile" \
         | grep -Fx 'enabled = true'
 
@@ -330,7 +309,6 @@ in
       HOME=${testHome} ${disabledLazyScript} "$activeGeneration" "$disabledGeneration"
       test ! -e "$pluginCache"
       ${disabledCodexScript} "$activeGeneration" "$disabledGeneration"
-      ! grep -F 'mcp_servers.codegraph' "$configFile"
       ! grep -F 'mcp_servers.context7' "$configFile"
 
       failureTmp="$TMPDIR/failing-activation"

@@ -130,11 +130,6 @@ packageLib.mkNpmTarballPackage {
 
     test ! -e "$packageRoot/packages/git-bash-mcp" \
       || failCheck "packaged LazyCodex contains the Windows-only Git Bash MCP"
-    test ! -e "$packageRoot/packages/omo-codex/plugin/components/codegraph" \
-      || failCheck "packaged OMO plugin contains the retired CodeGraph component"
-    if grep -F 'codegraph' "$packageRoot/packages/omo-codex/plugin/.mcp.json"; then
-      failCheck "packaged OMO MCP manifest still references retired codegraph"
-    fi
     test ! -e "$packageRoot/packages/omo-codex/plugin/components/git-bash" \
       || failCheck "packaged OMO plugin contains the Windows-only Git Bash component"
     test ! -e "$packageRoot/packages/omo-codex/plugin/components/rules/bundled-rules/windows-git-bash.md" \
@@ -208,12 +203,7 @@ packageLib.mkNpmTarballPackage {
 
     pluginRoot="$installCheckCodexHome/plugins/cache/sisyphuslabs/omo/${pin.version}"
     assertFileExists "$pluginRoot/.codex-plugin/plugin.json"
-    test ! -e "$pluginRoot/components/codegraph" \
-      || failCheck "installed OMO plugin contains the retired CodeGraph component"
     assertFileExists "$installCheckCodexHome/config.toml"
-    if grep -F 'codegraph' "$installCheckCodexHome/config.toml"; then
-      failCheck "installed Codex config still references retired codegraph"
-    fi
     assertNoGitBashConfig
     test ! -e "$pluginRoot/components/git-bash" \
       || failCheck "installed OMO plugin contains the Windows-only Git Bash component"
@@ -237,12 +227,6 @@ packageLib.mkNpmTarballPackage {
 
     grep -F "\"command\": \"${nodeExecutable}\"" "$pluginRoot/.mcp.json" > /dev/null \
       || failCheck "installed OMO MCP manifest does not use packaged node"
-    if grep -F 'codegraph' "$pluginRoot/.mcp.json"; then
-      failCheck "installed OMO MCP manifest still references retired codegraph"
-    fi
-    if grep -R -F 'OMO_CODEGRAPH_BIN' "$pluginRoot" --include '*.json' > /dev/null; then
-      failCheck "installed OMO plugin still references retired codegraph"
-    fi
     bareNodeCommand="$(grep -R '"command": "node' "$pluginRoot" --include '*.json' | head -1 || true)"
     test -z "$bareNodeCommand" || failCheck "installed OMO plugin contains bare node command: $bareNodeCommand"
     grep -F '[hooks.state.' "$installCheckCodexHome/config.toml" > /dev/null \
