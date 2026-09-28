@@ -70,6 +70,11 @@ let
 
   declaredEvaluation = mkEvaluation { settings = declaredSettings; };
   emptyEvaluation = mkEvaluation { settings = { }; };
+  runCheck = if pkgs.stdenv.hostPlatform.isDarwin then pkgs.runCommandCC else pkgs.runCommand;
+  darwinAppServer = import ../../lib/nix/codexDarwinAppServer.nix {
+    inherit lib pkgs;
+    codex = package;
+  };
 
   mkActivation =
     name: evaluation:
@@ -179,7 +184,8 @@ in
         "settings"
       ];
     assert lib.elem package declaredEvaluation.config.home.packages;
-    pkgs.runCommand "codex-home-module-check" { } ''
+    runCheck "codex-home-module-check" { } ''
+      ${darwinAppServer}
       shopt -s nullglob
       testHome="$NIX_BUILD_TOP/${testHomeName}"
       case "$testHome" in

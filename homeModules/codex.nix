@@ -156,11 +156,12 @@ let
         local version
 
         : >"$runtime_root/app-server.stderr"
+        codex_app_server_bin="''${CODEX_APP_SERVER_BIN:-codex}"
         coproc CODEX_SERVER {
           env \
             HOME="$runtime_root/home" \
             CODEX_HOME="$runtime_root/codex-home" \
-            codex app-server --disable plugins --listen stdio:// \
+            "$codex_app_server_bin" app-server --disable plugins --listen stdio:// \
             2>"$runtime_root/app-server.stderr"
         }
         server_pid="$CODEX_SERVER_PID"
