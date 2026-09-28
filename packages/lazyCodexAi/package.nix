@@ -2,7 +2,6 @@
   lib,
   stdenv,
   autoPatchelfHook,
-  codeGraph,
   makeWrapper,
   nodejs,
   packageLib,
@@ -35,7 +34,6 @@ let
 
   packageName = "lazycodex-ai";
   packageRoot = "${placeholder "out"}/libexec/lazycodex-ai";
-  codeGraphExecutable = "${codeGraph}/bin/codegraph";
   nodeExecutable = "${nodejs}/bin/node";
   nodePath = lib.makeBinPath [ nodejs ];
 in
@@ -94,7 +92,6 @@ packageLib.mkNpmTarballPackage {
 
     LAZYCODEX_PLUGIN_ROOT="$packageRoot/packages/omo-codex/plugin" \
     LAZYCODEX_NODE_EXECUTABLE="${nodeExecutable}" \
-    LAZYCODEX_CODEGRAPH_EXECUTABLE="${codeGraphExecutable}" \
       "${nodeExecutable}" ${./script/rewriteOmoPluginRuntimeJson.mjs}
 
     pluginNodeModules="$packageRoot/packages/omo-codex/plugin/node_modules"
@@ -102,8 +99,6 @@ packageLib.mkNpmTarballPackage {
     keepOnlyMatchingChildren "$pluginNodeModules/@rolldown" "binding-" '${platform.rolldown}'
     keepOnlyMatchingChildren "$pluginNodeModules" "lightningcss-" '${platform.lightningcss}'
     keepOnlyMatchingChildren "$pluginNodeModules/@code-yeongyu/comment-checker/vendor" "" '${platform.commentChecker}'
-    rm -rf "$pluginNodeModules/@colbymchenry/codegraph" "$pluginNodeModules/@colbymchenry/codegraph-"*
-    rmdir "$pluginNodeModules/@colbymchenry" 2> /dev/null || true
     makeWrapper "${nodejs}/bin/node" "$out/bin/lazycodex-ai" \
       --add-flags "$packageRoot/packages/omo-codex/scripts/install-local.mjs" \
       --set-default LAZYCODEX_AI_NIX_SKIP_CACHE_NPM 1 \
@@ -208,7 +203,6 @@ packageLib.mkNpmTarballPackage {
 
     pluginRoot="$installCheckCodexHome/plugins/cache/sisyphuslabs/omo/${pin.version}"
     assertFileExists "$pluginRoot/.codex-plugin/plugin.json"
-    assertFileExists "$pluginRoot/components/codegraph/dist/cli.js"
     assertFileExists "$installCheckCodexHome/config.toml"
     assertNoGitBashConfig
     test ! -e "$pluginRoot/components/git-bash" \
@@ -231,15 +225,8 @@ packageLib.mkNpmTarballPackage {
       -mindepth 1 -maxdepth 1 -name '.tmp-*' -print -quit)"
     test -z "$staleTmp" || failCheck "left stale plugin temp directory: $staleTmp"
 
-    assertFileExists "${codeGraphExecutable}"
     grep -F "\"command\": \"${nodeExecutable}\"" "$pluginRoot/.mcp.json" > /dev/null \
       || failCheck "installed OMO MCP manifest does not use packaged node"
-    grep -F "\"OMO_CODEGRAPH_BIN\": \"${codeGraphExecutable}\"" "$pluginRoot/.mcp.json" > /dev/null \
-      || failCheck "installed OMO MCP manifest does not use packaged codegraph"
-    bundledCodeGraphPackage="$(find "$pluginRoot/node_modules/@colbymchenry" \
-      -mindepth 1 -maxdepth 1 -name 'codegraph*' -print -quit 2> /dev/null || true)"
-    test -z "$bundledCodeGraphPackage" \
-      || failCheck "installed OMO plugin contains bundled npm codegraph package: $bundledCodeGraphPackage"
     bareNodeCommand="$(grep -R '"command": "node' "$pluginRoot" --include '*.json' | head -1 || true)"
     test -z "$bareNodeCommand" || failCheck "installed OMO plugin contains bare node command: $bareNodeCommand"
     grep -F '[hooks.state.' "$installCheckCodexHome/config.toml" > /dev/null \

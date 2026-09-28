@@ -90,7 +90,6 @@ let
   activeEvaluation = mkEvaluation {
     programs.lazyCodexAi = {
       enable = true;
-      codeGraph = false;
       codexAutonomous = false;
       context7 = false;
     };
@@ -107,13 +106,9 @@ let
     programs = {
       lazyCodexAi = {
         enable = true;
-        codeGraph = false;
         context7 = false;
       };
-      codex.settings.plugins."omo@sisyphuslabs".mcp_servers = {
-        codegraph.enabled = true;
-        context7.enabled = true;
-      };
+      codex.settings.plugins."omo@sisyphuslabs".mcp_servers.context7.enabled = true;
     };
   };
   disabledEvaluation = mkEvaluation { programs.codex.enable = true; };
@@ -177,16 +172,8 @@ let
     (activeEvaluation.options.programs.codex ? settings)
     (!(activeEvaluation.options.programs.codex ? config))
     (
-      activeConfig.programs.codex.settings.plugins."omo@sisyphuslabs".mcp_servers.codegraph.enabled
-      == false
-    )
-    (
       activeConfig.programs.codex.settings.plugins."omo@sisyphuslabs".mcp_servers.context7.enabled
       == false
-    )
-    (
-      userOverrideEvaluation.config.programs.codex.settings.plugins."omo@sisyphuslabs".mcp_servers.codegraph.enabled
-      == true
     )
     (
       userOverrideEvaluation.config.programs.codex.settings.plugins."omo@sisyphuslabs".mcp_servers.context7.enabled
@@ -195,14 +182,6 @@ let
     (
       autonomousEvaluation.config.programs.codex.settings.plugins."omo@sisyphuslabs".mcp_servers.context7.enabled
       == true
-    )
-    (
-      !lib.hasAttrByPath [
-        "plugins"
-        "omo@sisyphuslabs"
-        "mcp_servers"
-        "codegraph"
-      ] defaultEvaluation.config.programs.codex.settings
     )
     (
       !lib.hasAttrByPath [
@@ -282,15 +261,11 @@ in
       test ! -e "$TMPDIR/activate-lazycodex-ai-parent-trap"
       test -d "$pluginCache"
       ${activeCodexScript} "" "$activeGeneration"
-      sed -n '/^\[plugins\."omo@sisyphuslabs"\.mcp_servers\.codegraph\]$/,/^\[/p' "$configFile" \
-        | grep -Fx 'enabled = false'
       sed -n '/^\[plugins\."omo@sisyphuslabs"\.mcp_servers\.context7\]$/,/^\[/p' "$configFile" \
         | grep -Fx 'enabled = false'
 
       HOME=${testHome} ${activeLazyScript} "$activeGeneration" "$activeGeneration"
       ${activeCodexScript} "$activeGeneration" "$activeGeneration"
-      sed -n '/^\[plugins\."omo@sisyphuslabs"\.mcp_servers\.codegraph\]$/,/^\[/p' "$configFile" \
-        | grep -Fx 'enabled = false'
       sed -n '/^\[plugins\."omo@sisyphuslabs"\.mcp_servers\.context7\]$/,/^\[/p' "$configFile" \
         | grep -Fx 'enabled = false'
 
@@ -318,16 +293,12 @@ in
       HOME=${testHome} ${mkActivationScript "activate-lazycodex-ai-default" defaultLazyActivation.data} \
         "$activeGeneration" "$defaultGeneration"
       ${defaultCodexScript} "$activeGeneration" "$defaultGeneration"
-      sed -n '/^\[plugins\."omo@sisyphuslabs"\.mcp_servers\.codegraph\]$/,/^\[/p' "$configFile" \
-        | grep -Fx 'enabled = true'
       sed -n '/^\[plugins\."omo@sisyphuslabs"\.mcp_servers\.context7\]$/,/^\[/p' "$configFile" \
         | grep -Fx 'enabled = true'
 
       HOME=${testHome} ${mkActivationScript "reactivate-lazycodex-ai-default" defaultLazyActivation.data} \
         "$defaultGeneration" "$defaultGeneration"
       ${defaultCodexScript} "$defaultGeneration" "$defaultGeneration"
-      sed -n '/^\[plugins\."omo@sisyphuslabs"\.mcp_servers\.codegraph\]$/,/^\[/p' "$configFile" \
-        | grep -Fx 'enabled = true'
       sed -n '/^\[plugins\."omo@sisyphuslabs"\.mcp_servers\.context7\]$/,/^\[/p' "$configFile" \
         | grep -Fx 'enabled = true'
 
@@ -338,7 +309,6 @@ in
       HOME=${testHome} ${disabledLazyScript} "$activeGeneration" "$disabledGeneration"
       test ! -e "$pluginCache"
       ${disabledCodexScript} "$activeGeneration" "$disabledGeneration"
-      ! grep -F 'mcp_servers.codegraph' "$configFile"
       ! grep -F 'mcp_servers.context7' "$configFile"
 
       failureTmp="$TMPDIR/failing-activation"

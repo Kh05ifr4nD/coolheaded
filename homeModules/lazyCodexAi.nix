@@ -64,17 +64,6 @@ in
       '';
     };
 
-    codeGraph = lib.mkOption {
-      type = lib.types.nullOr lib.types.bool;
-      default = null;
-      description = ''
-        Whether the OMO CodeGraph MCP server is enabled. Null leaves the leaf
-        unmanaged and follows the packaged LazyCodex behavior. True or false
-        declares the leaf through programs.codex.settings. A direct user value
-        in programs.codex.settings has higher priority.
-      '';
-    };
-
     context7 = lib.mkOption {
       type = lib.types.nullOr lib.types.bool;
       default = null;
@@ -136,14 +125,9 @@ in
 
       programs.codex = {
         enable = lib.mkDefault true;
-        settings = lib.mkMerge [
-          (lib.mkIf (cfg.codeGraph != null) {
-            plugins."omo@sisyphuslabs".mcp_servers.codegraph.enabled = lib.mkDefault cfg.codeGraph;
-          })
-          (lib.mkIf (cfg.context7 != null) {
-            plugins."omo@sisyphuslabs".mcp_servers.context7.enabled = lib.mkDefault cfg.context7;
-          })
-        ];
+        settings = lib.mkIf (cfg.context7 != null) {
+          plugins."omo@sisyphuslabs".mcp_servers.context7.enabled = lib.mkDefault cfg.context7;
+        };
       };
 
       home = {
