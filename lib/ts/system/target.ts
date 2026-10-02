@@ -6,6 +6,7 @@ type SupportedSystem = (typeof SUPPORTED_SYSTEMS)[number];
 
 interface SystemTarget {
   readonly npmReleaseTarget: string;
+  readonly pythonEnvironmentMarker: string;
   readonly runner: string;
   readonly rustTargetTriple: string;
   readonly system: SupportedSystem;
@@ -24,10 +25,11 @@ function parseSystemTarget(value: unknown): SystemTarget {
     throw new TypeError("Invalid system target");
   }
 
-  const { npmReleaseTarget, runner, rustTargetTriple, system } = value;
+  const { npmReleaseTarget, pythonEnvironmentMarker, runner, rustTargetTriple, system } = value;
 
   if (
     typeof npmReleaseTarget !== "string" ||
+    typeof pythonEnvironmentMarker !== "string" ||
     typeof runner !== "string" ||
     typeof rustTargetTriple !== "string" ||
     typeof system !== "string" ||
@@ -38,6 +40,7 @@ function parseSystemTarget(value: unknown): SystemTarget {
 
   return {
     npmReleaseTarget,
+    pythonEnvironmentMarker,
     runner,
     rustTargetTriple,
     system,

@@ -2,14 +2,12 @@
   lib,
   packageLib,
   cacert,
-  ffmpeg_4,
-  ffmpeg_6,
+  ffmpeg,
+  libheif,
   python313,
   rdma-core,
-  sox,
   tbb,
   vulkan-loader,
-  cudaPackages,
   withTorch ? false,
   withFull ? false,
 }:
@@ -21,12 +19,14 @@ else
   let
     pname = "mineru";
     linuxAccelerated = withTorch || withFull;
-    enableNvidiaWheelOverrides = linuxAccelerated && packageLib.system == "x86_64-linux";
 
     pyproject =
       pin:
       packageLib.mkUvLockProject {
-        dependencies = [ "mineru[torch,full]==${pin.version}" ];
+        dependencies = [
+          "mineru[torch,full]==${pin.version}"
+          "mineru-vl-utils[mlx]; sys_platform == 'darwin' and platform_machine == 'arm64'"
+        ];
         extraBuildDependencies = {
           jieba = [ "setuptools" ];
         };
@@ -35,13 +35,19 @@ else
 
     extras = lib.optionals withTorch [ "torch" ] ++ lib.optionals withFull [ "full" ];
 
+    extraVenvDependencies = lib.optionalAttrs packageLib.stdenv.hostPlatform.isDarwin {
+      mineru-vl-utils = [ "mlx" ];
+    };
+
     distributionCheck =
       if packageLib.stdenv.hostPlatform.isDarwin then
         ''
+          require("mlx-vlm")
           require("torch")
           require("torchvision")
           require("transformers")
           forbid("vllm")
+          importlib.import_module("mlx.core")
         ''
       else if withFull then
         ''
@@ -49,6 +55,7 @@ else
           require("torchvision")
           require("transformers")
           require("vllm")
+          importlib.import_module("torch")
         ''
       else if withTorch then
         ''
@@ -56,6 +63,7 @@ else
           require("torchvision")
           require("transformers")
           forbid("vllm")
+          importlib.import_module("torch")
         ''
       else
         ''
@@ -63,22 +71,69 @@ else
           forbid("vllm")
         '';
 
-    packageOverrides =
+    sitePackages = "lib/python${python313.pythonVersion}/site-packages";
+
+    cudaComponent =
+      name:
+      let
+        versioned = builtins.match "(.*)-cu[0-9]+" name;
+      in
+      if versioned == null then name else builtins.head versioned;
+
+    isNativeWheel =
+      package:
+      let
+        src = package.src or null;
+      in
+      lib.isDerivation package
+      && lib.isAttrs src
+      && lib.hasSuffix ".whl" src.name
+      && !lib.hasSuffix "-none-any.whl" src.name;
+
+    linkNativeWheels =
+      final: prev:
+      lib.mapAttrs (
+        name: package:
+        if isNativeWheel package then
+          package.overrideAttrs (
+            oldAttrs:
+            let
+              providers = lib.filter (dependency: dependency.pname != package.pname && isNativeWheel dependency) (
+                final.resolveVirtualEnv { ${name} = [ ]; }
+              );
+            in
+            {
+              buildInputs = (oldAttrs.buildInputs or [ ]) ++ providers;
+              preFixup =
+                (oldAttrs.preFixup or "")
+                + lib.concatMapStrings (provider: ''
+                  addAutoPatchelfSearchPath ${provider}/${sitePackages}
+                '') providers;
+              autoPatchelfIgnoreMissingDeps = (oldAttrs.autoPatchelfIgnoreMissingDeps or [ ]) ++ [
+                "libcuda.so.1"
+              ];
+            }
+          )
+        else
+          package
+      ) prev;
+
+    nativeOverrides =
       final: prev:
       let
-        sitePackages = "lib/python${python313.pythonVersion}/site-packages";
-        torchLibraryPath = "${final.torch}/${sitePackages}/torch/lib";
-        torchBuildInputs = [
-          cudaPackages.cuda_cudart
-          final.torch
-        ];
-        vllmMissingDeps = [
-          "libcuda.so.1"
-        ]
-        ++ lib.optionals (packageLib.system == "aarch64-linux") [
-          "libc10_cuda.so"
-          "libtorch_cuda.so"
-        ];
+        dependsOnTorch = oldAttrs: {
+          passthru = oldAttrs.passthru // {
+            dependencies = oldAttrs.passthru.dependencies // {
+              torch = [ ];
+            };
+          };
+        };
+
+        overrideCudaComponent =
+          component: overrideAttrs:
+          lib.genAttrs (lib.filter (name: cudaComponent name == component) (lib.attrNames prev)) (
+            name: prev.${name}.overrideAttrs overrideAttrs
+          );
       in
       {
         mineru-llama-cpp = prev.mineru-llama-cpp.overrideAttrs (oldAttrs: {
@@ -90,167 +145,76 @@ else
           '';
         });
       }
+      // lib.optionalAttrs packageLib.stdenv.hostPlatform.isDarwin {
+        mlx = prev.mlx.overrideAttrs (oldAttrs: {
+          preFixup = (oldAttrs.preFixup or "") + ''
+            for library in "$out/${sitePackages}"/mlx/*.so; do
+              install_name_tool -add_rpath "${final.mlx-metal}/${sitePackages}/mlx/lib" "$library"
+            done
+          '';
+        });
+      }
       // lib.optionalAttrs withFull {
         flashinfer-python = prev.flashinfer-python.overrideAttrs (oldAttrs: {
           postInstall = (oldAttrs.postInstall or "") + ''
             rm -f "$out/${sitePackages}/build_backend.py"
           '';
         });
-        nvidia-cutlass-dsl-libs-base = prev.nvidia-cutlass-dsl-libs-base.overrideAttrs {
-          autoPatchelfIgnoreMissingDeps = [ "libcuda.so.1" ];
-        };
         opencv-python-headless = prev.opencv-python-headless.overrideAttrs (oldAttrs: {
           postFixup = (oldAttrs.postFixup or "") + ''
             rm -rf "$out/${sitePackages}/cv2"
           '';
         });
         torch-c-dlpack-ext = prev.torch-c-dlpack-ext.overrideAttrs (oldAttrs: {
-          buildInputs = (oldAttrs.buildInputs or [ ]) ++ torchBuildInputs;
-          preFixup = (oldAttrs.preFixup or "") + ''
-            addAutoPatchelfSearchPath ${torchLibraryPath}
-          '';
           postInstall = (oldAttrs.postInstall or "") + ''
             rm -f "$out/${sitePackages}/build_backend.py"
           '';
-          autoPatchelfIgnoreMissingDeps = lib.optionals (packageLib.system == "aarch64-linux") [
-            "libc10_cuda.so"
-            "libtorch_cuda.so"
-          ];
-        });
-        xgrammar = prev.xgrammar.overrideAttrs (oldAttrs: {
-          buildInputs = (oldAttrs.buildInputs or [ ]) ++ torchBuildInputs ++ [ final.apache-tvm-ffi ];
-          preFixup = (oldAttrs.preFixup or "") + ''
-            addAutoPatchelfSearchPath ${torchLibraryPath}
-            addAutoPatchelfSearchPath ${final.apache-tvm-ffi}/${sitePackages}/tvm_ffi/lib
-          '';
         });
       }
-      // lib.optionalAttrs linuxAccelerated {
-        numba = prev.numba.overrideAttrs (oldAttrs: {
-          buildInputs = (oldAttrs.buildInputs or [ ]) ++ [ tbb ];
-        });
-        torchaudio = prev.torchaudio.overrideAttrs (oldAttrs: {
-          buildInputs =
-            (oldAttrs.buildInputs or [ ])
-            ++ torchBuildInputs
-            ++ [
-              ffmpeg_4
-              ffmpeg_6
-              sox
-            ];
-          preFixup = (oldAttrs.preFixup or "") + ''
-            addAutoPatchelfSearchPath ${torchLibraryPath}
-          '';
-          autoPatchelfIgnoreMissingDeps = [
-            "libavcodec.so.59"
-            "libavdevice.so.59"
-            "libavfilter.so.8"
-            "libavformat.so.59"
-            "libavutil.so.57"
-          ];
-        });
-        torchvision = prev.torchvision.overrideAttrs (oldAttrs: {
-          buildInputs = (oldAttrs.buildInputs or [ ]) ++ torchBuildInputs;
-          preFixup = (oldAttrs.preFixup or "") + ''
-            addAutoPatchelfSearchPath ${torchLibraryPath}
-          '';
-        });
-        vllm = prev.vllm.overrideAttrs (oldAttrs: {
-          buildInputs = (oldAttrs.buildInputs or [ ]) ++ torchBuildInputs;
-          preFixup = (oldAttrs.preFixup or "") + ''
-            addAutoPatchelfSearchPath ${torchLibraryPath}
-          '';
-          autoPatchelfIgnoreMissingDeps = vllmMissingDeps;
-        });
-      }
-      // lib.optionalAttrs enableNvidiaWheelOverrides (
-        let
-          nvidiaLibraryPath = package: component: "${package}/${sitePackages}/nvidia/${component}/lib";
-          torchNvidiaLibraries = [
-            (nvidiaLibraryPath final."nvidia-cublas-cu12" "cublas")
-            (nvidiaLibraryPath final."nvidia-cuda-cupti-cu12" "cuda_cupti")
-            (nvidiaLibraryPath final."nvidia-cuda-nvrtc-cu12" "cuda_nvrtc")
-            (nvidiaLibraryPath final."nvidia-cuda-runtime-cu12" "cuda_runtime")
-            (nvidiaLibraryPath final."nvidia-cudnn-cu12" "cudnn")
-            (nvidiaLibraryPath final."nvidia-cufft-cu12" "cufft")
-            (nvidiaLibraryPath final."nvidia-cufile-cu12" "cufile")
-            (nvidiaLibraryPath final."nvidia-curand-cu12" "curand")
-            (nvidiaLibraryPath final."nvidia-cusolver-cu12" "cusolver")
-            (nvidiaLibraryPath final."nvidia-cusparse-cu12" "cusparse")
-            (nvidiaLibraryPath final."nvidia-cusparselt-cu12" "cusparselt")
-            (nvidiaLibraryPath final."nvidia-nccl-cu12" "nccl")
-            (nvidiaLibraryPath final."nvidia-nvjitlink-cu12" "nvjitlink")
-            (nvidiaLibraryPath final."nvidia-nvshmem-cu12" "nvshmem")
-            (nvidiaLibraryPath final."nvidia-nvtx-cu12" "nvtx")
-          ];
-        in
+      // lib.optionalAttrs linuxAccelerated (
         {
-          nvidia-cufile-cu12 = prev.nvidia-cufile-cu12.overrideAttrs (oldAttrs: {
-            buildInputs = (oldAttrs.buildInputs or [ ]) ++ [ rdma-core ];
+          numba = prev.numba.overrideAttrs (oldAttrs: {
+            buildInputs = (oldAttrs.buildInputs or [ ]) ++ [ tbb ];
           });
-          nvidia-nvshmem-cu12 = prev.nvidia-nvshmem-cu12.overrideAttrs {
-            autoPatchelfIgnoreMissingDeps = [
-              "libfabric.so.1"
-              "libmlx5.so.1"
-              "libmpi.so.40"
-              "liboshmem.so.40"
-              "libpmix.so.2"
-              "libucp.so.0"
-              "libucs.so.0"
-            ];
-          };
-          nvidia-cudnn-cu12 = prev.nvidia-cudnn-cu12.overrideAttrs (oldAttrs: {
-            preFixup = (oldAttrs.preFixup or "") + ''
-              addAutoPatchelfSearchPath ${nvidiaLibraryPath final."nvidia-cublas-cu12" "cublas"}
-            '';
-          });
-          nvidia-cusolver-cu12 = prev.nvidia-cusolver-cu12.overrideAttrs (oldAttrs: {
-            buildInputs = (oldAttrs.buildInputs or [ ]) ++ [
-              final."nvidia-cublas-cu12"
-              final."nvidia-cusparse-cu12"
-              final."nvidia-nvjitlink-cu12"
-            ];
-            preFixup = (oldAttrs.preFixup or "") + ''
-              addAutoPatchelfSearchPath ${nvidiaLibraryPath final."nvidia-cublas-cu12" "cublas"}
-              addAutoPatchelfSearchPath ${nvidiaLibraryPath final."nvidia-cusparse-cu12" "cusparse"}
-              addAutoPatchelfSearchPath ${nvidiaLibraryPath final."nvidia-nvjitlink-cu12" "nvjitlink"}
-            '';
-          });
-          nvidia-cusparse-cu12 = prev.nvidia-cusparse-cu12.overrideAttrs (oldAttrs: {
-            buildInputs = (oldAttrs.buildInputs or [ ]) ++ [ final."nvidia-nvjitlink-cu12" ];
-            preFixup = (oldAttrs.preFixup or "") + ''
-              addAutoPatchelfSearchPath ${nvidiaLibraryPath final."nvidia-nvjitlink-cu12" "nvjitlink"}
-            '';
-          });
-          torch = prev.torch.overrideAttrs (oldAttrs: {
-            buildInputs = (oldAttrs.buildInputs or [ ]) ++ [
-              final."nvidia-cublas-cu12"
-              final."nvidia-cuda-cupti-cu12"
-              final."nvidia-cuda-nvrtc-cu12"
-              final."nvidia-cuda-runtime-cu12"
-              final."nvidia-cudnn-cu12"
-              final."nvidia-cufft-cu12"
-              final."nvidia-cufile-cu12"
-              final."nvidia-curand-cu12"
-              final."nvidia-cusolver-cu12"
-              final."nvidia-cusparse-cu12"
-              final."nvidia-cusparselt-cu12"
-              final."nvidia-nccl-cu12"
-              final."nvidia-nvjitlink-cu12"
-              final."nvidia-nvshmem-cu12"
-              final."nvidia-nvtx-cu12"
-            ];
-            preFixup =
-              (oldAttrs.preFixup or "")
-              + "\n"
-              + lib.concatMapStringsSep "\n" (path: "addAutoPatchelfSearchPath ${path}") torchNvidiaLibraries;
-            autoPatchelfIgnoreMissingDeps = [ "libcuda.so.1" ];
-          });
+          torchaudio = prev.torchaudio.overrideAttrs dependsOnTorch;
+          torchcodec = prev.torchcodec.overrideAttrs (
+            oldAttrs:
+            dependsOnTorch oldAttrs
+            // {
+              buildInputs = (oldAttrs.buildInputs or [ ]) ++ [
+                ffmpeg
+                libheif
+              ];
+              autoPatchelfIgnoreMissingDeps = (oldAttrs.autoPatchelfIgnoreMissingDeps or [ ]) ++ [
+                "libav*"
+                "libsw*"
+              ];
+            }
+          );
         }
+        // overrideCudaComponent "nvidia-cufile" (oldAttrs: {
+          buildInputs = (oldAttrs.buildInputs or [ ]) ++ [ rdma-core ];
+        })
+        // overrideCudaComponent "nvidia-nvshmem" (oldAttrs: {
+          autoPatchelfIgnoreMissingDeps = (oldAttrs.autoPatchelfIgnoreMissingDeps or [ ]) ++ [
+            "libfabric.so.1"
+            "libmlx5.so.1"
+            "libmpi.so.40"
+            "liboshmem.so.40"
+            "libpmix.so.2"
+            "libucp.so.0"
+            "libucs.so.0"
+          ];
+        })
       );
+
+    packageOverrides = lib.composeManyExtensions (
+      lib.optional linuxAccelerated linkNativeWheels ++ [ nativeOverrides ]
+    );
   in
   packageLib.mkUvApplication {
     inherit
+      extraVenvDependencies
       extras
       packageOverrides
       pname
@@ -294,6 +258,7 @@ else
       test -x "$mineruPython" || failCheck "venv python missing next to mineru"
 
       "$mineruPython" - <<'PY'
+      import importlib
       import importlib.metadata
 
 

@@ -6,11 +6,15 @@ import {
 } from "coolheaded/core/updateScript.ts";
 import type { CommandRunner } from "coolheaded/core/commandRunner.ts";
 import { Effect } from "effect";
+import { SYSTEM_TARGETS } from "coolheaded/system/target.ts";
 import { withTemporaryDirectory } from "coolheaded/core/temporaryDirectory.ts";
 import { writePinJson } from "coolheaded/pin/json.ts";
 
 const ROOT_PROJECT_NAME = "coolheaded-lock-input";
 const ROOT_PROJECT_VERSION = "0";
+const PYTHON_ENVIRONMENT_MARKERS = SYSTEM_TARGETS.map(
+  ({ pythonEnvironmentMarker }): string => pythonEnvironmentMarker,
+);
 
 interface UvProject {
   readonly dependencies: readonly string[];
@@ -121,10 +125,10 @@ name = ${tomlString(project.name ?? ROOT_PROJECT_NAME)}
 version = ${tomlString(project.version ?? ROOT_PROJECT_VERSION)}
 requires-python = ${tomlString(pythonRequirement(project.pythonMinorVersion))}
 dependencies = ${tomlArray(project.dependencies)}
-${tomlTableArrays("project.optional-dependencies", project.optionalDependencies)}${tomlTableArrays(
-    "tool.uv.extra-build-dependencies",
-    project.extraBuildDependencies,
-  )}`;
+${tomlTableArrays("project.optional-dependencies", project.optionalDependencies)}
+[tool.uv]
+environments = ${tomlArray(PYTHON_ENVIRONMENT_MARKERS)}
+${tomlTableArrays("tool.uv.extra-build-dependencies", project.extraBuildDependencies)}`;
 }
 
 function generatedUvLock(

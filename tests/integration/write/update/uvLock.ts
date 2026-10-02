@@ -8,6 +8,7 @@ import {
 } from "@jsr/std__assert";
 import { Effect } from "effect";
 import { FakeCommandRunner } from "coolheadedTestSupport/commandRunner.ts";
+import { SYSTEM_TARGETS } from "coolheaded/system/target.ts";
 import { UpdateError } from "coolheaded/core/updateScript.ts";
 import { httpJsonError } from "coolheaded/core/fetchHttpClient.ts";
 import { updateVersionedNixpkgsPythonUvLock } from "coolheaded/update/uvLock.ts";
@@ -22,6 +23,9 @@ const SECOND_NON_TEXT_BYTE = 254;
 const UV_LOCK = "version = 1\n";
 const PIN_SENTINEL = new Uint8Array([0, NON_TEXT_BYTE, 1]);
 const LOCK_SENTINEL = new Uint8Array([2, SECOND_NON_TEXT_BYTE, 3]);
+const ENVIRONMENTS = SYSTEM_TARGETS.map(({ pythonEnvironmentMarker }) =>
+  JSON.stringify(pythonEnvironmentMarker),
+).join(", ");
 const PYPROJECT = `[project]
 name = "coolheaded-lock-input"
 version = "0"
@@ -31,6 +35,9 @@ dependencies = ["tool==1.2.3"]
 [project.optional-dependencies]
 dev = ["pytest"]
 docs = ["mkdocs"]
+
+[tool.uv]
+environments = [${ENVIRONMENTS}]
 
 [tool.uv.extra-build-dependencies]
 tool = ["setuptools"]
