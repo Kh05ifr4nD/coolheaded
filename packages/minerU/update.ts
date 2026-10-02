@@ -15,7 +15,10 @@ runUpdateScript(import.meta.url, (args, runner) =>
     latestVersion: () => latestPyPiVersion(PYPI_PACKAGE_NAME, fetchJsonClient),
     pinFilePath: PIN_FILE_PATH,
     project: (version, pythonMinorVersion) => ({
-      dependencies: [`mineru[torch,full]==${version}`],
+      dependencies: [
+        `mineru[torch,full]==${version}`,
+        "mineru-vl-utils[mlx]; sys_platform == 'darwin' and platform_machine == 'arm64'",
+      ],
       extraBuildDependencies: {
         jieba: ["setuptools"],
       },

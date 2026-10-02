@@ -42,9 +42,12 @@ let
       // lib.optionalAttrs (optionalDependencies != { }) {
         optional-dependencies = optionalDependencies;
       };
-    }
-    // lib.optionalAttrs (extraBuildDependencies != { }) {
-      tool.uv.extra-build-dependencies = extraBuildDependencies;
+      tool.uv = {
+        environments = base.pythonEnvironmentMarkers;
+      }
+      // lib.optionalAttrs (extraBuildDependencies != { }) {
+        extra-build-dependencies = extraBuildDependencies;
+      };
     };
 
   mkUvPythonSet =
@@ -78,6 +81,7 @@ let
       meta,
       doInstallCheck ? base.canExecute,
       expectedExecutables ? [ ],
+      extraVenvDependencies ? { },
       extras ? [ ],
       installCheck ? "",
       nativeInstallCheckInputs ? [ ],
@@ -115,6 +119,7 @@ let
             value = extras;
           }
         ]
+        // extraVenvDependencies
       );
       package = pythonSet.${packageName};
     }).overrideAttrs

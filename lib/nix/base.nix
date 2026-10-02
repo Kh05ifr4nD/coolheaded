@@ -39,6 +39,8 @@ let
 
   npmReleaseTargets = targetAttrs "npmReleaseTarget";
 
+  pythonEnvironmentMarkers = map (target: target.pythonEnvironmentMarker) systemTargetsConfig;
+
   releaseTarget =
     pname: targets: targets.${system} or (throw "Unsupported system for ${pname}: ${system}");
 
@@ -239,6 +241,7 @@ in
     npmReleaseTargets
     packageDirectory
     packageShell
+    pythonEnvironmentMarkers
     readPin
     releaseTarget
     removeReferencesTo

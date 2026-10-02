@@ -37,4 +37,11 @@ describe("supported systems", (): void => {
     );
     assertEquals(await fileContains("lib/nix/base.nix", "targetAttrs"), true);
   });
+
+  it("keeps uv lock environments sourced from the shared system target contract", async (): Promise<void> => {
+    assertEquals(
+      await fileContains("lib/nix/python.nix", "environments = base.pythonEnvironmentMarkers;"),
+      true,
+    );
+  });
 });

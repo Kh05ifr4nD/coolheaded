@@ -99,7 +99,7 @@
     "test:integration": "deno task test:integration:env && deno task test:integration:net && deno task test:integration:read && deno task test:integration:write && deno task test:integration:repo && deno task test:integration:update",
     "test:integration:env": "env -u GH_TOKEN -u GITHUB_TOKEN $COOLHEADED_DENO test --allow-env=FAST_CHECK_PATH,FAST_CHECK_RUNS,FAST_CHECK_SEED,GH_TOKEN,GITHUB_TOKEN 'tests/integration/env/**/*.ts'",
     "test:integration:net": "deno test --unstable-no-legacy-abort --allow-net=127.0.0.1 'tests/integration/net/**/*.ts'",
-    "test:integration:read": "deno test --allow-read=deno.jsonc,flake.nix,flake/gitHooks.nix,lib/nix/base.nix,lib/ts/system/targets.json 'tests/integration/read/**/*.ts'",
+    "test:integration:read": "deno test --allow-read=deno.jsonc,flake.nix,flake/gitHooks.nix,lib/nix/base.nix,lib/nix/python.nix,lib/ts/system/targets.json 'tests/integration/read/**/*.ts'",
     "test:integration:repo": "env TMPDIR=/tmp $COOLHEADED_DENO test --allow-env=PATH,COOLHEADED_CUE,COOLHEADED_GIT --allow-read=.,/tmp,$COOLHEADED_DENO,$COOLHEADED_CUE,$COOLHEADED_GIT,$COOLHEADED_GIT_DIR --allow-run=$COOLHEADED_DENO,$COOLHEADED_CUE,$COOLHEADED_GIT --allow-write=/tmp 'tests/integration/repo/**/*.ts'",
     "test:integration:update": "env TMPDIR=/tmp $COOLHEADED_DENO test --allow-env=COOLHEADED_GIT,GITHUB_OUTPUT --allow-read=/tmp --allow-run=$COOLHEADED_DENO,$COOLHEADED_GIT --allow-write=/tmp 'tests/integration/update/**/*.ts'",
     "test:integration:write": "env -u GH_TOKEN -u GITHUB_TOKEN TMPDIR=/tmp $COOLHEADED_DENO test --allow-env=GH_TOKEN,GITHUB_TOKEN --allow-read=/tmp --allow-write=/tmp 'tests/integration/write/**/*.ts'",
