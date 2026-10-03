@@ -3,13 +3,8 @@
   stdenv,
   autoPatchelfHook,
   installShellFiles,
-  makeWrapper,
   ncurses,
   packageLib,
-  ripgrep,
-  bubblewrap,
-  withRipgrep ? true,
-  withBubblewrap ? stdenv.hostPlatform.isLinux,
 }:
 let
   pname = "codex";
@@ -20,19 +15,6 @@ let
     x86_64-linux = "x86_64-unknown-linux-musl";
   };
   vendorTarget = packageLib.releaseTarget pname vendorTargets;
-
-  wrapperInputs = (
-    lib.optionals withRipgrep [ ripgrep ]
-    ++ lib.optionals (withBubblewrap && stdenv.hostPlatform.isLinux) [ bubblewrap ]
-  );
-  wrapperPath = lib.makeBinPath wrapperInputs;
-  wrapperNeeded = wrapperInputs != [ ];
-  wrapperArgs = lib.optionals wrapperNeeded [
-    "--prefix"
-    "PATH"
-    ":"
-    wrapperPath
-  ];
 in
 packageLib.mkNpmTarballPackage {
   inherit pname;
@@ -43,7 +25,6 @@ packageLib.mkNpmTarballPackage {
 
   nativeBuildInputs = [
     installShellFiles
-    makeWrapper
   ]
   ++ lib.optionals stdenv.hostPlatform.isLinux [ autoPatchelfHook ];
   buildInputs = lib.optionals stdenv.hostPlatform.isLinux [
@@ -65,16 +46,7 @@ packageLib.mkNpmTarballPackage {
     # Daemon installation validates and copies the complete upstream package.
     cp -a "vendor/${vendorTarget}/." "$packageRoot/"
 
-    ${
-      if wrapperNeeded then
-        ''
-          makeWrapper "$packageRoot/bin/codex" "$out/bin/codex" ${lib.escapeShellArgs wrapperArgs}
-        ''
-      else
-        ''
-          ln -s "$packageRoot/bin/codex" "$out/bin/codex"
-        ''
-    }
+    ln -s "$packageRoot/bin/codex" "$out/bin/codex"
 
     runHook postInstall
   '';
@@ -126,21 +98,12 @@ packageLib.mkNpmTarballPackage {
     ${lib.optionalString stdenv.hostPlatform.isLinux ''
       "$out/libexec/codex/codex-resources/bwrap" --version
     ''}
-    ${
-      if wrapperNeeded then
-        ''
-          test ! -L "$out/bin/codex" || failCheck "expected wrapped codex launcher"
-        ''
-      else
-        ''
-          test -L "$out/bin/codex" || failCheck "expected codex launcher symlink"
-          case "$(readlink "$out/bin/codex")" in
-            "$out/libexec/codex/bin/codex") ;;
-            "../libexec/codex/bin/codex") ;;
-            *) failCheck "unexpected codex launcher symlink target" ;;
-          esac
-        ''
-    }
+    test -L "$out/bin/codex" || failCheck "expected codex launcher symlink"
+    case "$(readlink "$out/bin/codex")" in
+      "$out/libexec/codex/bin/codex") ;;
+      "../libexec/codex/bin/codex") ;;
+      *) failCheck "unexpected codex launcher symlink target" ;;
+    esac
   '';
 
   meta = {

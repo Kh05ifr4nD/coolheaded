@@ -272,7 +272,7 @@ function defineChangedFilesTests(): void {
         "paseoHomeModule",
         "unrelated",
       ],
-      "aarch64-linux": ["codex", "codexMinimal", "paseo", "unrelated"],
+      "aarch64-linux": ["codex", "codexDaemon", "paseo", "unrelated"],
     };
 
     assertEquals(
@@ -289,8 +289,8 @@ function defineChangedFilesTests(): void {
       ),
       [
         "codex",
+        "codexDaemon",
         "codexHomeModule",
-        "codexMinimal",
         "minerU",
         "minerUFull",
         "minerUTorch",
