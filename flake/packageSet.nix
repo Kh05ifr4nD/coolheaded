@@ -69,12 +69,6 @@ let
     in
     directoryPackages
     // {
-      codexMinimal = withoutUpdateScript (
-        self.codex.override {
-          withBubblewrap = false;
-          withRipgrep = false;
-        }
-      );
       oxlintMinimal = withoutUpdateScript (self.oxlint.override { withTypecheck = false; });
     }
     // lib.optionalAttrs pkgs.stdenv.hostPlatform.isLinux {

@@ -174,6 +174,88 @@ let
   );
 in
 {
+  codexDaemon =
+    pkgs.runCommand "codex-daemon-check"
+      {
+        nativeBuildInputs = [
+          pkgs.jq
+          pkgs.ripgrep
+        ]
+        ++ lib.optionals pkgs.stdenv.hostPlatform.isLinux [
+          pkgs.procps
+          pkgs.patchelf
+        ]
+        ++ lib.optionals pkgs.stdenv.hostPlatform.isDarwin [ pkgs.darwin.adv_cmds.ps ];
+      }
+      ''
+        set -euo pipefail
+
+        export HOME="$TMPDIR/h"
+        export CODEX_HOME="$TMPDIR/d"
+        mkdir -p "$HOME" "$CODEX_HOME"
+        CODEX_HOME="$(realpath "$CODEX_HOME")"
+        codex="${package}/bin/codex"
+        packageRoot="${package}/libexec/codex"
+        managedRoot="$CODEX_HOME/packages/app-server-daemon/current"
+
+        cleanupDaemon() {
+          "$codex" app-server daemon stop > /dev/null
+        }
+        trap cleanupDaemon EXIT
+
+        "$codex" app-server daemon start | tee "$TMPDIR/start.json"
+        jq -e --arg version ${lib.escapeShellArg package.version} \
+          --arg managed "$managedRoot/bin/codex" \
+          '.status == "started" and .managedCodexPath == $managed and .cliVersion == $version and .appServerVersion == $version' \
+          "$TMPDIR/start.json"
+        for entry in "$packageRoot"/*; do
+          diff -r "$entry" "$managedRoot/$(basename "$entry")"
+        done
+        ${lib.optionalString pkgs.stdenv.hostPlatform.isLinux ''
+          shopt -s globstar nullglob
+          for resource in "$managedRoot"/**; do
+            if [[ -f "$resource" ]] && rpath="$(patchelf --print-rpath "$resource" 2> /dev/null)"; then
+              case "$rpath" in
+                *"$packageRoot"*)
+                  echo "Copied Codex resource still depends on its source package: $resource" >&2
+                  exit 1
+                  ;;
+              esac
+            fi
+          done
+        ''}
+        "$codex" app-server daemon version | jq -e '.status == "running"'
+        "$codex" app-server daemon start | jq -e '.status == "alreadyRunning"'
+        "$codex" app-server daemon stop | jq -e '.status == "stopped"'
+        "$codex" app-server daemon stop | jq -e '.status == "notRunning"'
+        trap - EXIT
+
+        # Recreate the missing-resource failure even when rg is available in PATH.
+        incomplete="$TMPDIR/incomplete"
+        cp -a ${package}/libexec/codex "$incomplete"
+        chmod -R u+w "$incomplete"
+        rm "$incomplete/codex-path/rg"
+        export CODEX_HOME="$TMPDIR/missing"
+        mkdir -p "$CODEX_HOME"
+        trap cleanupDaemon EXIT
+        if "$incomplete/bin/codex" app-server daemon start > "$TMPDIR/missing.out" 2> "$TMPDIR/missing.err"; then
+          echo "Codex accepted a package without its bundled rg" >&2
+          exit 1
+        fi
+        ${pkgs.ripgrep}/bin/rg -F 'local Codex package is missing codex-path/rg' "$TMPDIR/missing.err"
+        test ! -e "$CODEX_HOME/packages/app-server-daemon/current"
+
+        ln -s ${pkgs.ripgrep}/bin/rg "$incomplete/codex-path/rg"
+        if "$incomplete/bin/codex" app-server daemon start > "$TMPDIR/link.out" 2> "$TMPDIR/link.err"; then
+          echo "Codex accepted a package link escaping its root" >&2
+          exit 1
+        fi
+        ${pkgs.ripgrep}/bin/rg -F 'package link escapes its root' "$TMPDIR/link.err"
+        test ! -e "$CODEX_HOME/packages/app-server-daemon/current"
+        trap - EXIT
+        touch "$out"
+      '';
+
   codexHomeModule =
     assert builtins.attrNames declaredEvaluation.config.home.activation == [ "codexConfig" ];
     assert declaredEvaluation.config.home.activation.codexConfig.after == [ "linkGeneration" ];
