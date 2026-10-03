@@ -189,7 +189,8 @@ in
         ++ lib.optionals pkgs.stdenv.hostPlatform.isLinux [
           pkgs.procps
           pkgs.patchelf
-        ];
+        ]
+        ++ lib.optionals pkgs.stdenv.hostPlatform.isDarwin [ pkgs.darwin.adv_cmds.ps ];
       }
       ''
         set -euo pipefail
