@@ -186,7 +186,10 @@ in
           pkgs.jq
           pkgs.ripgrep
         ]
-        ++ lib.optionals pkgs.stdenv.hostPlatform.isLinux [ pkgs.procps ];
+        ++ lib.optionals pkgs.stdenv.hostPlatform.isLinux [
+          pkgs.procps
+          pkgs.patchelf
+        ];
       }
       ''
         set -euo pipefail
@@ -212,7 +215,22 @@ in
             --arg managed "$managedRoot/bin/codex" \
             '.status == "started" and .managedCodexPath == $managed and .cliVersion == $version and .appServerVersion == $version' \
             "$TMPDIR/start.json"
-          diff -r "$packageRoot" "$managedRoot"
+          for entry in "$packageRoot"/*; do
+            diff -r "$entry" "$managedRoot/$(basename "$entry")"
+          done
+          ${lib.optionalString pkgs.stdenv.hostPlatform.isLinux ''
+            shopt -s globstar nullglob
+            for resource in "$managedRoot"/**; do
+              if [[ -f "$resource" ]] && rpath="$(patchelf --print-rpath "$resource" 2> /dev/null)"; then
+                case "$rpath" in
+                  *"$packageRoot"*)
+                    echo "Copied Codex resource still depends on its source package: $resource" >&2
+                    exit 1
+                    ;;
+                esac
+              fi
+            done
+          ''}
           "$codex" app-server daemon version | jq -e '.status == "running"'
           "$codex" app-server daemon start | jq -e '.status == "alreadyRunning"'
           "$codex" app-server daemon stop | jq -e '.status == "stopped"'

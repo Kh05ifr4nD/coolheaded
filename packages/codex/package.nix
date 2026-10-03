@@ -46,7 +46,10 @@ packageLib.mkNpmTarballPackage {
     makeWrapper
   ]
   ++ lib.optionals stdenv.hostPlatform.isLinux [ autoPatchelfHook ];
-  buildInputs = lib.optionals stdenv.hostPlatform.isLinux [ ncurses ];
+  buildInputs = lib.optionals stdenv.hostPlatform.isLinux [
+    ncurses
+    stdenv.cc.cc.lib
+  ];
 
   unpackPhase = ''
     runHook preUnpack
@@ -76,23 +79,28 @@ packageLib.mkNpmTarballPackage {
     runHook postInstall
   '';
 
-  preFixup = lib.optionalString packageLib.canExecute ''
-    installCodexShellCompletions() {
-      completionHome="$PWD/completionHome"
-      completionCodexHome="$PWD/completionCodexHome"
-      completionTmp="$PWD/completionTmp"
-      mkdir -p "$completionHome" "$completionCodexHome" "$completionTmp"
+  preFixup =
+    lib.optionalString stdenv.hostPlatform.isLinux ''
+      # The daemon relocates this tree; keep its private library paths relative.
+      autoPatchelfFlags+=(--relativize-rpath)
+    ''
+    + lib.optionalString packageLib.canExecute ''
+      installCodexShellCompletions() {
+        completionHome="$PWD/completionHome"
+        completionCodexHome="$PWD/completionCodexHome"
+        completionTmp="$PWD/completionTmp"
+        mkdir -p "$completionHome" "$completionCodexHome" "$completionTmp"
 
-      export HOME="$completionHome"
-      export CODEX_HOME="$completionCodexHome"
-      export TMPDIR="$completionTmp"
-      installShellCompletion --cmd codex \
-        --bash <($out/bin/codex completion bash) \
-        --fish <($out/bin/codex completion fish) \
-        --zsh <($out/bin/codex completion zsh)
-    }
-    postFixupHooks+=(installCodexShellCompletions)
-  '';
+        export HOME="$completionHome"
+        export CODEX_HOME="$completionCodexHome"
+        export TMPDIR="$completionTmp"
+        installShellCompletion --cmd codex \
+          --bash <($out/bin/codex completion bash) \
+          --fish <($out/bin/codex completion fish) \
+          --zsh <($out/bin/codex completion zsh)
+      }
+      postFixupHooks+=(installCodexShellCompletions)
+    '';
 
   preVersionCheck = ''
     export HOME="$PWD/versionCheckHome"
