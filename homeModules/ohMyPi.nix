@@ -1,4 +1,4 @@
-{ self }:
+{ ... }:
 
 {
   config,
@@ -22,8 +22,8 @@ in
 
     package = lib.mkOption {
       type = lib.types.nullOr lib.types.package;
-      default = self.packages.${pkgs.stdenv.hostPlatform.system}.ohMyPi;
-      defaultText = lib.literalExpression "inputs.coolheaded.packages.\${pkgs.stdenv.hostPlatform.system}.ohMyPi";
+      default = pkgs.omp;
+      defaultText = lib.literalExpression "pkgs.omp";
       description = "Oh My Pi package to install, or null to manage only its configuration.";
     };
 

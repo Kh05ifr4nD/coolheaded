@@ -1,9 +1,0 @@
-{
-  "version": "1.2.16-5594158052802560",
-  "binaryVersion": "1.2.16",
-  "platformPackageHashes": {
-    "aarch64-darwin": "sha512-g0pi3Jcs/fCc2wAce6ebtbya5azbqL2cTSk5BFt24Zyb227qxY7Yih3qoWcPyTNe7hhIL+LzJgPngiTelXOw/g==",
-    "aarch64-linux": "sha512-0X2ARHNtMeJM58TLO3X67zzlEC7KrTGu+VeFwPPBP6BhXXsR+kEetzuEhImt+dQRF4RG8xSOMDU6IEjNPnMZcQ==",
-    "x86_64-linux": "sha512-wx8JJl1Pau98A7UQVmGumPmoNlxsgSxorcxKXh+Lj5bAX9LkQIpS9eh+G1Yaw1D0/6etQaGRiTvno3MMz51lUw=="
-  }
-}

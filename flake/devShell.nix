@@ -6,14 +6,14 @@ pkgs.mkShellNoCC {
     pre-commit.settings.enabledPackages
     ++ [ treefmt.build.wrapper ]
     ++ [
-      packages.cue
+      pkgs.cue
       pkgs.deno
       pkgs.git
     ]
   );
 
   shellHook = ''
-    export COOLHEADED_CUE="${config.packages.cue}/bin/cue"
+    export COOLHEADED_CUE="${pkgs.cue}/bin/cue"
     export COOLHEADED_DENO="${pkgs.deno}/bin/deno"
     export COOLHEADED_GIT="${pkgs.git}/bin/git"
     export COOLHEADED_GIT_DIR="$(${pkgs.git}/bin/git rev-parse --path-format=absolute --git-common-dir)"

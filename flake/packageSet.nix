@@ -68,9 +68,6 @@ let
       ) packageDirectories;
     in
     directoryPackages
-    // {
-      oxlintMinimal = withoutUpdateScript (self.oxlint.override { withTypecheck = false; });
-    }
     // lib.optionalAttrs pkgs.stdenv.hostPlatform.isLinux {
       minerUFull = withoutUpdateScript (self.minerU.override { withFull = true; });
       minerUTorch = withoutUpdateScript (self.minerU.override { withTorch = true; });

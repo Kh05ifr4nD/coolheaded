@@ -1,7 +1,6 @@
 {
   lib,
   package,
-  packages,
   pkgs,
   ...
 }:
@@ -17,14 +16,9 @@ let
   stateInstallFingerprint = "state/lazycodex-ai-install-fingerprint";
 
   lazyCodexAiModule = import ../../homeModules/lazyCodexAi.nix {
-    self.packages.${system} = {
-      codex = packages.codex;
-      lazyCodexAi = package;
-    };
+    self.packages.${system}.lazyCodexAi = package;
   };
-  codexModule = import ../../homeModules/codex.nix {
-    self.packages.${system}.codex = packages.codex;
-  };
+  codexModule = import ../../homeModules/codex.nix { };
   bundledCodexModule = {
     key = "${fakeHomeManagerModulesPath}/programs/codex";
     options.programs.codex.enable = lib.mkOption { type = lib.types.str; };
@@ -165,10 +159,10 @@ let
   commonAssertions = [
     (lib.all (assertion: assertion.assertion) activeConfig.assertions)
     activeConfig.programs.codex.enable
-    (activeConfig.programs.codex.package == packages.codex)
+    (activeConfig.programs.codex.package == pkgs.codex)
     (lib.length activeConfig.home.packages == 2)
     (lib.elem package activeConfig.home.packages)
-    (lib.elem packages.codex activeConfig.home.packages)
+    (lib.elem pkgs.codex activeConfig.home.packages)
     (activeEvaluation.options.programs.codex ? settings)
     (!(activeEvaluation.options.programs.codex ? config))
     (
@@ -200,7 +194,7 @@ let
     (lib.hasInfix "OMO_CODEX_PROJECT=" activeLazyActivation.data)
     (activeLazyActivation.after == [ "linkGeneration" ])
     (activeLazyActivation.before == [ "codexConfig" ])
-    (composedEvaluation.config.programs.codex.package == packages.codex)
+    (composedEvaluation.config.programs.codex.package == pkgs.codex)
     (!(activeEvaluation.options.programs.lazyCodexAi ? gitBash))
     (!(activeEvaluation.options.programs.lazyCodexAi ? gitBashEnabled))
   ];
@@ -240,7 +234,7 @@ let
   runCheck = if pkgs.stdenv.hostPlatform.isDarwin then pkgs.runCommandCC else pkgs.runCommand;
   darwinAppServer = import ../../lib/nix/codexDarwinAppServer.nix {
     inherit lib pkgs;
-    codex = packages.codex;
+    codex = pkgs.codex;
   };
 in
 {

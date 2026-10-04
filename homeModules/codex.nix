@@ -1,4 +1,4 @@
-{ self }:
+{ ... }:
 
 moduleArgs@{
   config,
@@ -320,8 +320,8 @@ in
 
     package = lib.mkOption {
       type = lib.types.package;
-      default = self.packages.${pkgs.stdenv.hostPlatform.system}.codex;
-      defaultText = lib.literalExpression "inputs.coolheaded.packages.\${pkgs.stdenv.hostPlatform.system}.codex";
+      default = pkgs.codex;
+      defaultText = lib.literalExpression "pkgs.codex";
       description = "Codex package to install and use for configuration reconciliation.";
     };
 

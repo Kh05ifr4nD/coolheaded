@@ -1,4 +1,4 @@
-{ self }:
+{ ... }:
 
 {
   config,
@@ -82,8 +82,8 @@ in
 
     package = lib.mkOption {
       type = lib.types.package;
-      default = self.packages.${pkgs.stdenv.hostPlatform.system}.paseo;
-      defaultText = lib.literalExpression "inputs.coolheaded.packages.\${pkgs.stdenv.hostPlatform.system}.paseo";
+      default = pkgs.paseo;
+      defaultText = lib.literalExpression "pkgs.paseo";
       description = "Paseo package providing the CLI and headless daemon.";
     };
 

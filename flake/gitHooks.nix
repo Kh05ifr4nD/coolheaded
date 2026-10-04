@@ -1,8 +1,6 @@
 { config, pkgs }:
 
 let
-  inherit (config) packages;
-
   denoDependencies = import ./denoDependencies.nix {
     inherit pkgs;
     inherit (pkgs) lib;
@@ -23,7 +21,7 @@ let
     task: extraPackages:
     let
       command = pkgs.writeShellScript "coolheaded-deno-task" ''
-        export COOLHEADED_CUE=${packages.cue}/bin/cue
+        export COOLHEADED_CUE=${pkgs.cue}/bin/cue
         export COOLHEADED_DENO=${pkgs.deno}/bin/deno
         export COOLHEADED_GIT=${pkgs.git}/bin/git
         export COOLHEADED_GIT_DIR="$(${pkgs.git}/bin/git rev-parse --path-format=absolute --git-common-dir)"
@@ -71,8 +69,8 @@ in
       stages = [ "prepare-commit-msg" ];
     };
 
-    denoCheck = denoTaskHook "check" [ packages.cue ];
-    denoTest = denoTaskHook "test:runtime" [ packages.cue ];
+    denoCheck = denoTaskHook "check" [ pkgs.cue ];
+    denoTest = denoTaskHook "test:runtime" [ pkgs.cue ];
 
     denolint = {
       enable = true;
@@ -94,7 +92,7 @@ in
 
     oxlint = {
       enable = true;
-      package = packages.oxlint;
+      package = pkgs.oxlint;
       pass_filenames = false;
       settings = {
         configPath = ".oxlintrc.jsonc";
