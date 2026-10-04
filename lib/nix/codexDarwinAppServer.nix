@@ -31,7 +31,11 @@ lib.optionalString pkgs.stdenv.hostPlatform.isDarwin ''
     -o "$codexAppServerDir/preference-sync.dylib" \
     "$codexAppServerDir/preference-sync.c"
   /usr/bin/codesign --force --sign - "$codexAppServerDir/preference-sync.dylib"
-  cp ${codex}/libexec/codex/bin/codex "$codexAppServerDir/codex"
+  if [[ -e ${codex}/bin/.codex-wrapped ]]; then
+    cp ${codex}/bin/.codex-wrapped "$codexAppServerDir/codex"
+  else
+    cp ${lib.getExe codex} "$codexAppServerDir/codex"
+  fi
   chmod u+w "$codexAppServerDir/codex"
   /usr/bin/codesign --remove-signature "$codexAppServerDir/codex"
   /usr/bin/codesign --force --sign - "$codexAppServerDir/codex"

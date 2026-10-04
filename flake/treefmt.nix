@@ -1,4 +1,4 @@
-{ config, pkgs }:
+{ pkgs, ... }:
 let
   rootMarkdown = [
     "AGENTS.md"
@@ -16,7 +16,7 @@ in
     oxfmt = {
       enable = true;
       excludes = rootMarkdown;
-      package = config.packages.oxfmt;
+      package = pkgs.oxfmt;
     };
     "rumdl-format" = {
       enable = true;
