@@ -2,9 +2,10 @@
   lib,
   packageLib,
   cacert,
+  fetchurl,
   ffmpeg,
   libheif,
-  python313,
+  python3,
   rdma-core,
   tbb,
   vulkan-loader,
@@ -30,7 +31,7 @@ else
         extraBuildDependencies = {
           jieba = [ "setuptools" ];
         };
-        python = python313;
+        python = python3;
       };
 
     extras = lib.optionals withTorch [ "torch" ] ++ lib.optionals withFull [ "full" ];
@@ -48,6 +49,12 @@ else
           require("transformers")
           forbid("vllm")
           importlib.import_module("mlx.core")
+          metalWheel = importlib.metadata.distribution("mlx-metal").read_text("WHEEL")
+          if metalWheel is None or not any(
+              line.startswith("Tag: ") and line.endswith("-macosx_26_0_arm64")
+              for line in metalWheel.splitlines()
+          ):
+              raise SystemExit("mlx-metal must use the macOS 26 arm64 wheel")
         ''
       else if withFull then
         ''
@@ -71,7 +78,7 @@ else
           forbid("vllm")
         '';
 
-    sitePackages = "lib/python${python313.pythonVersion}/site-packages";
+    sitePackages = python3.sitePackages;
 
     cudaComponent =
       name:
@@ -146,6 +153,19 @@ else
         });
       }
       // lib.optionalAttrs packageLib.stdenv.hostPlatform.isDarwin {
+        mlx-metal = prev.mlx-metal.overrideAttrs (oldAttrs: {
+          src =
+            let
+              lockedPackage =
+                lib.findFirst (package: package.name == "mlx-metal" && package.version == oldAttrs.version)
+                  (throw "mlx-metal is missing from uv.lock")
+                  (builtins.fromTOML (builtins.readFile ./uv.lock)).package;
+              wheel = lib.findFirst (
+                wheel: lib.hasSuffix "-macosx_26_0_arm64.whl" wheel.url
+              ) (throw "mlx-metal has no macOS 26 arm64 wheel in uv.lock") lockedPackage.wheels;
+            in
+            fetchurl { inherit (wheel) url hash; };
+        });
         mlx = prev.mlx.overrideAttrs (oldAttrs: {
           preFixup = (oldAttrs.preFixup or "") + ''
             for library in "$out/${sitePackages}"/mlx/*.so; do
@@ -221,7 +241,7 @@ else
       pyproject
       ;
 
-    python = python313;
+    python = python3;
     expectedExecutables = [
       "mineru"
       "mineru-api"
