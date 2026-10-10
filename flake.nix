@@ -2,10 +2,6 @@
   description = "Nix-packaged AI tools, developer CLIs, linters, and update automation";
 
   inputs = {
-    bun2nix = {
-      url = "github:nix-community/bun2nix";
-      inputs.nixpkgs.follows = "nixpkgs";
-    };
     flakeParts.url = "github:hercules-ci/flake-parts";
     gitHooksNix = {
       url = "github:cachix/git-hooks.nix";
