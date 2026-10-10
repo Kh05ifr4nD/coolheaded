@@ -69,8 +69,6 @@ jobs:
           persist-credentials: false
       - uses: cachix/install-nix-action@b97f05dcb019ddea06450a50ef6203d2fdc19fee # v31
       - run: nix develop -c pre-commit run --all-files
-      - name: Prepare bun2nix evaluation input
-        run: nix build --no-link --inputs-from . "bun2nix#packages.${{ matrix.system }}.cacheEntryCreator" --print-build-logs
       - run: nix flake check --no-build
   enforceCoveragePolicy:
     runs-on: ubuntu-24.04
