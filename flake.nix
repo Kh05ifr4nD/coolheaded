@@ -35,7 +35,6 @@
 
   outputs =
     inputs@{
-      bun2nix,
       flakeParts,
       gitHooksNix,
       nixpkgs,
@@ -57,12 +56,7 @@
       ];
 
       flake.overlays.default = import ./flake/overlay.nix {
-        inherit
-          bun2nix
-          pyprojectBuildSystems
-          pyprojectNix
-          uv2nix
-          ;
+        inherit pyprojectBuildSystems pyprojectNix uv2nix;
       };
 
       flake.homeModules =
@@ -108,7 +102,6 @@
             lib = pkgs.lib;
             inherit
               pkgs
-              bun2nix
               pyprojectBuildSystems
               pyprojectNix
               uv2nix

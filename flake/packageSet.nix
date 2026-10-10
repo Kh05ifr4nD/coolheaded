@@ -1,7 +1,6 @@
 {
   lib,
   pkgs,
-  bun2nix,
   pyprojectBuildSystems,
   pyprojectNix,
   uv2nix,
@@ -11,9 +10,6 @@ let
   packageDirectories = lib.filterAttrs (
     name: type: type == "directory" && builtins.pathExists (../packages + "/${name}/package.nix")
   ) (builtins.readDir ../packages);
-  bunPackageArgs = {
-    bun2nix = bun2nix.packages.${pkgs.stdenv.hostPlatform.system}.default;
-  };
   pyprojectPackageArgs = { inherit pyprojectBuildSystems pyprojectNix uv2nix; };
   packageDirectory = name: ../packages + "/${name}";
   packageUpdateScript = name: packageDirectory name + "/update.ts";
@@ -50,8 +46,7 @@ let
       packageFunction = import (packageDirectory name + "/package.nix");
       packageFunctionArgs = builtins.functionArgs packageFunction;
     in
-    lib.optionalAttrs (packageFunctionArgs ? bun2nix) bunPackageArgs
-    // lib.optionalAttrs (packageFunctionArgs ? packageLib) (packageLibArgs name)
+    lib.optionalAttrs (packageFunctionArgs ? packageLib) (packageLibArgs name)
     // lib.optionalAttrs (
       (packageFunctionArgs ? pyprojectBuildSystems)
       || (packageFunctionArgs ? pyprojectNix)
