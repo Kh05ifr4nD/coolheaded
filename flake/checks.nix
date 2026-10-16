@@ -1,10 +1,20 @@
 {
+  inputs,
   lib,
   packages,
   pkgs,
 }:
 
 let
+  incompleteLicenseMetadataNames = builtins.attrNames (
+    lib.filterAttrs (
+      _name: package:
+      let
+        licenses = lib.toList (package.meta.license or [ ]);
+      in
+      licenses == [ ] || lib.any (license: !(license ? free) || !(license ? redistributable)) licenses
+    ) packages
+  );
   packageCheckPath = name: ../packages + "/${name}/check.nix";
   packageNames = builtins.attrNames (
     lib.filterAttrs (
@@ -39,7 +49,7 @@ let
   checkNames = checkNameState.seen;
   duplicateCheckNames = lib.unique checkNameState.duplicates;
   packageVsCheckNames = lib.intersectLists (builtins.attrNames packages) checkNames;
-  denoDependenciesConflicts = lib.intersectLists [ "denoDependencies" ] (
+  builtinCheckConflicts = lib.intersectLists [ "denoDependencies" "evaluation" ] (
     builtins.attrNames packages ++ checkNames
   );
   packageChecks = lib.foldl' (merged: { checks, ... }: merged // checks) { } packageCheckOutputs;
@@ -48,12 +58,22 @@ let
     inherit (pkgs) lib;
     deno = pkgs.deno;
   };
+  evaluation = import ./evaluation.nix {
+    inherit
+      inputs
+      lib
+      packages
+      pkgs
+      ;
+  };
 in
-if duplicateCheckNames != [ ] then
+if incompleteLicenseMetadataNames != [ ] then
+  throw "packages need explicit free and redistributable license metadata: ${lib.concatStringsSep ", " incompleteLicenseMetadataNames}"
+else if duplicateCheckNames != [ ] then
   throw "check-vs-check name conflicts: ${lib.concatStringsSep ", " duplicateCheckNames}"
 else if packageVsCheckNames != [ ] then
   throw "package-vs-check name conflicts: ${lib.concatStringsSep ", " packageVsCheckNames}"
-else if denoDependenciesConflicts != [ ] then
-  throw "denoDependencies name conflicts: ${lib.concatStringsSep ", " denoDependenciesConflicts}"
+else if builtinCheckConflicts != [ ] then
+  throw "built-in check name conflicts: ${lib.concatStringsSep ", " builtinCheckConflicts}"
 else
-  packages // packageChecks // { inherit denoDependencies; }
+  packages // packageChecks // { inherit denoDependencies evaluation; }

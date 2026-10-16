@@ -31,31 +31,60 @@
 
   outputs =
     inputs@{
-      flakeParts,
-      gitHooksNix,
       nixpkgs,
       pyprojectBuildSystems,
       pyprojectNix,
       self,
-      treefmtNix,
       uv2nix,
       ...
     }:
     let
+      inherit (nixpkgs) lib;
       systemConfig = builtins.fromJSON (builtins.readFile ./lib/ts/system/targets.json);
       supportedSystems = map (target: target.system) systemConfig.targets;
+      forAllSystems = lib.genAttrs supportedSystems;
+      pkgsFor = forAllSystems (
+        system:
+        import nixpkgs {
+          inherit system;
+          config.allowUnfreePredicate =
+            pkg: lib.any (license: !(license.free or true)) (lib.toList (pkg.meta.license or [ ]));
+        }
+      );
+      packages = forAllSystems (
+        system:
+        import ./flake/packageSet.nix {
+          pkgs = pkgsFor.${system};
+          inherit
+            lib
+            pyprojectBuildSystems
+            pyprojectNix
+            uv2nix
+            ;
+        }
+      );
+      development = import ./flake/development.nix {
+        inherit inputs packages pkgsFor;
+        systems = supportedSystems;
+      };
     in
-    flakeParts.lib.mkFlake { inherit inputs; } {
-      imports = [
-        gitHooksNix.flakeModule
-        treefmtNix.flakeModule
-      ];
+    {
+      inherit packages;
+      inherit (development)
+        apps
+        checks
+        devShells
+        formatter
+        legacyPackages
+        nixosConfigurations
+        nixosModules
+        ;
 
-      flake.overlays.default = import ./flake/overlay.nix {
+      overlays.default = import ./flake/overlay.nix {
         inherit pyprojectBuildSystems pyprojectNix uv2nix;
       };
 
-      flake.homeModules =
+      homeModules =
         let
           modules = nixpkgs.lib.pipe (builtins.readDir ./homeModules) [
             (nixpkgs.lib.filterAttrs (
@@ -70,43 +99,5 @@
           ];
         in
         modules // { default = import ./homeModules/default.nix { inherit self; }; };
-
-      perSystem =
-        {
-          config,
-          pkgs,
-          system,
-          ...
-        }:
-        {
-          _module.args.pkgs = import nixpkgs {
-            inherit system;
-            config.allowUnfreePredicate =
-              pkg:
-              let
-                licenses = nixpkgs.lib.toList (pkg.meta.license or [ ]);
-              in
-              builtins.any (license: !(license.free or true)) licenses;
-          };
-          checks = import ./flake/checks.nix {
-            inherit pkgs;
-            inherit (config) packages;
-            inherit (pkgs) lib;
-          };
-          devShells.default = import ./flake/devShell.nix { inherit config pkgs; };
-          packages = import ./flake/packageSet.nix {
-            lib = pkgs.lib;
-            inherit
-              pkgs
-              pyprojectBuildSystems
-              pyprojectNix
-              uv2nix
-              ;
-          };
-          pre-commit.settings = import ./flake/gitHooks.nix { inherit config pkgs; };
-          treefmt = import ./flake/treefmt.nix { inherit config pkgs; };
-        };
-
-      systems = supportedSystems;
     };
 }
