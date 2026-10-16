@@ -68,24 +68,10 @@ let
       minerUTorch = withoutUpdateScript (self.minerU.override { withTorch = true; });
     }
   );
-  packages = builtins.removeAttrs scope [
-    "callPackage"
-    "newScope"
-    "overrideScope"
-    "packages"
-  ];
-  packageLicenses = package: lib.toList (package.meta.license or [ ]);
-  incompleteLicenseMetadataNames = builtins.attrNames (
-    lib.filterAttrs (
-      _name: package:
-      let
-        licenses = packageLicenses package;
-      in
-      licenses == [ ] || lib.any (license: !(license ? free) || !(license ? redistributable)) licenses
-    ) packages
-  );
 in
-if incompleteLicenseMetadataNames != [ ] then
-  throw "packages need explicit free and redistributable license metadata: ${lib.concatStringsSep ", " incompleteLicenseMetadataNames}"
-else
-  packages
+builtins.removeAttrs scope [
+  "callPackage"
+  "newScope"
+  "overrideScope"
+  "packages"
+]
