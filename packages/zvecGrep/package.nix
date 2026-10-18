@@ -7,6 +7,7 @@
   makeWrapper,
   nodejs-slim,
   packageLib,
+  patchelf,
   ripgrep,
   stdenv,
 }:
@@ -64,7 +65,9 @@ let
       nodejs-slim
       ripgrep
     ];
-    extraNativeBuildInputs = lib.optionals stdenv.hostPlatform.isLinux [ autoPatchelfHook ];
+    extraNativeBuildInputs =
+      lib.optionals stdenv.hostPlatform.isLinux [ autoPatchelfHook ]
+      ++ lib.optionals stdenv.hostPlatform.isDarwin [ patchelf ];
     preVersionCheck = ''
       export HOME="$PWD/versionCheckHome"
       export XDG_CACHE_HOME="$PWD/versionCheckCache"

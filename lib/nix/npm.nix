@@ -94,6 +94,7 @@ let
         inherit src;
         hash = pin.npmVendorHash;
         nativeBuildInputs = [ jq ];
+        env.LC_ALL = "C";
         postPatch = syncPackageLock;
       };
       packageRoot = "${placeholder "out"}/libexec/${pname}";
@@ -111,6 +112,7 @@ let
 
       strictDeps = true;
       __structuredAttrs = true;
+      env.LC_ALL = "C";
 
       nativeBuildInputs = [
         jq
@@ -131,7 +133,7 @@ let
 
         packageRoot="${packageRoot}"
         mkdir -p "$packageRoot" "$out/bin"
-        cp -R ${lib.escapeShellArgs installItems} "$packageRoot/"
+        cp -R --parents ${lib.escapeShellArgs installItems} "$packageRoot/"
 
         for launcherName in ${lib.escapeShellArgs launcherNames}; do
           makeWrapper ${nodejs}/bin/node "$out/bin/$launcherName" \
