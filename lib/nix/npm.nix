@@ -94,6 +94,7 @@ let
         inherit src;
         hash = pin.npmVendorHash;
         nativeBuildInputs = [ jq ];
+        env.LC_ALL = "C";
         postPatch = syncPackageLock;
       };
       packageRoot = "${placeholder "out"}/libexec/${pname}";
@@ -111,6 +112,7 @@ let
 
       strictDeps = true;
       __structuredAttrs = true;
+      env.LC_ALL = "C";
 
       nativeBuildInputs = [
         jq
