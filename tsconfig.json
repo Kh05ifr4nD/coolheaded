@@ -44,7 +44,6 @@
     ".generated/deno.d.ts",
     ".github/ci/**/*.ts",
     "packages/*/script/*.mjs",
-    "packages/*/test.ts",
     "packages/*/update.ts",
     "lib/ts/**/*.ts",
     "tests/**/*.ts",

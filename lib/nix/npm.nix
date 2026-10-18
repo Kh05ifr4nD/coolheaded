@@ -133,7 +133,7 @@ let
 
         packageRoot="${packageRoot}"
         mkdir -p "$packageRoot" "$out/bin"
-        cp -R ${lib.escapeShellArgs installItems} "$packageRoot/"
+        cp -R --parents ${lib.escapeShellArgs installItems} "$packageRoot/"
 
         for launcherName in ${lib.escapeShellArgs launcherNames}; do
           makeWrapper ${nodejs}/bin/node "$out/bin/$launcherName" \
