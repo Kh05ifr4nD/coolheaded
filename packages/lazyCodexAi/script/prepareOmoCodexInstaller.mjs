@@ -10,6 +10,15 @@ if (typeof packageRoot !== "string" || packageRoot.length === 0) {
 const file = `${packageRoot}/packages/omo-codex/scripts/install-dist/install-local.mjs`;
 let source = nodeFs.readFileSync(file, "utf8");
 
+/** @param {string} value @returns {string} */
+function javascriptString(value) {
+  return JSON.stringify(value)
+    .replaceAll("<", String.raw`\u003c`)
+    .replaceAll(">", String.raw`\u003e`)
+    .replaceAll("\u2028", String.raw`\u2028`)
+    .replaceAll("\u2029", String.raw`\u2029`);
+}
+
 /** @param {string} before @param {string} after @returns {void} */
 function replaceOnce(before, after) {
   if (source.split(before).length !== 2) {
@@ -49,7 +58,7 @@ source = source.replace(
   delegatedFunction,
   `function buildDelegatedOmoInvocation(parsed) {
   if (parsed.command === "doctor") return buildLazyCodexDoctorInvocation(parsed.args);
-  const args = [${JSON.stringify(`${packageRoot}/dist/cli-node/index.js`)}, parsed.command];
+  const args = [${javascriptString(`${packageRoot}/dist/cli-node/index.js`)}, parsed.command];
   if (parsed.command === "cleanup") args.push("--platform=codex", ...parsed.args);
   else if (parsed.command === "install") {
     args.push("--platform=codex");
@@ -102,7 +111,7 @@ nodeFs.writeFileSync(
   commentCheckerFile,
   commentChecker.replace(
     resolver,
-    `function resolveCommentCheckerBinary2() { return ${JSON.stringify(`${packageRoot}/runtime/comment-checker`)}; }`,
+    `function resolveCommentCheckerBinary2() { return ${javascriptString(`${packageRoot}/runtime/comment-checker`)}; }`,
   ),
 );
 
