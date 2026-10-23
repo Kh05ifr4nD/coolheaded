@@ -119,6 +119,7 @@ let
   };
   countingPackage = pkgs.writeShellApplication {
     name = "lazycodex-ai";
+    derivationArgs.version = package.version;
     text = ''
       printf '%s\n' "$*" >> "''${LAZYCODEX_AI_TEST_INVOCATIONS:?}"
       exec ${package}/bin/lazycodex-ai "$@"
@@ -287,6 +288,13 @@ in
         ${idempotentLazyScript} "$idempotentGeneration" "$idempotentGeneration"
       mapfile -t idempotentInvocationLines < "$idempotentInvocations"
       test "''${#idempotentInvocationLines[@]}" -eq 2
+
+      rm "${codexHome}/plugins/cache/sisyphuslabs/omo/${package.version}/.codex-plugin/plugin.json"
+      HOME=${testHome} LAZYCODEX_AI_TEST_INVOCATIONS="$idempotentInvocations" \
+        ${idempotentLazyScript} "$idempotentGeneration" "$idempotentGeneration"
+      mapfile -t idempotentInvocationLines < "$idempotentInvocations"
+      test "''${#idempotentInvocationLines[@]}" -eq 3
+      test -s "${codexHome}/plugins/cache/sisyphuslabs/omo/${package.version}/.codex-plugin/plugin.json"
 
       out="$defaultGeneration"
       ${defaultEvaluation.config.home.extraBuilderCommands}

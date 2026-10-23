@@ -64,6 +64,7 @@ function requiredEnv(name) {
 
 const pluginRoot = requiredEnv("LAZYCODEX_PLUGIN_ROOT");
 const nodeExecutable = requiredEnv("LAZYCODEX_NODE_EXECUTABLE");
+const sgExecutable = requiredEnv("LAZYCODEX_SG_EXECUTABLE");
 
 /**
  * @param {string} file
@@ -125,7 +126,7 @@ function nixNodeCommand(command) {
     return nodeExecutable;
   }
   if (command.startsWith("node ")) {
-    return nodeExecutable + command.slice("node".length);
+    return `OMO_AST_GREP_SG_PATH=${sgExecutable} ${nodeExecutable}${command.slice("node".length)}`;
   }
   return command;
 }
