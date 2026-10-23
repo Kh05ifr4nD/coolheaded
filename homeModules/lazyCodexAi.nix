@@ -12,6 +12,11 @@ let
   statePackage = "state/lazycodex-ai-package";
   stateInstallFingerprint = "state/lazycodex-ai-install-fingerprint";
   codexHome = "${config.home.homeDirectory}/.codex";
+  pluginManifest =
+    if cfg.package ? version then
+      "${codexHome}/plugins/cache/sisyphuslabs/omo/${cfg.package.version}/.codex-plugin/plugin.json"
+    else
+      null;
   installArguments = [
     "${cfg.package}/bin/lazycodex-ai"
     "install"
@@ -92,7 +97,9 @@ in
                 IFS= read -r previousInstallFingerprint < "$previousFingerprint"
               fi
 
-              if [[ "$previousInstallFingerprint" != ${lib.escapeShellArg installFingerprint} || ! -d "$pluginCache" ]]; then
+              if [[ "$previousInstallFingerprint" != ${lib.escapeShellArg installFingerprint} || ! -d "$pluginCache"${
+                lib.optionalString (pluginManifest != null) " || ! -s ${lib.escapeShellArg pluginManifest}"
+              } ]]; then
                 run env \
                   CODEX_HOME=${lib.escapeShellArg codexHome} \
                   OMO_CODEX_PROJECT="$lazyCodexAiProject" \
