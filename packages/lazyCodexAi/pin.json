@@ -1,8 +1,8 @@
 {
-  "version": "5.1.44",
+  "version": "5.1.45",
   "platformPackageHashes": {
-    "aarch64-darwin": "sha512-5wLvnAxR0XKLFMrMAtwQok8fGaJW6S+m/aRovWhyY2V4O0r9nCdYVQ54YZ9RRkjLVcFTit0hhlOkwIORj2QJsg==",
-    "aarch64-linux": "sha512-5wLvnAxR0XKLFMrMAtwQok8fGaJW6S+m/aRovWhyY2V4O0r9nCdYVQ54YZ9RRkjLVcFTit0hhlOkwIORj2QJsg==",
-    "x86_64-linux": "sha512-5wLvnAxR0XKLFMrMAtwQok8fGaJW6S+m/aRovWhyY2V4O0r9nCdYVQ54YZ9RRkjLVcFTit0hhlOkwIORj2QJsg=="
+    "aarch64-darwin": "sha512-JpPZgA5PFgMErEexOo+xpg34ZBf49YKXj9Lm3+ph5myM5Ttw/D55LAk8wlN0aLzDTUee3AF+gcb505k5y7lZvQ==",
+    "aarch64-linux": "sha512-JpPZgA5PFgMErEexOo+xpg34ZBf49YKXj9Lm3+ph5myM5Ttw/D55LAk8wlN0aLzDTUee3AF+gcb505k5y7lZvQ==",
+    "x86_64-linux": "sha512-JpPZgA5PFgMErEexOo+xpg34ZBf49YKXj9Lm3+ph5myM5Ttw/D55LAk8wlN0aLzDTUee3AF+gcb505k5y7lZvQ=="
   }
 }
