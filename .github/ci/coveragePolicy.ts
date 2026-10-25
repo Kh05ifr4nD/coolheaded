@@ -43,6 +43,7 @@ const SOURCE_CATEGORIES: Readonly<Record<string, "adapter" | "pure">> = {
   "lib/ts/core/updateScript.ts": "adapter",
   "lib/ts/core/version.ts": "pure",
   "lib/ts/npm/lock.ts": "adapter",
+  "lib/ts/npm/lockPlatform.ts": "pure",
   "lib/ts/npm/metadataError.ts": "pure",
   "lib/ts/npm/packageHash.ts": "adapter",
   "lib/ts/npm/platformHash.ts": "adapter",
