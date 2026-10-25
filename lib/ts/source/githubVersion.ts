@@ -268,5 +268,51 @@ function latestGitHubVersion(
     },
   );
 }
-export { gitHubRelease, latestGitHubVersion };
-export type { GitHubRelease, GitHubVersionError, GitHubVersionSource, LatestGitHubVersionOptions };
+interface GitHubPathCommit {
+  readonly date: string;
+  readonly rev: string;
+}
+function latestGitHubPathCommit(
+  owner: string,
+  repo: string,
+  path: string,
+  jsonClient: Readonly<JsonClient>,
+): Effect.Effect<GitHubPathCommit, GitHubVersionError> {
+  const url = `https://api.github.com/repos/${owner}/${repo}/commits?path=${encodeURIComponent(
+    path,
+  )}&per_page=1`;
+  return Effect.gen(function* fetchGitHubPathCommit(): Effect.fn.Return<
+    GitHubPathCommit,
+    GitHubVersionError
+  > {
+    const { response, value }: JsonResponse = yield* jsonClient.request({
+      headers: gitHubHeaders(),
+      method: "GET",
+      timeoutMs: REQUEST_TIMEOUT_MS,
+      url,
+    });
+    yield* trustedPageUrl(response.url, url);
+    const entry: unknown = Array.isArray(value) ? value[0] : undefined;
+    const commit: unknown = isRecord(entry) ? entry["commit"] : undefined;
+    const committer: unknown = isRecord(commit) ? commit["committer"] : undefined;
+    const rev: unknown = isRecord(entry) ? entry["sha"] : undefined;
+    const date: unknown = isRecord(committer) ? committer["date"] : undefined;
+    return typeof rev === "string" && typeof date === "string"
+      ? { date, rev }
+      : yield* Effect.fail(
+          sourceError(
+            "missingVersion",
+            url,
+            `Missing GitHub commit for ${path} in ${owner}/${repo}`,
+          ),
+        );
+  });
+}
+export { gitHubRelease, latestGitHubPathCommit, latestGitHubVersion };
+export type {
+  GitHubPathCommit,
+  GitHubRelease,
+  GitHubVersionError,
+  GitHubVersionSource,
+  LatestGitHubVersionOptions,
+};
