@@ -8,6 +8,7 @@ type SupportedSystem = (typeof SUPPORTED_SYSTEMS)[number];
 const JSON_INDENT = 2;
 const PACKAGE_VERSION_FIELD = "version";
 const WRAPPED_BINARY_VERSION_FIELD = "binaryVersion";
+const UPSTREAM_REVISION_FIELD = "rev";
 const SINGLE_PACKAGE_ARTIFACT_HASH_FIELD = "packageHash";
 const PLATFORM_PACKAGE_ARTIFACT_HASHES_FIELD = "platformPackageHashes";
 const AUXILIARY_UPSTREAM_SOURCE_HASH_FIELD = "sourceHash";
@@ -17,6 +18,7 @@ const NPM_DEPENDENCY_VENDOR_HASH_FIELD = "npmVendorHash";
 const VERSION_IDENTITY_FIELDS = [
   PACKAGE_VERSION_FIELD,
   WRAPPED_BINARY_VERSION_FIELD,
+  UPSTREAM_REVISION_FIELD,
 ] as const satisfies readonly string[];
 
 const UPSTREAM_ARTIFACT_HASH_FIELDS = [
@@ -45,6 +47,7 @@ interface PinJsonConfig {
   readonly npmVendorHash?: string;
   readonly packageHash?: string;
   readonly platformPackageHashes?: Readonly<Record<SupportedSystem, string>>;
+  readonly rev?: string;
   readonly sourceHash?: string;
   readonly version: string;
 }
