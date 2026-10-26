@@ -1,7 +1,8 @@
-import { commandOutput, readTextFile } from "coolheaded/core/updateScript.ts";
+import { commandOutput, readTextFile, writeTextFile } from "coolheaded/core/updateScript.ts";
 import type { CommandRunner } from "coolheaded/core/commandRunner.ts";
 import { Effect } from "effect";
 import { npmScopedTarballUrl } from "coolheaded/npm/registry.ts";
+import { supportedPackageLock } from "coolheaded/npm/lockPlatform.ts";
 import { withTemporaryDirectory } from "coolheaded/core/temporaryDirectory.ts";
 
 const NPM_PACKAGE_LOCK_FILE_NAME = "package-lock.json";
@@ -78,15 +79,11 @@ function generatedNpmPackageLockFromWorkspace(
 
     yield* prepareWorkspace(workspacePath);
 
-    const [packageLock, npmVendorHash] = yield* Effect.all([
-      readTextFile(packageLockPath),
-      commandOutput(runner, prefetchNpmDepsPath, [packageLockPath]),
-    ]);
+    const packageLock = supportedPackageLock(yield* readTextFile(packageLockPath));
+    yield* writeTextFile(packageLockPath, packageLock);
+    const npmVendorHash = yield* commandOutput(runner, prefetchNpmDepsPath, [packageLockPath]);
 
-    return {
-      npmVendorHash: npmVendorHash.trim(),
-      packageLock: `${packageLock.trim()}\n`,
-    };
+    return { npmVendorHash: npmVendorHash.trim(), packageLock };
   });
 }
 
