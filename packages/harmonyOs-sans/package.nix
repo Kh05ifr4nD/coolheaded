@@ -8,11 +8,11 @@ let
   pin = builtins.fromJSON (builtins.readFile ./pin.json);
 in
 stdenvNoCC.mkDerivation {
-  pname = "harmonyOsSans";
+  pname = "harmonyOs-sans";
   inherit (pin) version;
 
   src = fetchurl {
-    name = "harmonyOsSans.zip";
+    name = "harmonyOs-sans.zip";
     url = "https://media.githubusercontent.com/media/huawei-fonts/HarmonyOS-Sans/${pin.rev}/HarmonyOS%20Sans.zip";
     hash = pin.packageHash;
   };
