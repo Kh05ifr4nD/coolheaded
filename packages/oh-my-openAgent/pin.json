@@ -1,9 +1,0 @@
-{
-  "version": "5.1.51",
-  "packageHash": "sha512-RaYyjD/VNMlhp3hOnzzlCWQMcPxPYBwbDwSrrajZfNpK5aUP0LLdtawClsMeXhoBu7C7bl1VPqGNjGXyX2FcZg==",
-  "platformPackageHashes": {
-    "aarch64-darwin": "sha512-RUs6rS2nm5coGVECWxhlEDmkbP/YGXhIhhPnmrlR8GNhDSHuQQAXfEQFQMWQ/oOM37Y2S6+gImk+Ll4pQxtjvQ==",
-    "aarch64-linux": "sha512-itnq/K79owL218P5sIbvQGarn3TfibfhKxK7qHdw4nWO8zBRxVQ9xEPKhRIRnFHBgvdodrYZ9/0wTbpDGAyMfQ==",
-    "x86_64-linux": "sha512-ePIiPeU3T1MEbxBasw7hD9lifhp8kQ8PLCzQXIH4MAgj4kyr9jzkrwWH0SNtFbIkCelCGRd3C9t6wLx0J6z65Q=="
-  }
-}

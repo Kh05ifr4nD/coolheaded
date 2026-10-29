@@ -23,7 +23,7 @@ runUpdateScript(import.meta.url, (_args, runner) =>
       "prefetch-file",
       "--json",
       "--name",
-      "harmonyOsSans.zip",
+      "harmonyOs-sans.zip",
       `https://media.githubusercontent.com/media/${OWNER}/${REPO}/${rev}/${encodeURIComponent(ARCHIVE)}`,
     ]);
     const hash = SRI_HASH_PATTERN.exec(prefetch)?.groups?.["hash"];
