@@ -78,11 +78,17 @@ def check_index(binary: Path) -> None:
         worker.start()
         try:
             zg(
-                binary, "--index", "--mode", "direct",
+                binary, "--index", "--mode", "direct", "--allow-remote",
                 "--embedding", f"qwen/{MODEL}", "--api-key", TOKEN,
                 "--endpoint", f"http://127.0.0.1:{server.server_port}/v1/embeddings",
             )
             assert server.used.is_set(), "Indexing never requested an embedding"
+            server.used.clear()
+            vector = zg(
+                binary, "--mode", "direct", "--vector", MARKER,
+                "--api-key", TOKEN, "--allow-remote",
+            )
+            assert FIXTURE in vector and server.used.is_set(), vector
         finally:
             server.shutdown()
             worker.join()
@@ -90,7 +96,7 @@ def check_index(binary: Path) -> None:
     zg(binary, "--status", "--check-ready")
     result = zg(binary, "--mode", "direct", "--fts", MARKER)
     assert FIXTURE in result, result
-    print("PASS local indexing, ready status, and FTS")
+    print("PASS local indexing, ready status, vector search, and FTS")
 
 
 def read_mcp(stream: TextIO, responses: Queue[str]) -> None:
@@ -115,7 +121,7 @@ def check_mcp(binary: Path, workspace: Path) -> None:
             Thread(target=read_mcp, args=(reader, responses), daemon=True).start()
 
             def send(method: str, params: Mapping[str, Json], identifier: int | None = None) -> None:
-                message = {"jsonrpc": "2.0", "method": method, "params": params}
+                message: dict[str, Json] = {"jsonrpc": "2.0", "method": method, "params": params}
                 if identifier is not None:
                     message["id"] = identifier
                 writer.write(json.dumps(message) + "\n")
@@ -167,8 +173,15 @@ def main() -> None:
     package = Path(sys.argv[1])
     binary = package / "bin/zg"
     onnx = "libonnxruntime.1.dylib" if sys.platform == "darwin" else "libonnxruntime.so.1"
-    ctypes.CDLL(str(package / "lib" / onnx))
-    print("PASS packaged ONNX Runtime library load")
+    onnx_path = package / "lib" / onnx
+    if sys.platform == "linux" and os.uname().machine == "aarch64":
+        # The sandbox hides the CPU topology needed by ONNX's ARM64 initializer.
+        linkage = subprocess.check_output(["ldd", str(onnx_path)], text=True, timeout=10)
+        assert "not found" not in linkage and "libc.so.6" in linkage, linkage
+        print("PASS packaged ONNX Runtime ELF dependencies")
+    else:
+        ctypes.CDLL(str(onnx_path))
+        print("PASS packaged ONNX Runtime library load")
 
     with TemporaryDirectory() as directory:
         root = Path(directory).resolve()

@@ -1,16 +1,16 @@
-import { fetchJsonClient } from "coolheaded/core/fetchHttpClient.ts";
 import {
   runUpdateScript,
   scriptPath,
   updateNewerPinVersion,
 } from "coolheaded/core/updateScript.ts";
+import { Effect } from "effect";
+import { fetchJsonClient } from "coolheaded/core/fetchHttpClient.ts";
+import { latestNpmVersion } from "coolheaded/source/version.ts";
 import { npmPackageHash } from "coolheaded/npm/packageHash.ts";
 import { packageHashConfig } from "coolheaded/pin/packageHashConfig.ts";
-import { writePackageHashConfig } from "coolheaded/pin/json.ts";
-import { latestNpmVersion } from "coolheaded/source/version.ts";
-import { systemRecord } from "coolheaded/system/target.ts";
-import { Effect } from "effect";
 import platforms from "./platforms.json" with { type: "json" };
+import { systemRecord } from "coolheaded/system/target.ts";
+import { writePackageHashConfig } from "coolheaded/pin/json.ts";
 
 const NPM_PACKAGE_NAME = "@zvec/zvec-grep";
 const PIN_FILE_PATH = scriptPath("pin.json", import.meta.url);
@@ -25,7 +25,7 @@ function updateVersion(version: string): Effect.Effect<void, PinError> {
   );
   return Effect.all(hashes, { concurrency: "unbounded" }).pipe(
     Effect.flatMap((platformPackageHashes): ReturnType<typeof packageHashConfig> =>
-      packageHashConfig({ version, platformPackageHashes }),
+      packageHashConfig({ platformPackageHashes, version }),
     ),
     Effect.flatMap((config): Effect.Effect<void> => writePackageHashConfig(PIN_FILE_PATH, config)),
   );
