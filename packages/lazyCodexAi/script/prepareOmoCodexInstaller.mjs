@@ -54,7 +54,7 @@ const delegatedFunction = /^function buildDelegatedOmoInvocation\(parsed\) \{[\s
 if ([...source.matchAll(delegatedFunction)].length !== 1) {
   throw new Error("LazyCodex delegated command entrypoint changed");
 }
-source = source.replace(
+source = source.replaceAll(
   delegatedFunction,
   `function buildDelegatedOmoInvocation(parsed) {
   if (parsed.command === "doctor") return buildLazyCodexDoctorInvocation(parsed.args);
@@ -76,7 +76,7 @@ const updateFunction = /^async function runLazyCodexManualUpdate\(input = \{\}\)
 if ([...source.matchAll(updateFunction)].length !== 1) {
   throw new Error("LazyCodex update entrypoint changed");
 }
-source = source.replace(
+source = source.replaceAll(
   updateFunction,
   `async function runLazyCodexManualUpdate(input = {}) {
   (input.log ?? console.log)("LazyCodex is managed by Nix; update your flake input and rebuild.");
@@ -109,7 +109,7 @@ if ([...commentChecker.matchAll(resolver)].length !== 1) {
 }
 nodeFs.writeFileSync(
   commentCheckerFile,
-  commentChecker.replace(
+  commentChecker.replaceAll(
     resolver,
     `function resolveCommentCheckerBinary2() { return ${javascriptString(`${packageRoot}/runtime/comment-checker`)}; }`,
   ),
