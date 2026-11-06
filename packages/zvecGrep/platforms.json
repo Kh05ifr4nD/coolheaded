@@ -1,0 +1,5 @@
+{
+  "aarch64-darwin": "@zvec/zvec-grep-darwin-arm64",
+  "aarch64-linux": "@zvec/zvec-grep-linux-arm64-gnu",
+  "x86_64-linux": "@zvec/zvec-grep-linux-x64-gnu"
+}
