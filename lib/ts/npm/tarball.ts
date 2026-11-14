@@ -65,6 +65,7 @@ function runtimePackageJson(
   }
 
   const packageJson: Record<string, unknown> = { ...value };
+  delete packageJson["os"];
   delete packageJson["devDependencies"];
   delete packageJson["scripts"];
   if (removeDependencies.length > 0) {

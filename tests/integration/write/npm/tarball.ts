@@ -175,9 +175,12 @@ Deno.test("npm tarball update writes sanitized lock and exact pin", async (): Pr
   const directory = await Deno.makeTempDir();
   const packageDirectory = `${directory}/packages/example`;
   const repositoryRootPath = `${directory}/`;
-  const packageJson = '{"name":"example","scripts":{"build":"false"},"devDependencies":{"x":"1"}}';
+  const packageJson =
+    '{"name":"example","os":["darwin"],"scripts":{"build":"false"},"devDependencies":{"x":"1"}}';
   await Deno.mkdir(packageDirectory, { recursive: true });
-  const runner = new FakeCommandRunner(requests(repositoryRootPath, packageJson, PACKAGE_LOCK));
+  const runner = new FakeCommandRunner(
+    requests(repositoryRootPath, packageJson, PACKAGE_LOCK, '{\n  "name": "example"\n}\n'),
+  );
   const json = strictJsonClient([
     {
       effect: (): Effect.Effect<ReturnType<typeof response>> => Effect.succeed(response()),

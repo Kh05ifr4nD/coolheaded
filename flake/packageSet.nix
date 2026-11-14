@@ -8,7 +8,15 @@
 
 let
   packageDirectories = lib.filterAttrs (
-    name: type: type == "directory" && builtins.pathExists (../packages + "/${name}/package.nix")
+    name: type:
+    let
+      directory = ../packages + "/${name}";
+      systemsPath = directory + "/systems.json";
+      supportsSystem =
+        !builtins.pathExists systemsPath
+        || lib.elem pkgs.stdenv.hostPlatform.system (builtins.fromJSON (builtins.readFile systemsPath));
+    in
+    type == "directory" && builtins.pathExists (directory + "/package.nix") && supportsSystem
   ) (builtins.readDir ../packages);
   pyprojectPackageArgs = { inherit pyprojectBuildSystems pyprojectNix uv2nix; };
   packageDirectory = name: ../packages + "/${name}";

@@ -15,7 +15,8 @@ const NIX_EXPR = `
 let
   config = builtins.fromJSON (builtins.getEnv "DISCOVERY_CONFIG");
   flake = builtins.getFlake (toString ./.);
-  packages = flake.packages.\${config.system};
+  systems = builtins.attrNames flake.packages;
+  packages = builtins.foldl' (combined: system: combined // flake.packages.\${system}) { } systems;
   isUpdatable = package:
     package ? version && ((package.passthru or { }) ? updateScript);
   getVersionScheme = package:

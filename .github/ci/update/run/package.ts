@@ -5,6 +5,7 @@ import {
   changedFiles,
   currentSystem,
   gitHasChanges,
+  isRecord,
   nixEvalRaw,
   run,
   writeOutput,
@@ -20,40 +21,62 @@ const PACKAGE_UPDATE_ALLOWED_FILES_EXPR = `
 let
   config = builtins.fromJSON (builtins.getEnv "PACKAGE_UPDATE_CONFIG");
   flake = builtins.getFlake (toString ./.);
-  package = builtins.getAttr config.name flake.packages.\${config.system};
+  systems = builtins.attrNames flake.packages;
+  availableSystems = builtins.filter (
+    system: builtins.hasAttr config.name flake.packages.\${system}
+  ) systems;
+  system =
+    if builtins.elem config.currentSystem availableSystems then
+      config.currentSystem
+    else
+      builtins.head availableSystems;
+  package = builtins.getAttr config.name flake.packages.\${system};
 in
-  package.passthru.updateAllowedFiles or []
+  {
+    inherit system;
+    updateAllowedFiles = package.passthru.updateAllowedFiles or [];
+  }
 `;
+
+interface PackageUpdateConfig {
+  readonly allowedFiles: readonly string[];
+  readonly system: string;
+}
 
 function isStringList(value: unknown): value is readonly string[] {
   return Array.isArray(value) && value.every((item: unknown): boolean => typeof item === "string");
 }
 
-function parseStringList(value: unknown): readonly string[] {
-  if (!isStringList(value)) {
+function parsePackageUpdateConfig(value: unknown): PackageUpdateConfig {
+  if (!isRecord(value) || typeof value["system"] !== "string") {
     throw new Error("Invalid package update allowed files JSON");
   }
 
-  return value;
+  const allowedFiles = value["updateAllowedFiles"];
+  if (!isStringList(allowedFiles)) {
+    throw new Error("Invalid package update allowed files JSON");
+  }
+
+  return { allowedFiles, system: value["system"] };
 }
 
-async function packageUpdateAllowedFiles(
+async function packageUpdateConfig(
   system: string,
   name: string,
   runner: CommandRunner,
-): Promise<readonly string[]> {
+): Promise<PackageUpdateConfig> {
   const result = await run(
     runner,
     ["nix", "eval", "--json", "--impure", "--expr", PACKAGE_UPDATE_ALLOWED_FILES_EXPR],
     {
       capture: true,
       env: {
-        PACKAGE_UPDATE_CONFIG: JSON.stringify({ name, system }),
+        PACKAGE_UPDATE_CONFIG: JSON.stringify({ currentSystem: system, name }),
       },
     },
   );
   const parsed: unknown = JSON.parse(result.stdout);
-  return parseStringList(parsed);
+  return parsePackageUpdateConfig(parsed);
 }
 
 function packageAllowedFile(name: string, extraFiles: readonly string[], file: string): boolean {
@@ -113,8 +136,12 @@ async function runPackage(
     return;
   }
 
-  const system = await currentSystem(runner);
-  const extraAllowedFiles = await packageUpdateAllowedFiles(system, name, runner);
+  const current = await currentSystem(runner);
+  const { allowedFiles: extraAllowedFiles, system } = await packageUpdateConfig(
+    current,
+    name,
+    runner,
+  );
   const files = await changedFiles(runner);
   assertOnlyChangedFiles(files, (file: string): boolean =>
     packageAllowedFile(name, extraAllowedFiles, file),
