@@ -175,9 +175,12 @@ Deno.test("npm tarball update writes sanitized lock and exact pin", async (): Pr
   const directory = await Deno.makeTempDir();
   const packageDirectory = `${directory}/packages/example`;
   const repositoryRootPath = `${directory}/`;
-  const packageJson = '{"name":"example","scripts":{"build":"false"},"devDependencies":{"x":"1"}}';
+  const packageJson =
+    '{"name":"example","os":["darwin"],"scripts":{"build":"false"},"devDependencies":{"x":"1"}}';
   await Deno.mkdir(packageDirectory, { recursive: true });
-  const runner = new FakeCommandRunner(requests(repositoryRootPath, packageJson, PACKAGE_LOCK));
+  const runner = new FakeCommandRunner(
+    requests(repositoryRootPath, packageJson, PACKAGE_LOCK, '{\n  "name": "example"\n}\n'),
+  );
   const json = strictJsonClient([
     {
       effect: (): Effect.Effect<ReturnType<typeof response>> => Effect.succeed(response()),
@@ -192,13 +195,14 @@ Deno.test("npm tarball update writes sanitized lock and exact pin", async (): Pr
         jsonClient: json.client,
         packageName: PACKAGE_NAME,
         runner,
+        systems: ["aarch64-darwin"],
         tarballBaseName: "example",
       }),
     );
     assertEquals(await Deno.readTextFile(`${packageDirectory}/package-lock.json`), PACKAGE_LOCK);
     assertEquals(
       await Deno.readTextFile(`${packageDirectory}/pin.json`),
-      `{\n  "version": "${VERSION}",\n  "platformPackageHashes": {\n    "aarch64-darwin": "${INTEGRITY}",\n    "aarch64-linux": "${INTEGRITY}",\n    "x86_64-linux": "${INTEGRITY}"\n  },\n  "npmVendorHash": "${VENDOR_HASH}"\n}\n`,
+      `{\n  "version": "${VERSION}",\n  "platformPackageHashes": {\n    "aarch64-darwin": "${INTEGRITY}"\n  },\n  "npmVendorHash": "${VENDOR_HASH}"\n}\n`,
     );
     const workspacePath = runner.calls()[2]?.cwd;
     assertEquals(runner.calls()[3]?.cwd, workspacePath);
@@ -250,6 +254,7 @@ Deno.test("npm tarball update preserves targets when npm lock prefetch fails", a
           jsonClient: json.client,
           packageName: PACKAGE_NAME,
           runner,
+          systems: ["aarch64-darwin"],
           tarballBaseName: "example",
         }),
       ),
@@ -301,6 +306,7 @@ Deno.test("npm tarball update removes selected runtime dependencies", async (): 
         packageName: PACKAGE_NAME,
         removeDependencies: ["remove-me", "remove-me-too"],
         runner,
+        systems: ["aarch64-darwin"],
         tarballBaseName: "example",
       }),
     );
@@ -334,6 +340,7 @@ Deno.test("npm tarball update preserves targets after invalid package JSON", asy
           jsonClient: json.client,
           packageName: PACKAGE_NAME,
           runner,
+          systems: ["aarch64-darwin"],
           tarballBaseName: "example",
         }),
       ),
@@ -375,6 +382,7 @@ Deno.test("npm tarball update preserves targets and JSON error identity", async 
           jsonClient: json.client,
           packageName: PACKAGE_NAME,
           runner,
+          systems: ["aarch64-darwin"],
           tarballBaseName: "example",
         }),
       ),

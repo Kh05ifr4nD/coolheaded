@@ -163,7 +163,7 @@ let
 
       meta = {
         inherit mainProgram;
-        platforms = base.supportedSystems;
+        platforms = builtins.attrNames pin.platformPackageHashes;
         sourceProvenance = with lib.sourceTypes; [ fromSource ];
       }
       // meta;
@@ -174,7 +174,9 @@ let
       pname,
       packageName ? pname,
       tarballName ? npmTarballName packageName,
-      targets ? base.systemTargets,
+      targets ? lib.genAttrs (builtins.attrNames
+        (base.readPin (args.pinPath or base.defaultPinPath)).platformPackageHashes
+      ) lib.id,
       asset ? ({ version, ... }: "${tarballName}-${version}.tgz"),
       ...
     }@args:

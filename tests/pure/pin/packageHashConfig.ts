@@ -6,6 +6,8 @@ import { assertEquals, assertThrows } from "@jsr/std__assert";
 import { assertProperty, defineReplayTarget } from "coolheadedTestSupport/fastCheck.ts";
 import { describe, it } from "@jsr/std__testing/bdd";
 import fc from "fast-check";
+import { parsePackageSystems } from "coolheaded/system/target.ts";
+import { parseSriHash } from "coolheaded/pin/sriHash.ts";
 
 const SHA256_LENGTH = 32;
 const SHA512_LENGTH = 64;
@@ -22,8 +24,8 @@ function digestArbitrary(length: number): fc.Arbitrary<readonly number[]> {
     .map((digest: readonly number[]): readonly number[] => Object.freeze(digest));
 }
 
-const SHA256_ZERO = zeroHash("sha256", SHA256_LENGTH);
-const SHA512_ZERO = zeroHash("sha512", SHA512_LENGTH);
+const SHA256_ZERO = parseSriHash(zeroHash("sha256", SHA256_LENGTH));
+const SHA512_ZERO = parseSriHash(zeroHash("sha512", SHA512_LENGTH));
 const COMPLETE_HASHES = {
   "aarch64-darwin": SHA256_ZERO,
   "aarch64-linux": SHA512_ZERO,
@@ -66,19 +68,48 @@ describe("parsePackageHashConfig", (): void => {
     );
   });
 
-  it("rejects missing platform pins", (): void => {
+  it("accepts a single platform pin", (): void => {
+    const config = parsePackageHashConfig({
+      platformPackageHashes: { "aarch64-darwin": SHA256_ZERO },
+      version: "2.23.0",
+    });
+
+    assertEquals(config.platformPackageHashes, { "aarch64-darwin": SHA256_ZERO });
+  });
+
+  it("preserves any selected platform pins", (): void => {
+    const platformPackageHashes = {
+      "aarch64-darwin": SHA256_ZERO,
+      "x86_64-linux": SHA512_ZERO,
+    } as const;
+    const config = parsePackageHashConfig({ platformPackageHashes, version: "1.0.0" });
+
+    assertEquals(config.platformPackageHashes, platformPackageHashes);
+  });
+
+  it("rejects empty platform pins", (): void => {
     assertThrows(
       (): void => {
         parsePackageHashConfig({
-          platformPackageHashes: {
-            "aarch64-darwin": SHA256_ZERO,
-            "aarch64-linux": SHA512_ZERO,
-          },
+          platformPackageHashes: {},
           version: "0.137.0",
         });
       },
-      Error,
-      "Missing hash for x86_64-linux",
+      InvalidPackageHashConfigError,
+      "platformPackageHashes must not be empty",
+    );
+  });
+
+  it("rejects unsupported platform pin keys", (): void => {
+    assertThrows(
+      (): void => {
+        parsePackageHashConfig({
+          platformPackageHashes: { "linux-riscv64": SHA256_ZERO },
+          version: "0.137.0",
+        });
+      },
+      InvalidPackageHashConfigError,
+      "Unsupported system for pin hash: linux-riscv64",
     );
   });
 
@@ -98,6 +129,56 @@ describe("parsePackageHashConfig", (): void => {
         "Invalid hash for aarch64-linux",
       );
     }
+  });
+});
+
+describe("parsePackageSystems", (): void => {
+  it("accepts a package's declared system subset", (): void => {
+    assertEquals(parsePackageSystems(["aarch64-darwin"]), ["aarch64-darwin"]);
+  });
+
+  it("rejects an empty system list", (): void => {
+    assertThrows(
+      (): void => {
+        parsePackageSystems([]);
+      },
+      TypeError,
+      "Package systems must be a non-empty array",
+    );
+  });
+
+  it("rejects non-array values and non-string entries", (): void => {
+    assertThrows(
+      (): void => {
+        parsePackageSystems(null);
+      },
+      TypeError,
+      "Package systems must be a non-empty array",
+    );
+    assertThrows(
+      (): void => {
+        parsePackageSystems([42]);
+      },
+      TypeError,
+      "Unsupported package system: 42",
+    );
+  });
+
+  it("rejects unsupported and duplicate systems", (): void => {
+    assertThrows(
+      (): void => {
+        parsePackageSystems(["linux-riscv64"]);
+      },
+      TypeError,
+      "Unsupported package system: linux-riscv64",
+    );
+    assertThrows(
+      (): void => {
+        parsePackageSystems(["aarch64-darwin", "aarch64-darwin"]);
+      },
+      TypeError,
+      "Duplicate package system: aarch64-darwin",
+    );
   });
 });
 

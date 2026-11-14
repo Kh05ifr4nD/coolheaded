@@ -6,9 +6,10 @@ import type {
 } from "coolheaded/core/httpClient.ts";
 import { UpdateError, updateNewerPinVersion } from "coolheaded/core/updateScript.ts";
 import { Effect } from "effect";
+import type { SupportedSystem } from "coolheaded/system/target.ts";
 import type { VersionScheme } from "coolheaded/core/version.ts";
 import { formatSriHash } from "coolheaded/pin/sriHash.ts";
-import { systemRecord } from "coolheaded/system/target.ts";
+import { packageHashConfig } from "coolheaded/pin/packageHashConfig.ts";
 import { writePackageHashConfig } from "coolheaded/pin/json.ts";
 
 const HEX_RADIX = 16;
@@ -39,13 +40,16 @@ class ChecksumManifestError extends Error {
 }
 
 type SriHash = ReturnType<typeof formatSriHash>;
+type PackageHashConfig = Effect.Effect.Success<ReturnType<typeof packageHashConfig>>;
+type InvalidPackageHashConfigError = Effect.Effect.Error<ReturnType<typeof packageHashConfig>>;
 type ChecksumManifestResult = Readonly<Record<string, SriHash>>;
 type ChecksumVerificationError = ChecksumManifestError | HttpClientError;
-type SupportedSystem = Parameters<Parameters<typeof systemRecord>[0]>[0];
+type PackageAssets = Readonly<Partial<Record<SupportedSystem, string>>>;
+type ChecksumUpdateError = ChecksumVerificationError | InvalidPackageHashConfigError | UpdateError;
 
 interface ChecksumManifestUpdateOptions<LatestVersionError extends Error> {
   readonly args: readonly string[];
-  readonly assets: Readonly<Record<SupportedSystem, string>>;
+  readonly assets: PackageAssets;
   readonly assetUrl: (version: string, asset: string) => string;
   readonly httpClient: HttpClient;
   readonly latestVersion: () => Effect.Effect<string, LatestVersionError>;
@@ -172,35 +176,15 @@ function verifiedAssets(
   assetUrls: Readonly<Record<string, string>>,
   expected: Readonly<Record<string, string>>,
 ): Effect.Effect<ChecksumManifestResult, ChecksumVerificationError> {
-  const assetEntries = Object.entries(assetUrls);
-  const verificationEntries = assetEntries.map(
-    (
-      entry: readonly [string, string],
-    ): readonly [string, Effect.Effect<SriHash, ChecksumVerificationError>] => {
-      const [asset, assetUrl] = entry;
-      return [asset, verifiedAssetForExpected(httpClient, asset, assetUrl, expected)];
-    },
+  const verificationEffects = Object.fromEntries(
+    Object.entries(assetUrls).map(
+      ([asset, assetUrl]: readonly [string, string]): readonly [
+        string,
+        Effect.Effect<SriHash, ChecksumVerificationError>,
+      ] => [asset, verifiedAssetForExpected(httpClient, asset, assetUrl, expected)],
+    ),
   );
-  const verificationEffects = Object.fromEntries(verificationEntries);
   return Effect.all(verificationEffects, { concurrency: "unbounded" });
-}
-
-function verifiedManifestResponse<Response extends HttpResponse>(
-  httpClient: Readonly<HttpClient>,
-  assets: readonly string[],
-  assetUrls: Readonly<Record<string, string>>,
-  manifestResponse: Response,
-): Effect.Effect<ChecksumManifestResult, ChecksumVerificationError> &
-  Readonly<{ readonly response?: Response }> {
-  const manifestEffect = responseText(manifestResponse);
-  return manifestEffect.pipe(
-    Effect.flatMap((manifest: string) => {
-      const expectedEffect = parseChecksumManifest(manifest, assets);
-      return expectedEffect.pipe(
-        Effect.flatMap((expected) => verifiedAssets(httpClient, assetUrls, expected)),
-      );
-    }),
-  );
 }
 
 function verifiedChecksumAssets(
@@ -211,12 +195,10 @@ function verifiedChecksumAssets(
   const assets = Object.keys(assetUrls);
   const manifestEffect = httpClient.request(httpRequest(manifestUrl));
   return manifestEffect.pipe(
-    Effect.flatMap(
-      <Response extends HttpResponse>(
-        manifestResponse: Response,
-      ): Effect.Effect<ChecksumManifestResult, ChecksumVerificationError> &
-        Readonly<{ readonly response?: Response }> =>
-        verifiedManifestResponse(httpClient, assets, assetUrls, manifestResponse),
+    Effect.flatMap(responseText),
+    Effect.flatMap((manifest: string) => parseChecksumManifest(manifest, assets)),
+    Effect.flatMap((expected: Readonly<Record<string, string>>) =>
+      verifiedAssets(httpClient, assetUrls, expected),
     ),
   );
 }
@@ -224,35 +206,39 @@ function verifiedChecksumAssets(
 function writeVerifiedPackageHashConfig(
   pinFilePath: string,
   version: string,
-  assets: Readonly<Record<SupportedSystem, string>>,
+  assets: PackageAssets,
   hashes: ChecksumManifestResult,
-): Effect.Effect<void, UpdateError> {
-  const hashEffects = systemRecord(
-    (system: SupportedSystem): Effect.Effect<SriHash, UpdateError> => {
-      const asset = assets[system];
+): Effect.Effect<void, InvalidPackageHashConfigError | UpdateError> {
+  const hashEffects = Object.entries(assets).map(
+    ([system, asset]: readonly [string, string]): readonly [
+      string,
+      Effect.Effect<SriHash, UpdateError>,
+    ] => {
       const hash = hashes[asset];
-      return hash === undefined
-        ? Effect.fail(new UpdateError(`Missing verified checksum: ${asset}`))
-        : Effect.succeed(hash);
+      const verified =
+        hash === undefined
+          ? Effect.fail(new UpdateError(`Missing verified checksum: ${asset}`))
+          : Effect.succeed(hash);
+      return [system, verified];
     },
   );
-  const platformPackageHashesEffect = Effect.all(hashEffects);
-  return platformPackageHashesEffect.pipe(
-    Effect.flatMap((platformPackageHashes) =>
-      writePackageHashConfig(pinFilePath, { platformPackageHashes, version }),
+  return Effect.all(Object.fromEntries(hashEffects)).pipe(
+    Effect.flatMap((platformPackageHashes: Readonly<Record<string, SriHash>>) =>
+      packageHashConfig({ platformPackageHashes, version }),
     ),
+    Effect.flatMap((config: PackageHashConfig) => writePackageHashConfig(pinFilePath, config)),
   );
 }
 
 function checksumManifestUpdateProgram<LatestVersionError extends Error>(
   options: ChecksumManifestUpdateOptions<LatestVersionError>,
-): Effect.Effect<void, ChecksumVerificationError | LatestVersionError | UpdateError> {
+): Effect.Effect<void, ChecksumUpdateError | LatestVersionError> {
   const assets = Object.values(options.assets);
   return updateNewerPinVersion(
     options.args,
     options.latestVersion,
     options.pinFilePath,
-    (version: string): Effect.Effect<void, ChecksumVerificationError | UpdateError> => {
+    (version: string): Effect.Effect<void, ChecksumUpdateError> => {
       const assetEntries = assets.map((asset: string): readonly [string, string] => [
         asset,
         options.assetUrl(version, asset),

@@ -7,6 +7,7 @@ import {
 import { Effect } from "effect";
 import { InvalidPackageHashConfigError } from "coolheaded/pin/packageHashConfig.ts";
 import type { JsonResponse } from "coolheaded/core/httpClient.ts";
+import { SUPPORTED_SYSTEMS } from "coolheaded/system/target.ts";
 import { httpJsonError } from "coolheaded/core/fetchHttpClient.ts";
 import { strictJsonClient } from "coolheadedTestSupport/httpClient.ts";
 
@@ -81,6 +82,7 @@ describe("npm package hash updates", (): void => {
             jsonClient: strict.client,
             packageName: "example",
             pinFilePath,
+            systems: SUPPORTED_SYSTEMS,
           }),
         ),
       );
@@ -110,6 +112,7 @@ describe("npm package hash updates", (): void => {
             jsonClient: strict.client,
             packageName: "example",
             pinFilePath,
+            systems: ["aarch64-darwin"],
           }),
         ),
       );
@@ -172,6 +175,7 @@ describe("npm package hash updates", (): void => {
           jsonClient: strict.client,
           packageName: "example",
           pinFilePath,
+          systems: SUPPORTED_SYSTEMS,
         }),
       );
       assertEquals(JSON.parse(await Deno.readTextFile(pinFilePath)), {
