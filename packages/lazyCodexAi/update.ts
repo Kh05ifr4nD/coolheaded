@@ -6,6 +6,7 @@ import {
   updateNewerPinVersion,
 } from "coolheaded/core/updateScript.ts";
 import { Effect } from "effect";
+import { SUPPORTED_SYSTEMS } from "coolheaded/system/target.ts";
 import { fetchJsonClient } from "coolheaded/core/fetchHttpClient.ts";
 import { latestNpmVersion } from "coolheaded/source/version.ts";
 import { npmPackageHashConfig } from "coolheaded/npm/packageHash.ts";
@@ -67,7 +68,12 @@ runUpdateScript(import.meta.url, (args, runner) =>
             `${workspacePath}/packages/omo-codex/plugin/package-lock.json`,
           );
           const dependency = yield* commentCheckerPin(contents);
-          const pin = yield* npmPackageHashConfig(PACKAGE_NAME, version, fetchJsonClient);
+          const pin = yield* npmPackageHashConfig({
+            jsonClient: fetchJsonClient,
+            packageName: PACKAGE_NAME,
+            systems: SUPPORTED_SYSTEMS,
+            version,
+          });
           yield* writePinJson(COMMENT_CHECKER_PIN_PATH, {
             packageHash: dependency.hash,
             version: dependency.version,

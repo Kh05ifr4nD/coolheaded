@@ -20,6 +20,25 @@ function isSupportedSystem(value: string): value is SupportedSystem {
   return (SUPPORTED_SYSTEMS as readonly string[]).includes(value);
 }
 
+function parsePackageSystems(value: unknown): readonly SupportedSystem[] {
+  if (!Array.isArray(value) || value.length === 0) {
+    throw new TypeError("Package systems must be a non-empty array");
+  }
+
+  const values: readonly unknown[] = value;
+  const systems: SupportedSystem[] = [];
+  for (const system of values) {
+    if (typeof system !== "string" || !isSupportedSystem(system)) {
+      throw new TypeError(`Unsupported package system: ${String(system)}`);
+    }
+    if (systems.includes(system)) {
+      throw new TypeError(`Duplicate package system: ${system}`);
+    }
+    systems.push(system);
+  }
+  return systems;
+}
+
 function parseSystemTarget(value: unknown): SystemTarget {
   if (!isRecord(value)) {
     throw new TypeError("Invalid system target");
@@ -57,18 +76,5 @@ function parseSystemTargets(value: unknown): readonly SystemTarget[] {
 }
 
 const SYSTEM_TARGETS = parseSystemTargets(systemConfig);
-
-function systemRecord<Value>(
-  valueForSystem: (system: SupportedSystem) => Value,
-): Readonly<Record<SupportedSystem, Value>> {
-  const [darwinArm64System, linuxArm64System, linuxX64System] = SUPPORTED_SYSTEMS;
-
-  return {
-    [darwinArm64System]: valueForSystem(darwinArm64System),
-    [linuxArm64System]: valueForSystem(linuxArm64System),
-    [linuxX64System]: valueForSystem(linuxX64System),
-  };
-}
-
-export { SUPPORTED_SYSTEMS, SYSTEM_TARGETS, systemRecord };
+export { SUPPORTED_SYSTEMS, SYSTEM_TARGETS, isSupportedSystem, parsePackageSystems };
 export type { SupportedSystem, SystemTarget };

@@ -1,12 +1,12 @@
 import { InvalidSriHashError, parseSriHash } from "coolheaded/pin/sriHash.ts";
 import { Effect } from "effect";
-import { systemRecord } from "coolheaded/system/target.ts";
+import { SUPPORTED_SYSTEMS } from "coolheaded/system/target.ts";
 
 type SriHash = ReturnType<typeof parseSriHash>;
-type SupportedSystem = keyof ReturnType<typeof systemRecord<string>>;
+type SupportedSystem = (typeof SUPPORTED_SYSTEMS)[number];
 interface PackageHashConfig {
   readonly binaryVersion?: string;
-  readonly platformPackageHashes: Readonly<Record<SupportedSystem, SriHash>>;
+  readonly platformPackageHashes: Readonly<Partial<Record<SupportedSystem, SriHash>>>;
   readonly version: string;
 }
 
@@ -70,9 +70,26 @@ function optionalNonEmptyString(
   return value;
 }
 
-function platformPackageHashes(value: unknown): Readonly<Record<SupportedSystem, SriHash>> {
+function platformPackageHashes(
+  value: unknown,
+): Readonly<Partial<Record<SupportedSystem, SriHash>>> {
   const hashes = objectRecord(value, "platformPackageHashes");
-  return systemRecord((system: SupportedSystem): SriHash => hashForSystem(hashes, system));
+  const entries = Object.entries(hashes);
+  if (entries.length === 0) {
+    throw new InvalidPackageHashConfigError("platformPackageHashes must not be empty");
+  }
+
+  const validEntries = entries.map(
+    (entry: readonly [string, unknown]): readonly [SupportedSystem, SriHash] => {
+      const [name] = entry;
+      const system = SUPPORTED_SYSTEMS.find((candidate) => candidate === name);
+      if (system === undefined) {
+        throw new InvalidPackageHashConfigError(`Unsupported system for pin hash: ${name}`);
+      }
+      return [system, hashForSystem(hashes, system)];
+    },
+  );
+  return Object.fromEntries(validEntries);
 }
 
 function parsePackageHashConfig(value: unknown): PackageHashConfig {

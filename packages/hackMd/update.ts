@@ -1,3 +1,4 @@
+import { SUPPORTED_SYSTEMS } from "coolheaded/system/target.ts";
 import { fetchJsonClient } from "coolheaded/core/fetchHttpClient.ts";
 import { runUpdateScript } from "coolheaded/core/updateScript.ts";
 import { updateNpmTarballPackage } from "coolheaded/npm/tarball.ts";
@@ -10,6 +11,7 @@ runUpdateScript(import.meta.url, (args, runner) =>
     packageName: "@hackmd/hackmd-cli",
     removeDependencies: ["cli-ux", "oclif"],
     runner,
+    systems: SUPPORTED_SYSTEMS,
     tarballBaseName: "hackmd-cli",
   }),
 );

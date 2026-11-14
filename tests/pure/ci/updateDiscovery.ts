@@ -47,21 +47,14 @@ Deno.test("package discovery validates and sorts evaluated versions", (): void =
   assertEquals(invalidVersionScheme.message, "Invalid version scheme for package broken");
 });
 
-Deno.test("package discovery sends exact system and filtered Nix requests", async (): Promise<void> => {
+Deno.test("package discovery queries all systems independently of its runner", async (): Promise<void> => {
   const runner = new FakeCommandRunner([
-    {
-      request: {
-        command: ["nix", "eval", "--impure", "--raw", "--expr", "builtins.currentSystem"],
-      },
-      result: { code: 0, stderr: "", stdout: "aarch64-darwin" },
-    },
     {
       request: {
         command: ["nix", "eval", "--json", "--impure", "--expr", NIX_EXPR],
         env: {
           DISCOVERY_CONFIG: JSON.stringify({
             filter: ["zeta", "alpha"],
-            system: "aarch64-darwin",
           }),
         },
       },

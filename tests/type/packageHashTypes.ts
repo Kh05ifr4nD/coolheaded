@@ -10,7 +10,8 @@ import type { InvalidNpmMetadataError } from "coolheaded/npm/registry.ts";
 import type { SupportedSystem } from "coolheaded/system/target.ts";
 import { assertType } from "@jsr/std__testing/types";
 
-type ReadonlyHashes = Readonly<Record<SupportedSystem, SriHash>>;
+type ReadonlyHashes = Readonly<Partial<Record<SupportedSystem, SriHash>>>;
+type ReadonlySingleHash = Readonly<{ readonly "aarch64-darwin": SriHash }>;
 type NpmHashesEffect = ReturnType<typeof npmHashesForSystems>;
 type NpmHashConfigEffect = ReturnType<typeof npmHashConfigForSystems>;
 
@@ -20,6 +21,7 @@ assertType<"sha256-AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA=" extends SriHash
 );
 assertType<string extends SriHash ? true : false>(false);
 assertType<IsExact<ReturnType<typeof parseSriHash>, SriHash>>(true);
+assertType<ReadonlySingleHash extends ReadonlyHashes ? true : false>(true);
 assertType<
   IsExact<
     PackageHashConfig,

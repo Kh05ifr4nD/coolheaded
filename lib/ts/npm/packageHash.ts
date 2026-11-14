@@ -4,27 +4,37 @@ import { npmRegistryPackageUrl, npmVersionIntegrity } from "coolheaded/npm/regis
 import { Effect } from "effect";
 import type { InvalidNpmMetadataError } from "coolheaded/npm/metadataError.ts";
 import type { NpmPackageMetadata } from "coolheaded/npm/metadata.ts";
+import type { SupportedSystem } from "coolheaded/system/target.ts";
 import { latestNpmVersion } from "coolheaded/source/version.ts";
 import { npmHashConfigForSystems } from "coolheaded/npm/platformHash.ts";
 import { packageHashConfig } from "coolheaded/pin/packageHashConfig.ts";
-import { systemRecord } from "coolheaded/system/target.ts";
 import { writePackageHashConfig } from "coolheaded/pin/json.ts";
 
 type PackageHashConfig = Effect.Effect.Success<ReturnType<typeof packageHashConfig>>;
 type InvalidPackageHashConfigError = Effect.Effect.Error<ReturnType<typeof packageHashConfig>>;
 type LatestNpmVersionError = Effect.Effect.Error<ReturnType<typeof latestNpmVersion>>;
-type SupportedSystem = Parameters<Parameters<typeof systemRecord>[0]>[0];
-type PlatformPackageSuffixes = Readonly<Record<SupportedSystem, string>>;
+type PlatformPackageSuffixes = Readonly<Partial<Record<SupportedSystem, string>>>;
 const REQUEST_TIMEOUT_MS = 30_000;
 
-interface NpmPackageHashUpdateOptions {
+interface NpmHashUpdateOptions {
   readonly args: readonly string[];
   readonly jsonClient: JsonClient;
   readonly packageName: string;
   readonly pinFilePath: string;
 }
 
-interface NpmPlatformPackageHashUpdateOptions extends NpmPackageHashUpdateOptions {
+interface NpmPackageHashUpdateOptions extends NpmHashUpdateOptions {
+  readonly systems: readonly SupportedSystem[];
+}
+
+interface NpmPackageHashRequest {
+  readonly jsonClient: JsonClient;
+  readonly packageName: string;
+  readonly systems: readonly SupportedSystem[];
+  readonly version: string;
+}
+
+interface NpmPlatformPackageHashUpdateOptions extends NpmHashUpdateOptions {
   readonly suffixes: PlatformPackageSuffixes;
 }
 
@@ -93,25 +103,23 @@ function npmPackageHash(
 }
 
 function npmPackageHashConfig(
-  packageName: string,
-  version: string,
-  jsonClient: Readonly<JsonClient>,
+  request: NpmPackageHashRequest,
 ): Effect.Effect<
   PackageHashConfig,
   InvalidNpmMetadataError | InvalidPackageHashConfigError | JsonClientError | UpdateError
 > {
   return Effect.flatMap(
-    npmPackageHash(packageName, version, jsonClient),
+    npmPackageHash(request.packageName, request.version, request.jsonClient),
     (hash: string): Effect.Effect<PackageHashConfig, InvalidPackageHashConfigError> =>
       packageHashConfig({
-        platformPackageHashes: systemRecord((_system: SupportedSystem): string => hash),
-        version,
+        platformPackageHashes: Object.fromEntries(request.systems.map((system) => [system, hash])),
+        version: request.version,
       }),
   );
 }
 
 function writePackageHashUpdate(
-  options: NpmPackageHashUpdateOptions,
+  options: NpmHashUpdateOptions,
   hashConfigForVersion: (
     version: string,
   ) => Effect.Effect<
@@ -149,7 +157,12 @@ function npmPackageHashUpdateProgram(
   return writePackageHashUpdate(
     options,
     (version: string): ReturnType<typeof npmPackageHashConfig> =>
-      npmPackageHashConfig(options.packageName, version, options.jsonClient),
+      npmPackageHashConfig({
+        jsonClient: options.jsonClient,
+        packageName: options.packageName,
+        systems: options.systems,
+        version,
+      }),
   );
 }
 

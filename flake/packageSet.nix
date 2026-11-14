@@ -12,9 +12,16 @@ let
     let
       directory = ../packages + "/${name}";
       systemsPath = directory + "/systems.json";
-      supportsSystem =
-        !builtins.pathExists systemsPath
-        || lib.elem pkgs.stdenv.hostPlatform.system (builtins.fromJSON (builtins.readFile systemsPath));
+      pinPath = directory + "/pin.json";
+      pin = if builtins.pathExists pinPath then builtins.fromJSON (builtins.readFile pinPath) else { };
+      systems =
+        if builtins.pathExists systemsPath then
+          builtins.fromJSON (builtins.readFile systemsPath)
+        else if pin ? platformPackageHashes then
+          builtins.attrNames pin.platformPackageHashes
+        else
+          null;
+      supportsSystem = systems == null || lib.elem pkgs.stdenv.hostPlatform.system systems;
     in
     type == "directory" && builtins.pathExists (directory + "/package.nix") && supportsSystem
   ) (builtins.readDir ../packages);

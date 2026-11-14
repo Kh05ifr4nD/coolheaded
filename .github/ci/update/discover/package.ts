@@ -1,6 +1,6 @@
 #!/usr/bin/env -S deno run --allow-env --allow-run --allow-write
 
-import { currentSystem, isRecord, run, writeOutput } from "coolheadedCi/process.ts";
+import { isRecord, run, writeOutput } from "coolheadedCi/process.ts";
 import type { CommandRunner } from "coolheaded/core/commandRunner.ts";
 import type { VersionSchemeName } from "coolheaded/core/version.ts";
 import { denoCommandRunner } from "coolheaded/core/denoCommandRunner.ts";
@@ -88,7 +88,6 @@ async function discoverPackage(
 ): Promise<readonly MatrixItem[]> {
   const config = JSON.stringify({
     filter,
-    system: await currentSystem(runner),
   });
   const result = await run(runner, ["nix", "eval", "--json", "--impure", "--expr", NIX_EXPR], {
     capture: true,
