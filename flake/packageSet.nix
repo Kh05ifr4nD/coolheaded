@@ -8,7 +8,22 @@
 
 let
   packageDirectories = lib.filterAttrs (
-    name: type: type == "directory" && builtins.pathExists (../packages + "/${name}/package.nix")
+    name: type:
+    let
+      directory = ../packages + "/${name}";
+      systemsPath = directory + "/systems.json";
+      pinPath = directory + "/pin.json";
+      pin = if builtins.pathExists pinPath then builtins.fromJSON (builtins.readFile pinPath) else { };
+      systems =
+        if builtins.pathExists systemsPath then
+          builtins.fromJSON (builtins.readFile systemsPath)
+        else if pin ? platformPackageHashes then
+          builtins.attrNames pin.platformPackageHashes
+        else
+          null;
+      supportsSystem = systems == null || lib.elem pkgs.stdenv.hostPlatform.system systems;
+    in
+    type == "directory" && builtins.pathExists (directory + "/package.nix") && supportsSystem
   ) (builtins.readDir ../packages);
   pyprojectPackageArgs = { inherit pyprojectBuildSystems pyprojectNix uv2nix; };
   packageDirectory = name: ../packages + "/${name}";
