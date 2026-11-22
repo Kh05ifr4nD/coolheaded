@@ -113,7 +113,7 @@ buildNpmPackage {
   '';
 
   meta = {
-    description = "Native Safari browser automation over MCP";
+    description = "Native Safari browser automation for AI agents";
     homepage = "https://github.com/achiya-automation/safari-mcp";
     changelog = "https://github.com/achiya-automation/safari-mcp/releases/tag/v${pin.version}";
     license = lib.licenses.mit;

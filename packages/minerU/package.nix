@@ -319,7 +319,7 @@ else
         spdxId = "LicenseRef-MinerU-Open-Source-License";
         url = "https://github.com/opendatalab/MinerU/blob/mineru-${pin.version}-released/LICENSE.md";
       };
-      description = "A practical document parsing tool for converting PDF, OFD, EPUB, HTML, images, CSV, RTF, OOXML, and OpenDocument files into Markdown and JSON";
+      description = "Transforms complex documents like PDFs and Office docs into LLM-ready markdown/JSON for your Agentic workflows";
       changelog = "https://github.com/opendatalab/MinerU/releases/tag/mineru-${pin.version}-released";
       platforms =
         if linuxAccelerated then

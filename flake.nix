@@ -1,5 +1,5 @@
 {
-  description = "Nix-packaged AI tools, developer CLIs, linters, and update automation";
+  description = "";
 
   inputs = {
     flakeParts.url = "github:hercules-ci/flake-parts";

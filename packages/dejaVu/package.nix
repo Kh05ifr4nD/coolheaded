@@ -48,7 +48,7 @@ packageLib.mkGitHubReleaseBinaryPackage {
   };
 
   meta = {
-    description = "Search and recall coding agent histories across tools";
+    description = "Local MCP memory, session history search & coding agent handoff";
     license = lib.licenses.mit;
   };
 }

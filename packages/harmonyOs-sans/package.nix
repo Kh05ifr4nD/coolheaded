@@ -27,7 +27,7 @@ stdenvNoCC.mkDerivation {
   '';
 
   meta = {
-    description = "HarmonyOS Sans font family";
+    description = "Huawei HarmonyOS Sans font";
     homepage = "https://github.com/huawei-fonts/HarmonyOS-Sans";
     license = lib.licenses.unfreeRedistributable;
     platforms = lib.platforms.all;

@@ -88,6 +88,6 @@ packageLib.mkNpmCliPackage {
   meta = {
     homepage = "https://github.com/hackmdio/hackmd-cli";
     license = lib.licenses.mit;
-    description = "Official HackMD command line tool";
+    description = "HackMD Command Line Tool";
   };
 }

@@ -37,7 +37,7 @@ packageLib.mkReleaseBinaryPackage {
   '';
 
   meta = {
-    description = "Local-first workspace search for humans and AI agents";
+    description = "Local-first search across your workspace, built for humans and AI agents";
     homepage = "https://github.com/zvec-ai/zvec-grep";
     license = lib.licenses.asl20;
   };
