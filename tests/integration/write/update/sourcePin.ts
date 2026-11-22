@@ -13,7 +13,7 @@ function options(
   runner: Readonly<FakeCommandRunner>,
   args: readonly string[] = [VERSION],
   latestVersion: () => Effect.Effect<string, Error> = (): Effect.Effect<string, Error> =>
-    Effect.succeed(VERSION),
+    Effect.succeed(VERSION)
 ): Parameters<typeof updateGitHubSourcePin>[0] {
   return {
     args,
@@ -24,14 +24,14 @@ function options(
     source: {
       owner: "example",
       repo: "tool",
-      tag: (version: string): string => `v${version}`,
-    },
+      tag: (version: string): string => `v${version}`
+    }
   } as const;
 }
 
 function update(
   pinFilePath: string,
-  runner: Readonly<FakeCommandRunner>,
+  runner: Readonly<FakeCommandRunner>
 ): ReturnType<typeof updateGitHubSourcePin> {
   const updateOptions = options(pinFilePath, runner);
   return updateGitHubSourcePin(updateOptions);
@@ -48,7 +48,7 @@ Deno.test("GitHub source pin update writes example source hash", async (): Promi
           "build",
           "--impure",
           "--no-link",
-          "--expr",
+          "--expr"
         ]);
         assertEquals(request.cwd, ROOT);
         const expression = request.command.at(5);
@@ -60,14 +60,14 @@ Deno.test("GitHub source pin update writes example source hash", async (): Promi
         assertStringIncludes(expression, 'tag = "v1.2.3"');
         assertStringIncludes(expression, `path:${ROOT}`);
       },
-      result: { code: 1, stderr: `error: got: ${SOURCE_HASH}`, stdout: "" },
-    },
+      result: { code: 1, stderr: `error: got: ${SOURCE_HASH}`, stdout: "" }
+    }
   ]);
   try {
     await Effect.runPromise(update(pinFilePath, runner));
     assertEquals(
       await Deno.readTextFile(pinFilePath),
-      `{\n  "version": "${VERSION}",\n  "sourceHash": "${SOURCE_HASH}"\n}\n`,
+      `{\n  "version": "${VERSION}",\n  "sourceHash": "${SOURCE_HASH}"\n}\n`
     );
     runner.assertExhausted();
   } finally {
@@ -83,7 +83,7 @@ Deno.test("GitHub source pin update preserves pin and latest-version error ident
   const error = new Error("latest version unavailable");
   try {
     const updateEffect = updateGitHubSourcePin(
-      options(pinFilePath, runner, [], (): Effect.Effect<string, Error> => Effect.fail(error)),
+      options(pinFilePath, runner, [], (): Effect.Effect<string, Error> => Effect.fail(error))
     );
     const failureEffect = Effect.flip(updateEffect);
     const failure = await Effect.runPromise(failureEffect);

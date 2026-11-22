@@ -7,7 +7,7 @@ import type {
   LayoutNode,
   SnapshotChangedComponent,
   SnapshotChangedError,
-  ToolExecutionError,
+  ToolExecutionError
 } from "coolheaded/repo/layout/types.ts";
 
 const REGULAR_FILE_NODE = true;
@@ -18,7 +18,7 @@ const LAYOUT_SCHEMA_FILE_NAME = "layout.cue";
 function conformanceViolation(message: string): ConformanceViolation {
   return Object.assign(new Error(message), {
     kind: "conformance" as const,
-    name: "ConformanceViolation",
+    name: "ConformanceViolation"
   });
 }
 
@@ -27,7 +27,7 @@ function toolExecutionError(
   executable: string,
   args: readonly string[],
   exitCode: number | undefined,
-  stderr: string,
+  stderr: string
 ): ToolExecutionError {
   const detail = stderr.length === 0 ? "" : `: ${stderr}`;
   const status = exitCode === undefined ? "failed to start" : `exit ${exitCode}`;
@@ -38,7 +38,7 @@ function toolExecutionError(
     exitCode,
     kind: "toolExecution" as const,
     name: "ToolExecutionError",
-    stderr,
+    stderr
   });
 }
 
@@ -46,28 +46,28 @@ function inputDecodeError(source: string, message: string): InputDecodeError {
   return Object.assign(new Error(`Failed to decode ${source}: ${message}`), {
     kind: "inputDecode" as const,
     name: "InputDecodeError",
-    source,
+    source
   });
 }
 
 function internalInvariantError(message: string): InternalInvariantError {
   return Object.assign(new Error(message), {
     kind: "internalInvariant" as const,
-    name: "InternalInvariantError",
+    name: "InternalInvariantError"
   });
 }
 
 function snapshotChangedError(
   beforeFingerprint: string,
   afterFingerprint: string,
-  changedComponents: readonly SnapshotChangedComponent[],
+  changedComponents: readonly SnapshotChangedComponent[]
 ): SnapshotChangedError {
   return Object.assign(new Error("repository changed while layout was being checked"), {
     afterFingerprint,
     beforeFingerprint,
     changedComponents,
     kind: "snapshotChanged" as const,
-    name: "SnapshotChangedError",
+    name: "SnapshotChangedError"
   });
 }
 
@@ -91,7 +91,7 @@ function insertGitPath(spec: Layout, path: string): Layout {
 
     return {
       ...spec,
-      [segment]: REGULAR_FILE_NODE,
+      [segment]: REGULAR_FILE_NODE
     };
   }
 
@@ -105,7 +105,7 @@ function insertGitPath(spec: Layout, path: string): Layout {
 
   return {
     ...spec,
-    [segment]: insertGitPath(childTree, childPath),
+    [segment]: insertGitPath(childTree, childPath)
   };
 }
 
@@ -152,5 +152,5 @@ export {
   isLayoutError,
   isToolExecutionError,
   snapshotChangedError,
-  toolExecutionError,
+  toolExecutionError
 };

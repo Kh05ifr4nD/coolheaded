@@ -2,7 +2,7 @@ import {
   UpdateError,
   requestedOrLatestVersion,
   requestedOrNewerPinVersion,
-  updateNewerPinVersion,
+  updateNewerPinVersion
 } from "coolheaded/core/updateScript.ts";
 import { Effect } from "effect";
 import type { IsExact } from "./testingTypes.ts";

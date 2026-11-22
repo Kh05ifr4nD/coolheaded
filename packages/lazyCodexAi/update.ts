@@ -3,7 +3,7 @@ import {
   readTextFile,
   runUpdateScript,
   scriptPath,
-  updateNewerPinVersion,
+  updateNewerPinVersion
 } from "coolheaded/core/updateScript.ts";
 import { Effect } from "effect";
 import { SUPPORTED_SYSTEMS } from "coolheaded/system/target.ts";
@@ -25,7 +25,7 @@ function isRecord(value: unknown): value is Readonly<Record<string, unknown>> {
 }
 
 function commentCheckerPin(
-  contents: string,
+  contents: string
 ): Effect.Effect<{ readonly hash: string; readonly version: string }, Error> {
   return Effect.try({
     catch: (error: unknown): Error =>
@@ -45,7 +45,7 @@ function commentCheckerPin(
         throw new UpdateError("Invalid Comment Checker lock entry");
       }
       return { hash: parseSriHash(entry["integrity"]), version: entry["version"] };
-    },
+    }
   });
 }
 
@@ -62,26 +62,26 @@ runUpdateScript(import.meta.url, (args, runner) =>
             runner,
             tarballBaseName: PACKAGE_NAME,
             version,
-            workspacePath,
+            workspacePath
           });
           const contents = yield* readTextFile(
-            `${workspacePath}/packages/omo-codex/plugin/package-lock.json`,
+            `${workspacePath}/packages/omo-codex/plugin/package-lock.json`
           );
           const dependency = yield* commentCheckerPin(contents);
           const pin = yield* npmPackageHashConfig({
             jsonClient: fetchJsonClient,
             packageName: PACKAGE_NAME,
             systems: SUPPORTED_SYSTEMS,
-            version,
+            version
           });
           yield* writePinJson(COMMENT_CHECKER_PIN_PATH, {
             packageHash: dependency.hash,
-            version: dependency.version,
+            version: dependency.version
           });
           yield* writePinJson(PIN_FILE_PATH, pin);
-        }),
-      ),
-  ),
+        })
+      )
+  )
 );
 
 export { commentCheckerPin };

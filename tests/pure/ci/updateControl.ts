@@ -11,18 +11,18 @@ describe("update control command runner", (): void => {
     const runner = new FakeCommandRunner([
       {
         request: { command: ["git", "fetch", "origin", "main"] },
-        result: success,
+        result: success
       },
       {
         request: { command: ["git", "fetch", "origin", "update/package/example"] },
-        result: { code: 1, stderr: "missing", stdout: "" },
+        result: { code: 1, stderr: "missing", stdout: "" }
       },
       {
         request: {
-          command: ["git", "checkout", "-B", "update/package/example", "origin/main"],
+          command: ["git", "checkout", "-B", "update/package/example", "origin/main"]
         },
-        result: success,
-      },
+        result: success
+      }
     ]);
 
     await prepareBranch("update/package/example", runner);
@@ -34,18 +34,18 @@ describe("update control command runner", (): void => {
     const runner = new FakeCommandRunner([
       {
         request: { command: ["git", "fetch", "origin", baseRef] },
-        result: success,
+        result: success
       },
       {
         request: { command: ["git", "fetch", "origin", "update/package/example"] },
-        result: { code: 1, stderr: "missing", stdout: "" },
+        result: { code: 1, stderr: "missing", stdout: "" }
       },
       {
         request: {
-          command: ["git", "checkout", "-B", "update/package/example", `origin/${baseRef}`],
+          command: ["git", "checkout", "-B", "update/package/example", `origin/${baseRef}`]
         },
-        result: success,
-      },
+        result: success
+      }
     ]);
 
     await prepareBranch("update/package/example", runner, baseRef);
@@ -59,9 +59,9 @@ describe("update control command runner", (): void => {
       { request: { command: ["git", "fetch", "origin", branch] }, result: success },
       {
         request: { command: ["git", "checkout", "-B", branch, `origin/${branch}`] },
-        result: success,
+        result: success
       },
-      { request: { command: ["git", "rebase", "origin/main"] }, result: success },
+      { request: { command: ["git", "rebase", "origin/main"] }, result: success }
     ]);
 
     await prepareBranch(branch, runner);
@@ -76,17 +76,17 @@ describe("update control command runner", (): void => {
       { request: { command: ["git", "fetch", "origin", branch] }, result: success },
       {
         request: { command: ["git", "checkout", "-B", branch, `origin/${branch}`] },
-        result: success,
+        result: success
       },
       {
         request: { command: ["git", "rebase", "origin/main"] },
-        result: { code: 1, stderr: "conflict", stdout: "" },
+        result: { code: 1, stderr: "conflict", stdout: "" }
       },
       { request: { command: ["git", "rebase", "--abort"] }, result: success },
       {
         request: { command: ["git", "checkout", "-B", branch, "origin/main"] },
-        result: success,
-      },
+        result: success
+      }
     ]);
 
     await prepareBranch(branch, runner);
@@ -97,8 +97,8 @@ describe("update control command runner", (): void => {
         .map((request): readonly string[] => request.command),
       [
         ["git", "rebase", "--abort"],
-        ["git", "checkout", "-B", branch, "origin/main"],
-      ],
+        ["git", "checkout", "-B", branch, "origin/main"]
+      ]
     );
     runner.assertExhausted();
   });

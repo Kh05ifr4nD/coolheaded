@@ -12,6 +12,6 @@ runUpdateScript(import.meta.url, (args, runner) =>
     removeDependencies: ["cli-ux", "oclif"],
     runner,
     systems: SUPPORTED_SYSTEMS,
-    tarballBaseName: "hackmd-cli",
-  }),
+    tarballBaseName: "hackmd-cli"
+  })
 );

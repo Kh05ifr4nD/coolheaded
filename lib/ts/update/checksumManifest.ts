@@ -2,7 +2,7 @@ import type {
   HttpClient,
   HttpClientError,
   HttpRequest,
-  HttpResponse,
+  HttpResponse
 } from "coolheaded/core/httpClient.ts";
 import { UpdateError, updateNewerPinVersion } from "coolheaded/core/updateScript.ts";
 import { Effect } from "effect";
@@ -28,7 +28,7 @@ class ChecksumManifestError extends Error {
     asset: string,
     message: string,
     expected?: string,
-    actual?: string,
+    actual?: string
   ) {
     super(message);
     this.actual = actual;
@@ -64,7 +64,7 @@ function malformed(asset: string): ChecksumManifestError {
 
 function parseChecksumManifest(
   manifest: string,
-  assets: readonly string[],
+  assets: readonly string[]
 ): Effect.Effect<Readonly<Record<string, string>>, ChecksumManifestError> {
   const requested = new Set(assets);
   const selected: Record<string, string> = {};
@@ -79,7 +79,7 @@ function parseChecksumManifest(
       if (requested.has(filename)) {
         if (Object.hasOwn(selected, filename)) {
           return Effect.fail(
-            new ChecksumManifestError("duplicate", filename, `Duplicate checksum: ${filename}`),
+            new ChecksumManifestError("duplicate", filename, `Duplicate checksum: ${filename}`)
           );
         }
         selected[filename] = hash;
@@ -99,35 +99,35 @@ function httpRequest(url: string): HttpRequest {
     headers: {},
     method: "GET",
     timeoutMs: REQUEST_TIMEOUT_MS,
-    url,
+    url
   };
 }
 
 function responseText<Response extends HttpResponse>(
-  response: Response,
+  response: Response
 ): Effect.Effect<string, ChecksumManifestError> & Readonly<{ readonly response?: Response }> {
   return Effect.try({
     catch: (): ChecksumManifestError => malformed("manifest"),
-    try: (): string => new globalThis.TextDecoder("utf8", { fatal: true }).decode(response.body),
+    try: (): string => new globalThis.TextDecoder("utf8", { fatal: true }).decode(response.body)
   });
 }
 
 function digestHex(
-  bytes: readonly number[],
+  bytes: readonly number[]
 ): Effect.Effect<Readonly<{ readonly hex: string; readonly sri: SriHash }>> {
   return Effect.promise(
     async (): Promise<Readonly<{ readonly hex: string; readonly sri: SriHash }>> => {
       const digest = new Uint8Array(
-        await globalThis.crypto.subtle.digest("SHA-256", Uint8Array.from(bytes)),
+        await globalThis.crypto.subtle.digest("SHA-256", Uint8Array.from(bytes))
       );
       const hex = Array.from(digest, (byte: number): string =>
-        byte.toString(HEX_RADIX).padStart(2, "0"),
+        byte.toString(HEX_RADIX).padStart(2, "0")
       ).join("");
       return {
         hex,
-        sri: formatSriHash("sha256", [...digest]),
+        sri: formatSriHash("sha256", [...digest])
       };
-    },
+    }
   );
 }
 
@@ -135,12 +135,12 @@ function verifiedAsset(
   httpClient: Readonly<HttpClient>,
   asset: string,
   url: string,
-  expected: string,
+  expected: string
 ): Effect.Effect<SriHash, ChecksumVerificationError> {
   return Effect.flatMap(
     httpClient.request(httpRequest(url)),
     <Response extends HttpResponse>(
-      response: Response,
+      response: Response
     ): Effect.Effect<SriHash, ChecksumManifestError> & Readonly<{ readonly response?: Response }> =>
       Effect.flatMap(digestHex([...response.body]), ({ hex, sri }) =>
         hex === expected
@@ -151,10 +151,10 @@ function verifiedAsset(
                 asset,
                 `Checksum mismatch: ${asset}`,
                 expected,
-                hex,
-              ),
-            ),
-      ),
+                hex
+              )
+            )
+      )
   );
 }
 
@@ -162,7 +162,7 @@ function verifiedAssetForExpected(
   httpClient: Readonly<HttpClient>,
   asset: string,
   url: string,
-  expected: Readonly<Record<string, string>>,
+  expected: Readonly<Record<string, string>>
 ): Effect.Effect<SriHash, ChecksumVerificationError> {
   const expectedHash = expected[asset];
   if (expectedHash === undefined) {
@@ -174,15 +174,15 @@ function verifiedAssetForExpected(
 function verifiedAssets(
   httpClient: Readonly<HttpClient>,
   assetUrls: Readonly<Record<string, string>>,
-  expected: Readonly<Record<string, string>>,
+  expected: Readonly<Record<string, string>>
 ): Effect.Effect<ChecksumManifestResult, ChecksumVerificationError> {
   const verificationEffects = Object.fromEntries(
     Object.entries(assetUrls).map(
       ([asset, assetUrl]: readonly [string, string]): readonly [
         string,
-        Effect.Effect<SriHash, ChecksumVerificationError>,
-      ] => [asset, verifiedAssetForExpected(httpClient, asset, assetUrl, expected)],
-    ),
+        Effect.Effect<SriHash, ChecksumVerificationError>
+      ] => [asset, verifiedAssetForExpected(httpClient, asset, assetUrl, expected)]
+    )
   );
   return Effect.all(verificationEffects, { concurrency: "unbounded" });
 }
@@ -190,7 +190,7 @@ function verifiedAssets(
 function verifiedChecksumAssets(
   httpClient: Readonly<HttpClient>,
   manifestUrl: string,
-  assetUrls: Readonly<Record<string, string>>,
+  assetUrls: Readonly<Record<string, string>>
 ): Effect.Effect<ChecksumManifestResult, ChecksumVerificationError> {
   const assets = Object.keys(assetUrls);
   const manifestEffect = httpClient.request(httpRequest(manifestUrl));
@@ -198,8 +198,8 @@ function verifiedChecksumAssets(
     Effect.flatMap(responseText),
     Effect.flatMap((manifest: string) => parseChecksumManifest(manifest, assets)),
     Effect.flatMap((expected: Readonly<Record<string, string>>) =>
-      verifiedAssets(httpClient, assetUrls, expected),
-    ),
+      verifiedAssets(httpClient, assetUrls, expected)
+    )
   );
 }
 
@@ -207,12 +207,12 @@ function writeVerifiedPackageHashConfig(
   pinFilePath: string,
   version: string,
   assets: PackageAssets,
-  hashes: ChecksumManifestResult,
+  hashes: ChecksumManifestResult
 ): Effect.Effect<void, InvalidPackageHashConfigError | UpdateError> {
   const hashEffects = Object.entries(assets).map(
     ([system, asset]: readonly [string, string]): readonly [
       string,
-      Effect.Effect<SriHash, UpdateError>,
+      Effect.Effect<SriHash, UpdateError>
     ] => {
       const hash = hashes[asset];
       const verified =
@@ -220,18 +220,18 @@ function writeVerifiedPackageHashConfig(
           ? Effect.fail(new UpdateError(`Missing verified checksum: ${asset}`))
           : Effect.succeed(hash);
       return [system, verified];
-    },
+    }
   );
   return Effect.all(Object.fromEntries(hashEffects)).pipe(
     Effect.flatMap((platformPackageHashes: Readonly<Record<string, SriHash>>) =>
-      packageHashConfig({ platformPackageHashes, version }),
+      packageHashConfig({ platformPackageHashes, version })
     ),
-    Effect.flatMap((config: PackageHashConfig) => writePackageHashConfig(pinFilePath, config)),
+    Effect.flatMap((config: PackageHashConfig) => writePackageHashConfig(pinFilePath, config))
   );
 }
 
 function checksumManifestUpdateProgram<LatestVersionError extends Error>(
-  options: ChecksumManifestUpdateOptions<LatestVersionError>,
+  options: ChecksumManifestUpdateOptions<LatestVersionError>
 ): Effect.Effect<void, ChecksumUpdateError | LatestVersionError> {
   const assets = Object.values(options.assets);
   return updateNewerPinVersion(
@@ -241,21 +241,21 @@ function checksumManifestUpdateProgram<LatestVersionError extends Error>(
     (version: string): Effect.Effect<void, ChecksumUpdateError> => {
       const assetEntries = assets.map((asset: string): readonly [string, string] => [
         asset,
-        options.assetUrl(version, asset),
+        options.assetUrl(version, asset)
       ]);
       const assetUrls = Object.fromEntries(assetEntries);
       const verified = verifiedChecksumAssets(
         options.httpClient,
         options.manifestUrl(version),
-        assetUrls,
+        assetUrls
       );
       return verified.pipe(
         Effect.flatMap((hashes: ChecksumManifestResult) =>
-          writeVerifiedPackageHashConfig(options.pinFilePath, version, options.assets, hashes),
-        ),
+          writeVerifiedPackageHashConfig(options.pinFilePath, version, options.assets, hashes)
+        )
       );
     },
-    options.versionScheme,
+    options.versionScheme
   );
 }
 
@@ -263,6 +263,6 @@ export {
   ChecksumManifestError,
   checksumManifestUpdateProgram,
   parseChecksumManifest,
-  verifiedChecksumAssets,
+  verifiedChecksumAssets
 };
 export type { ChecksumManifestErrorKind, ChecksumManifestResult, ChecksumVerificationError };

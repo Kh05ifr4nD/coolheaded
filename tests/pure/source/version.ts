@@ -1,7 +1,7 @@
 import {
   VersionSourceError,
   latestNpmVersion,
-  latestPyPiVersion,
+  latestPyPiVersion
 } from "coolheaded/source/version.ts";
 import { assertEquals, assertInstanceOf } from "@jsr/std__assert";
 import { describe, it } from "@jsr/std__testing/bdd";
@@ -15,13 +15,13 @@ const npmRequest = {
   headers: {},
   method: "GET",
   timeoutMs: REQUEST_TIMEOUT_MS,
-  url: "https://registry.npmjs.org/%40scope%2Fexample",
+  url: "https://registry.npmjs.org/%40scope%2Fexample"
 } as const;
 const pyPiRequest = {
   headers: {},
   method: "GET",
   timeoutMs: REQUEST_TIMEOUT_MS,
-  url: "https://pypi.org/pypi/example/json",
+  url: "https://pypi.org/pypi/example/json"
 } as const;
 
 function jsonResponse(value: unknown, url: string): JsonResponse {
@@ -31,9 +31,9 @@ function jsonResponse(value: unknown, url: string): JsonResponse {
       headers: {},
       status: HTTP_OK,
       statusText: "OK",
-      url,
+      url
     },
-    value,
+    value
   };
 }
 
@@ -43,15 +43,15 @@ describe("registry version sources", (): void => {
       {
         effect: (): Effect.Effect<JsonResponse> =>
           Effect.succeed(jsonResponse({ "dist-tags": { latest: "1.2.3" } }, npmRequest.url)),
-        request: npmRequest,
-      },
+        request: npmRequest
+      }
     ]);
     const pyPi = strictJsonClient([
       {
         effect: (): Effect.Effect<JsonResponse> =>
           Effect.succeed(jsonResponse({ info: { version: "2.3.4" } }, pyPiRequest.url)),
-        request: pyPiRequest,
-      },
+        request: pyPiRequest
+      }
     ]);
 
     assertEquals(await Effect.runPromise(latestNpmVersion("@scope/example", npm.client)), "1.2.3");
@@ -67,22 +67,22 @@ describe("registry version sources", (): void => {
         {},
         { "dist-tags": {} },
         { "dist-tags": { latest: 1 } },
-        { "dist-tags": { latest: "01.0.0" } },
+        { "dist-tags": { latest: "01.0.0" } }
       ].map(async (value: unknown): Promise<void> => {
         const strict = strictJsonClient([
           {
             effect: (): Effect.Effect<JsonResponse> =>
               Effect.succeed(jsonResponse(value, npmRequest.url)),
-            request: npmRequest,
-          },
+            request: npmRequest
+          }
         ]);
         const error = await Effect.runPromise(
-          Effect.flip(latestNpmVersion("@scope/example", strict.client)),
+          Effect.flip(latestNpmVersion("@scope/example", strict.client))
         );
         assertInstanceOf(error, VersionSourceError);
         assertEquals(error.url, npmRequest.url);
         strict.assertExhausted();
-      }),
+      })
     );
   });
 
@@ -94,17 +94,17 @@ describe("registry version sources", (): void => {
             {
               effect: (): Effect.Effect<JsonResponse> =>
                 Effect.succeed(jsonResponse(value, pyPiRequest.url)),
-              request: pyPiRequest,
-            },
+              request: pyPiRequest
+            }
           ]);
           const error = await Effect.runPromise(
-            Effect.flip(latestPyPiVersion("example", strict.client)),
+            Effect.flip(latestPyPiVersion("example", strict.client))
           );
           assertInstanceOf(error, VersionSourceError);
           assertEquals(error.url, pyPiRequest.url);
           strict.assertExhausted();
-        },
-      ),
+        }
+      )
     );
   });
 });

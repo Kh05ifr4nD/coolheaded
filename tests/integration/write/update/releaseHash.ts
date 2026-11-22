@@ -3,7 +3,7 @@ import { describe, it } from "@jsr/std__testing/bdd";
 import {
   hexSha256ToSRI,
   releaseHashUpdateProgram,
-  releaseUrlsFromTargets,
+  releaseUrlsFromTargets
 } from "coolheaded/update/release.ts";
 import { Effect } from "effect";
 import { assertEquals } from "@jsr/std__assert";
@@ -27,7 +27,7 @@ function response(url: string, body: readonly number[]): HttpResponse {
     headers: {},
     status: HTTP_OK,
     statusText: "OK",
-    url,
+    url
   };
 }
 
@@ -42,7 +42,7 @@ function plan(url: string, body: readonly number[]): ExpectedHttpRequest {
       const httpResponse = response(url, body);
       return Effect.succeed(httpResponse);
     },
-    request: request(url),
+    request: request(url)
   };
 }
 
@@ -52,14 +52,14 @@ describe("release helpers", (): void => {
       {
         "aarch64-darwin": "darwin_arm64",
         "aarch64-linux": "linux_arm64",
-        "x86_64-linux": "linux_amd64",
+        "x86_64-linux": "linux_amd64"
       },
-      (target: string): string => `https://example.test/${target}.tar.gz`,
+      (target: string): string => `https://example.test/${target}.tar.gz`
     );
     assertEquals(urls, {
       "aarch64-darwin": "https://example.test/darwin_arm64.tar.gz",
       "aarch64-linux": "https://example.test/linux_arm64.tar.gz",
-      "x86_64-linux": "https://example.test/linux_amd64.tar.gz",
+      "x86_64-linux": "https://example.test/linux_amd64.tar.gz"
     });
   });
 
@@ -75,13 +75,13 @@ describe("release hash updates", (): void => {
     const urls = {
       "aarch64-darwin": "https://example.test/releases/v0.1.0/darwin_arm64.tar.gz",
       "aarch64-linux": "https://example.test/releases/v0.1.0/linux_arm64.tar.gz",
-      "x86_64-linux": "https://example.test/releases/v0.1.0/linux_amd64.tar.gz",
+      "x86_64-linux": "https://example.test/releases/v0.1.0/linux_amd64.tar.gz"
     } as const;
     const hashBody = encoded(EMPTY_SHA256);
     const expectedRequests = [
       plan(urls["aarch64-darwin"], hashBody),
       plan(urls["aarch64-linux"], hashBody),
-      plan(urls["x86_64-linux"], hashBody),
+      plan(urls["x86_64-linux"], hashBody)
     ];
     const strict = strictHttpClient(expectedRequests);
 
@@ -92,7 +92,7 @@ describe("release hash updates", (): void => {
         latestVersion: (): Effect.Effect<string, Error> => Effect.succeed("0.2.0"),
         pinFilePath,
         source: "sha256Sum",
-        urlsForVersion: (): typeof urls => urls,
+        urlsForVersion: (): typeof urls => urls
       });
       await Effect.runPromise(update);
 
@@ -102,9 +102,9 @@ describe("release hash updates", (): void => {
         platformPackageHashes: {
           "aarch64-darwin": EMPTY_SRI,
           "aarch64-linux": EMPTY_SRI,
-          "x86_64-linux": EMPTY_SRI,
+          "x86_64-linux": EMPTY_SRI
         },
-        version: "0.1.0",
+        version: "0.1.0"
       });
       strict.assertExhausted();
     } finally {
@@ -117,13 +117,13 @@ describe("release hash updates", (): void => {
     const urls = {
       "aarch64-darwin": "https://example.test/digest/darwin",
       "aarch64-linux": "https://example.test/digest/linux-arm64",
-      "x86_64-linux": "https://example.test/digest/linux-amd64",
+      "x86_64-linux": "https://example.test/digest/linux-amd64"
     } as const;
     const emptyBody: readonly number[] = [];
     const expectedRequests = [
       plan(urls["aarch64-darwin"], emptyBody),
       plan(urls["aarch64-linux"], emptyBody),
-      plan(urls["x86_64-linux"], emptyBody),
+      plan(urls["x86_64-linux"], emptyBody)
     ];
     const strict = strictHttpClient(expectedRequests);
     try {
@@ -133,7 +133,7 @@ describe("release hash updates", (): void => {
         latestVersion: (): Effect.Effect<string, Error> => Effect.succeed("0.2.0"),
         pinFilePath,
         source: "sha256Digest",
-        urlsForVersion: (): typeof urls => urls,
+        urlsForVersion: (): typeof urls => urls
       });
       await Effect.runPromise(update);
       const pinText = await Deno.readTextFile(pinFilePath);
@@ -142,9 +142,9 @@ describe("release hash updates", (): void => {
         platformPackageHashes: {
           "aarch64-darwin": EMPTY_SRI,
           "aarch64-linux": EMPTY_SRI,
-          "x86_64-linux": EMPTY_SRI,
+          "x86_64-linux": EMPTY_SRI
         },
-        version: "0.1.0",
+        version: "0.1.0"
       });
       strict.assertExhausted();
     } finally {
@@ -158,13 +158,13 @@ describe("release hash updates", (): void => {
     const urls = {
       "aarch64-darwin": "https://example.test/calendar/darwin",
       "aarch64-linux": "https://example.test/calendar/linux-arm64",
-      "x86_64-linux": "https://example.test/calendar/linux-amd64",
+      "x86_64-linux": "https://example.test/calendar/linux-amd64"
     } as const;
     const hashBody = encoded(EMPTY_SHA256);
     const expectedRequests = [
       plan(urls["aarch64-darwin"], hashBody),
       plan(urls["aarch64-linux"], hashBody),
-      plan(urls["x86_64-linux"], hashBody),
+      plan(urls["x86_64-linux"], hashBody)
     ];
     const strict = strictHttpClient(expectedRequests);
     try {
@@ -175,7 +175,7 @@ describe("release hash updates", (): void => {
         pinFilePath,
         source: "sha256Sum",
         urlsForVersion: (): typeof urls => urls,
-        versionScheme: calendarVersionScheme,
+        versionScheme: calendarVersionScheme
       });
       await Effect.runPromise(update);
       const pinText = await Deno.readTextFile(pinFilePath);

@@ -19,10 +19,10 @@ function prList(branch: string, number: string): PlannedCommand {
         "--json",
         "number",
         "--jq",
-        ".[0].number // empty",
-      ],
+        ".[0].number // empty"
+      ]
     },
-    result: { code: 0, stderr: "", stdout: number },
+    result: { code: 0, stderr: "", stdout: number }
   };
 }
 
@@ -31,15 +31,15 @@ function completionCommands(branch: string, existing: boolean, merge: boolean): 
     { request: { command: ["git", "add", "--update"] }, result: success },
     {
       request: { command: ["git", "diff", "--cached", "--quiet"] },
-      result: { code: 1, stderr: "", stdout: "" },
+      result: { code: 1, stderr: "", stdout: "" }
     },
     {
       request: { command: ["git", "commit", "--signoff", "-m", "update", "-m", "body"] },
-      result: success,
+      result: success
     },
     {
       request: { command: ["git", "push", "--force-with-lease", "origin", `HEAD:${branch}`] },
-      result: success,
+      result: success
     },
     prList(branch, existing ? "42" : ""),
     {
@@ -53,10 +53,10 @@ function completionCommands(branch: string, existing: boolean, merge: boolean): 
           "0e8a16",
           "--description",
           "Managed by update automation",
-          "--force",
-        ],
+          "--force"
+        ]
       },
-      result: success,
+      result: success
     },
     {
       request: {
@@ -75,11 +75,11 @@ function completionCommands(branch: string, existing: boolean, merge: boolean): 
               "--body",
               "body",
               "--label",
-              "package",
-            ],
+              "package"
+            ]
       },
-      result: success,
-    },
+      result: success
+    }
   ];
   if (!existing) {
     commands.push(prList(branch, "42"));
@@ -91,15 +91,15 @@ function completionCommands(branch: string, existing: boolean, merge: boolean): 
           command: [
             "gh",
             "api",
-            "repos/owner/repository/branches/main/protection/required_status_checks",
-          ],
+            "repos/owner/repository/branches/main/protection/required_status_checks"
+          ]
         },
-        result: { code: 0, stderr: "", stdout: '{"contexts":["quality"]}' },
+        result: { code: 0, stderr: "", stdout: '{"contexts":["quality"]}' }
       },
       {
         request: { command: ["gh", "pr", "merge", "42", "--auto", "--squash"] },
-        result: success,
-      },
+        result: success
+      }
     );
   }
   return commands;
@@ -107,7 +107,7 @@ function completionCommands(branch: string, existing: boolean, merge: boolean): 
 
 function completeCommand(
   existing: boolean,
-  merge: boolean,
+  merge: boolean
 ): fc.AsyncCommand<UpdateModel, UpdateReal> {
   return {
     check(model: Readonly<UpdateModel>): boolean {
@@ -123,10 +123,10 @@ function completeCommand(
           branch: model.branch.get(),
           dryRun: false,
           labels: ["package"],
-          title: "update",
+          title: "update"
         },
         runner,
-        "owner/repository",
+        "owner/repository"
       );
       runner.assertExhausted();
       assertEquals(runner.calls(), requests(expected));
@@ -142,7 +142,7 @@ function completeCommand(
     },
     toString(): string {
       return `complete(existing=${existing},merge=${merge})`;
-    },
+    }
   };
 }
 

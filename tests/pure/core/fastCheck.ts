@@ -6,13 +6,13 @@ import {
   MAX_FAST_CHECK_RUNS,
   assertProperty,
   defineReplayTarget,
-  fastCheckConfig,
+  fastCheckConfig
 } from "coolheadedTestSupport/fastCheck.ts";
 import {
   assertEquals,
   assertInstanceOf,
   assertStringIncludes,
-  assertThrows,
+  assertThrows
 } from "@jsr/std__assert";
 import { describe, it } from "@jsr/std__testing/bdd";
 import fc from "fast-check";
@@ -27,7 +27,7 @@ function failingIntegerProperty(): fc.IPropertyWithHooks<[number]> {
 
 function capturedFailure(
   target: ReturnType<typeof defineReplayTarget>,
-  environment?: Readonly<Record<string, string | undefined>>,
+  environment?: Readonly<Record<string, string | undefined>>
 ): FastCheckFailureError {
   try {
     assertProperty(target, failingIntegerProperty(), environment);
@@ -43,7 +43,7 @@ describe("fast-check replay support", (): void => {
   it("uses stable deterministic defaults", (): void => {
     assertEquals(fastCheckConfig({}), {
       runs: DEFAULT_FAST_CHECK_RUNS,
-      seed: DEFAULT_FAST_CHECK_SEED,
+      seed: DEFAULT_FAST_CHECK_SEED
     });
   });
 
@@ -61,7 +61,7 @@ describe("fast-check replay support", (): void => {
       { FAST_CHECK_PATH: "", FAST_CHECK_SEED: "1" },
       { FAST_CHECK_PATH: "00", FAST_CHECK_SEED: "1" },
       { FAST_CHECK_PATH: "0:01", FAST_CHECK_SEED: "1" },
-      { FAST_CHECK_PATH: "0::1", FAST_CHECK_SEED: "1" },
+      { FAST_CHECK_PATH: "0::1", FAST_CHECK_SEED: "1" }
     ] satisfies readonly Readonly<Record<string, string>>[]) {
       assertThrows((): void => {
         fastCheckConfig(environment);
@@ -71,7 +71,7 @@ describe("fast-check replay support", (): void => {
     let executed = false;
     const target = defineReplayTarget(
       "tests/pure/core/fastCheck.ts",
-      "fast-check replay support rejects invalid environment",
+      "fast-check replay support rejects invalid environment"
     );
     assertThrows((): void => {
       assertProperty(
@@ -80,7 +80,7 @@ describe("fast-check replay support", (): void => {
           executed = true;
           return true;
         }),
-        { FAST_CHECK_RUNS: "0" },
+        { FAST_CHECK_RUNS: "0" }
       );
     }, InvalidFastCheckEnvironmentError);
     assertEquals(executed, false);
@@ -89,17 +89,17 @@ describe("fast-check replay support", (): void => {
   it("rejects duplicate replay targets", (): void => {
     defineReplayTarget(
       "tests/pure/core/fastCheck.ts",
-      "fast-check replay support duplicate target",
+      "fast-check replay support duplicate target"
     );
     assertThrows(
       (): void => {
         defineReplayTarget(
           "tests/pure/core/fastCheck.ts",
-          "fast-check replay support duplicate target",
+          "fast-check replay support duplicate target"
         );
       },
       TypeError,
-      "Duplicate fast-check replay target",
+      "Duplicate fast-check replay target"
     );
   });
 
@@ -108,17 +108,17 @@ describe("fast-check replay support", (): void => {
       "tests/pure/core/fastCheck.ts",
       "fast-check replay support permits declared replay environment",
       undefined,
-      ["GH_TOKEN", "GITHUB_TOKEN"],
+      ["GH_TOKEN", "GITHUB_TOKEN"]
     );
     const failure = capturedFailure(target, {
       FAST_CHECK_RUNS: "1",
-      FAST_CHECK_SEED: "42",
+      FAST_CHECK_SEED: "42"
     });
 
     assertStringIncludes(
       failure.message,
       "FAST_CHECK_RUNS='1' env -u GH_TOKEN -u GITHUB_TOKEN deno test --no-check " +
-        "--allow-env=FAST_CHECK_SEED,FAST_CHECK_PATH,FAST_CHECK_RUNS,GH_TOKEN,GITHUB_TOKEN",
+        "--allow-env=FAST_CHECK_SEED,FAST_CHECK_PATH,FAST_CHECK_RUNS,GH_TOKEN,GITHUB_TOKEN"
     );
   });
 
@@ -126,14 +126,14 @@ describe("fast-check replay support", (): void => {
     for (const [index, unsetEnvironmentVariables] of [
       ["GH_TOKEN,GITHUB_TOKEN"],
       ["GH_TOKEN", "GH_TOKEN"],
-      ["FAST_CHECK_SEED"],
+      ["FAST_CHECK_SEED"]
     ].entries()) {
       assertThrows((): void => {
         defineReplayTarget(
           "tests/pure/core/fastCheck.ts",
           `fast-check replay support rejects replay environment ${index}`,
           undefined,
-          unsetEnvironmentVariables,
+          unsetEnvironmentVariables
         );
       }, InvalidFastCheckEnvironmentError);
     }
@@ -149,8 +149,8 @@ Deno.test(deterministicReplayName, (): void => {
       ? undefined
       : {
           FAST_CHECK_RUNS: "23",
-          FAST_CHECK_SEED: "42",
-        },
+          FAST_CHECK_SEED: "42"
+        }
   );
   if (replaying) {
     throw failure;
@@ -160,11 +160,11 @@ Deno.test(deterministicReplayName, (): void => {
     failure.message,
     `FAST_CHECK_SEED='${failure.seed}' FAST_CHECK_PATH='${failure.counterexamplePath}' ` +
       "FAST_CHECK_RUNS='23' deno test --no-check " +
-      "--allow-env=FAST_CHECK_SEED,FAST_CHECK_PATH,FAST_CHECK_RUNS",
+      "--allow-env=FAST_CHECK_SEED,FAST_CHECK_PATH,FAST_CHECK_RUNS"
   );
   assertStringIncludes(
     failure.message,
-    `--filter 'fast-check reports a deterministic replay command with '"'"'quoted'"'"' target'`,
+    `--filter 'fast-check reports a deterministic replay command with '"'"'quoted'"'"' target'`
   );
   assertStringIncludes(failure.message, "'tests/pure/core/fastCheck.ts'");
 });
@@ -178,7 +178,7 @@ Deno.test(adjacentPropertyName, (): void => {
       runs += 1;
       return true;
     }),
-    {},
+    {}
   );
   assertEquals(runs, DEFAULT_FAST_CHECK_RUNS);
 });

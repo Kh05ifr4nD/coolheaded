@@ -10,7 +10,7 @@ function temporaryDirectory(): Effect.Effect<string, Error> {
     },
     async try(): Promise<string> {
       return await Deno.makeTempDir({ prefix: "coolheaded-" });
-    },
+    }
   });
 }
 
@@ -21,20 +21,20 @@ function removeDirectory(path: string): Effect.Effect<void, Error> {
     },
     async try(): Promise<void> {
       await Deno.remove(path, { recursive: true });
-    },
+    }
   });
 }
 
 function withTemporaryDirectory<Success, Failure extends Error>(
-  useDirectory: (path: string) => Effect.Effect<Success, Failure>,
+  useDirectory: (path: string) => Effect.Effect<Success, Failure>
 ): Effect.Effect<Success, Error | Failure> {
   return Effect.flatMap(
     temporaryDirectory(),
     (workspacePath: string): Effect.Effect<Success, Error | Failure> =>
       Effect.ensuring(
         useDirectory(workspacePath),
-        Effect.catchAll(removeDirectory(workspacePath), () => Effect.void),
-      ),
+        Effect.catchAll(removeDirectory(workspacePath), () => Effect.void)
+      )
   );
 }
 

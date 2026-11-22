@@ -17,16 +17,16 @@ runUpdateScript(import.meta.url, (args, runner) =>
     project: (version, pythonMinorVersion) => ({
       dependencies: [
         `mineru[torch,full]==${version}`,
-        "mineru-vl-utils[mlx]; sys_platform == 'darwin' and platform_machine == 'arm64'",
+        "mineru-vl-utils[mlx]; sys_platform == 'darwin' and platform_machine == 'arm64'"
       ],
       extraBuildDependencies: {
-        jieba: ["setuptools"],
+        jieba: ["setuptools"]
       },
-      pythonMinorVersion,
+      pythonMinorVersion
     }),
     pythonPackage: PYTHON_PACKAGE,
     repositoryRootPath: REPOSITORY_ROOT_PATH,
     runner,
-    uvLockFilePath: UV_LOCK_FILE_PATH,
-  }),
+    uvLockFilePath: UV_LOCK_FILE_PATH
+  })
 );

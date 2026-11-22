@@ -25,12 +25,12 @@ function request(url: string, timeoutMs: number = LONG_TIMEOUT_MS): HttpRequest 
     headers: { "x-client": url.endsWith("/fast") ? "long" : "exact" },
     method: "GET",
     timeoutMs,
-    url,
+    url
   };
 }
 
 async function failure(
-  effect: () => Effect.Effect<HttpResponse, HttpClientError>,
+  effect: () => Effect.Effect<HttpResponse, HttpClientError>
 ): Promise<HttpClientError> {
   const exit = await Effect.runPromiseExit(effect());
   const { _tag: exitTag } = exit;
@@ -57,7 +57,7 @@ Deno.test("fetch HTTP client preserves redirect request and raw final response",
     accepted.push({
       header: requestValue.headers.get("x-client"),
       method: requestValue.method,
-      path,
+      path
     });
     if (path === "/redirect") {
       return new globalThis.Response(null, { headers: { location: "/raw" }, status: FOUND_STATUS });
@@ -67,9 +67,9 @@ Deno.test("fetch HTTP client preserves redirect request and raw final response",
         "Content-Length": "2",
         "Content-Type": "application/octet-stream",
         Date: RESPONSE_DATE,
-        "X-Test": "value",
+        "X-Test": "value"
       },
-      status: OK_STATUS,
+      status: OK_STATUS
     });
   }
 
@@ -83,15 +83,15 @@ Deno.test("fetch HTTP client preserves redirect request and raw final response",
         "content-length": "2",
         "content-type": "application/octet-stream",
         date: RESPONSE_DATE,
-        "x-test": "value",
+        "x-test": "value"
       },
       status: OK_STATUS,
       statusText: "OK",
-      url: `${origin}/raw`,
+      url: `${origin}/raw`
     });
     assertEquals(accepted, [
       { header: "exact", method: "GET", path: "/redirect" },
-      { header: "exact", method: "GET", path: "/raw" },
+      { header: "exact", method: "GET", path: "/raw" }
     ]);
   } finally {
     await server.shutdown();
@@ -104,8 +104,8 @@ Deno.test("fetch HTTP client returns a typed status failure", async (): Promise<
     (): InstanceType<typeof globalThis.Response> =>
       new globalThis.Response("missing", {
         headers: { "x-error": "exact" },
-        status: NOT_FOUND_STATUS,
-      }),
+        status: NOT_FOUND_STATUS
+      })
   );
   const expectedRequest = request(`http://127.0.0.1:${server.addr.port}/missing`);
   try {
@@ -129,7 +129,7 @@ Deno.test("fetch HTTP timeout aborts accepted request without affecting concurre
   const slowAccepted = Promise.withResolvers<null>();
   const slowAborted = Promise.withResolvers<null>();
   async function handleRequest(
-    requestValue: IncomingRequest,
+    requestValue: IncomingRequest
   ): Promise<InstanceType<typeof globalThis.Response>> {
     if (new globalThis.URL(requestValue.url).pathname === "/fast") {
       return new globalThis.Response("fast", { status: OK_STATUS });
@@ -140,7 +140,7 @@ Deno.test("fetch HTTP timeout aborts accepted request without affecting concurre
       (): void => {
         slowAborted.resolve(null);
       },
-      { once: true },
+      { once: true }
     );
     await slowAborted.promise;
     return new globalThis.Response("aborted", { status: OK_STATUS });

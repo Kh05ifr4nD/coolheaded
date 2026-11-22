@@ -3,7 +3,7 @@ import {
   runGit,
   runGitBytes,
   withTemporaryDirectory,
-  writeRepositoryFixture,
+  writeRepositoryFixture
 } from "./fixture.ts";
 import { assertEquals, assertInstanceOf, assertRejects } from "@jsr/std__assert";
 import { describe, it } from "@jsr/std__testing/bdd";
@@ -19,7 +19,7 @@ describe("Git index hardening", (): void => {
       await writeRepositoryFixture(repositoryRoot, {
         files: [{ contents: "#!/bin/sh\n", path: "executable" }],
         pathFields: "\texecutable?: #RegularFile\n\tlink?: #RegularFile",
-        requiredFields: "\texecutable?: #RegularFile\n\tlink?: #RegularFile",
+        requiredFields: "\texecutable?: #RegularFile\n\tlink?: #RegularFile"
       });
       await Deno.chmod(`${repositoryRoot}/executable`, EXECUTABLE_MODE);
       await runGit(repositoryRoot, ["add", "executable"]);
@@ -37,7 +37,7 @@ describe("Git index hardening", (): void => {
       await writeRepositoryFixture(repositoryRoot, {
         files: [{ contents: "value\n", path: "tracked" }],
         pathFields: "\tgitlink?: #RegularFile\n\ttracked?: #RegularFile",
-        requiredFields: "\tgitlink?: #RegularFile\n\ttracked?: #RegularFile",
+        requiredFields: "\tgitlink?: #RegularFile\n\ttracked?: #RegularFile"
       });
       await runGit(repositoryRoot, ["config", "user.email", "tests@example.invalid"]);
       await runGit(repositoryRoot, ["config", "user.name", "Layout Tests"]);
@@ -49,7 +49,7 @@ describe("Git index hardening", (): void => {
         "update-index",
         "--add",
         "--cacheinfo",
-        `160000,${commit},gitlink`,
+        `160000,${commit},gitlink`
       ]);
 
       await assertRejects((): Promise<void> => checkLayout(repositoryRoot), Error, "kind gitlink");
@@ -60,7 +60,7 @@ describe("Git index hardening", (): void => {
     await withTemporaryDirectory(async (repositoryRoot: string): Promise<void> => {
       await writeRepositoryFixture(repositoryRoot, {
         pathFields: "\tconflict?: #RegularFile",
-        requiredFields: "\tconflict?: #RegularFile",
+        requiredFields: "\tconflict?: #RegularFile"
       });
       const firstOutput = await runGit(repositoryRoot, ["hash-object", "-w", "--stdin"], "first");
       const secondOutput = await runGit(repositoryRoot, ["hash-object", "-w", "--stdin"], "second");
@@ -69,13 +69,13 @@ describe("Git index hardening", (): void => {
       await runGit(
         repositoryRoot,
         ["update-index", "--index-info"],
-        `100644 ${first} 1\tconflict\n100644 ${second} 2\tconflict\n`,
+        `100644 ${first} 1\tconflict\n100644 ${second} 2\tconflict\n`
       );
 
       await assertRejects(
         (): Promise<void> => checkLayout(repositoryRoot),
         Error,
-        "unresolved stage",
+        "unresolved stage"
       );
     });
   });
@@ -89,11 +89,11 @@ describe("Git index hardening", (): void => {
       await runGitBytes(
         repositoryRoot,
         ["update-index", "-z", "--index-info"],
-        [...prefix, INVALID_UTF8_BYTE, 0],
+        [...prefix, INVALID_UTF8_BYTE, 0]
       );
 
       const error = await assertRejects((): Promise<readonly unknown[]> =>
-        gitIndexEntriesFrom(repositoryRoot),
+        gitIndexEntriesFrom(repositoryRoot)
       );
       assertInstanceOf(error, Error);
       assertEquals(isLayoutError(error), true);

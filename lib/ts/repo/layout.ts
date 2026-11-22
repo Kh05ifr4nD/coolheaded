@@ -8,7 +8,7 @@ type LayoutRunOutcome =
 async function layoutRun(
   moduleUrl: string,
   mainModule: string,
-  checker: () => Promise<void>,
+  checker: () => Promise<void>
 ): Promise<LayoutRunOutcome> {
   if (mainModule !== moduleUrl) {
     return { kind: "skipped" };

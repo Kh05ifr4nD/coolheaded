@@ -9,20 +9,20 @@ const DEFAULT_BASE_REF = "main";
 async function prepareBranch(
   branch: string,
   runner: CommandRunner,
-  baseRef = DEFAULT_BASE_REF,
+  baseRef = DEFAULT_BASE_REF
 ): Promise<void> {
   await run(runner, ["git", "fetch", "origin", baseRef], { capture: false });
   const existingBranch = await run(runner, ["git", "fetch", "origin", branch], {
     capture: false,
-    check: false,
+    check: false
   });
   if (existingBranch.code === 0) {
     await run(runner, ["git", "checkout", "-B", branch, `origin/${branch}`], {
-      capture: false,
+      capture: false
     });
     const rebase = await run(runner, ["git", "rebase", `origin/${baseRef}`], {
       capture: false,
-      check: false,
+      check: false
     });
     if (rebase.code === 0) {
       return;
@@ -30,12 +30,12 @@ async function prepareBranch(
 
     await run(runner, ["git", "rebase", "--abort"], {
       capture: false,
-      check: false,
+      check: false
     });
   }
 
   await run(runner, ["git", "checkout", "-B", branch, `origin/${baseRef}`], {
-    capture: false,
+    capture: false
   });
 }
 

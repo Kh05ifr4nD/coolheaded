@@ -70,5 +70,5 @@ export type {
   HttpTransportError,
   JsonClient,
   JsonClientError,
-  JsonResponse,
+  JsonResponse
 };

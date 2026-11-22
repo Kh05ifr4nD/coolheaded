@@ -2,7 +2,7 @@ import { assertEquals, assertInstanceOf, assertStrictEquals } from "@jsr/std__as
 import { describe, it } from "@jsr/std__testing/bdd";
 import {
   npmPackageHashUpdateProgram,
-  npmPlatformPackageHashUpdateProgram,
+  npmPlatformPackageHashUpdateProgram
 } from "coolheaded/npm/packageHash.ts";
 import { Effect } from "effect";
 import { InvalidPackageHashConfigError } from "coolheaded/pin/packageHashConfig.ts";
@@ -17,7 +17,7 @@ const REQUEST = {
   headers: {},
   method: "GET",
   timeoutMs: REQUEST_TIMEOUT_MS,
-  url: "https://registry.npmjs.org/example",
+  url: "https://registry.npmjs.org/example"
 } as const;
 const SHA512_DARWIN =
   "sha512-AQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQ==";
@@ -30,7 +30,7 @@ const SHA512_PACKAGE =
 const SUFFIXES = {
   "aarch64-darwin": "darwin-arm64",
   "aarch64-linux": "linux-arm64",
-  "x86_64-linux": "linux-x64",
+  "x86_64-linux": "linux-x64"
 } as const;
 
 function metadata(value: unknown): JsonResponse {
@@ -40,15 +40,15 @@ function metadata(value: unknown): JsonResponse {
       headers: {},
       status: HTTP_OK,
       statusText: "OK",
-      url: REQUEST.url,
+      url: REQUEST.url
     },
-    value,
+    value
   };
 }
 
 async function withPinFile(
   initial: string,
-  operation: (pinFilePath: string) => Promise<void>,
+  operation: (pinFilePath: string) => Promise<void>
 ): Promise<void> {
   const pinFilePath = await Deno.makeTempFile();
   await Deno.writeTextFile(pinFilePath, initial);
@@ -67,13 +67,13 @@ describe("npm package hash updates", (): void => {
       const error = httpJsonError(
         REQUEST,
         expected.response,
-        new Error("latest version JSON sentinel"),
+        new Error("latest version JSON sentinel")
       );
       const strict = strictJsonClient([
         {
           effect: (): Effect.Effect<never, typeof error> => Effect.fail(error),
-          request: REQUEST,
-        },
+          request: REQUEST
+        }
       ]);
       const failure = await Effect.runPromise(
         Effect.flip(
@@ -82,9 +82,9 @@ describe("npm package hash updates", (): void => {
             jsonClient: strict.client,
             packageName: "example",
             pinFilePath,
-            systems: SUPPORTED_SYSTEMS,
-          }),
-        ),
+            systems: SUPPORTED_SYSTEMS
+          })
+        )
       );
       assertStrictEquals(failure, error);
       assertEquals(await Deno.readTextFile(pinFilePath), pinContents);
@@ -99,11 +99,11 @@ describe("npm package hash updates", (): void => {
           effect: (): Effect.Effect<JsonResponse> =>
             Effect.succeed(
               metadata({
-                versions: { "1.0.0": { dist: { integrity: "sha512-invalid" } } },
-              }),
+                versions: { "1.0.0": { dist: { integrity: "sha512-invalid" } } }
+              })
             ),
-          request: REQUEST,
-        },
+          request: REQUEST
+        }
       ]);
       const error = await Effect.runPromise(
         Effect.flip(
@@ -112,9 +112,9 @@ describe("npm package hash updates", (): void => {
             jsonClient: strict.client,
             packageName: "example",
             pinFilePath,
-            systems: ["aarch64-darwin"],
-          }),
-        ),
+            systems: ["aarch64-darwin"]
+          })
+        )
       );
       assertInstanceOf(error, InvalidPackageHashConfigError);
       assertEquals(await Deno.readTextFile(pinFilePath), "sentinel");
@@ -132,12 +132,12 @@ describe("npm package hash updates", (): void => {
                 versions: {
                   "1.0.0-darwin-arm64": { dist: { integrity: "sha512-invalid" } },
                   "1.0.0-linux-arm64": { dist: { integrity: SHA512_LINUX_ARM } },
-                  "1.0.0-linux-x64": { dist: { integrity: SHA512_LINUX_X64 } },
-                },
-              }),
+                  "1.0.0-linux-x64": { dist: { integrity: SHA512_LINUX_X64 } }
+                }
+              })
             ),
-          request: REQUEST,
-        },
+          request: REQUEST
+        }
       ]);
       const error = await Effect.runPromise(
         Effect.flip(
@@ -146,9 +146,9 @@ describe("npm package hash updates", (): void => {
             jsonClient: strict.client,
             packageName: "example",
             pinFilePath,
-            suffixes: SUFFIXES,
-          }),
-        ),
+            suffixes: SUFFIXES
+          })
+        )
       );
       assertInstanceOf(error, InvalidPackageHashConfigError);
       assertEquals(await Deno.readTextFile(pinFilePath), "sentinel");
@@ -163,11 +163,11 @@ describe("npm package hash updates", (): void => {
           effect: (): Effect.Effect<JsonResponse> =>
             Effect.succeed(
               metadata({
-                versions: { "1.0.0": { dist: { integrity: SHA512_PACKAGE } } },
-              }),
+                versions: { "1.0.0": { dist: { integrity: SHA512_PACKAGE } } }
+              })
             ),
-          request: REQUEST,
-        },
+          request: REQUEST
+        }
       ]);
       await Effect.runPromise(
         npmPackageHashUpdateProgram({
@@ -175,16 +175,16 @@ describe("npm package hash updates", (): void => {
           jsonClient: strict.client,
           packageName: "example",
           pinFilePath,
-          systems: SUPPORTED_SYSTEMS,
-        }),
+          systems: SUPPORTED_SYSTEMS
+        })
       );
       assertEquals(JSON.parse(await Deno.readTextFile(pinFilePath)), {
         platformPackageHashes: {
           "aarch64-darwin": SHA512_PACKAGE,
           "aarch64-linux": SHA512_PACKAGE,
-          "x86_64-linux": SHA512_PACKAGE,
+          "x86_64-linux": SHA512_PACKAGE
         },
-        version: "1.0.0",
+        version: "1.0.0"
       });
       strict.assertExhausted();
     });
@@ -200,12 +200,12 @@ describe("npm package hash updates", (): void => {
                 versions: {
                   "1.0.0-darwin-arm64": { dist: { integrity: SHA512_DARWIN } },
                   "1.0.0-linux-arm64": { dist: { integrity: SHA512_LINUX_ARM } },
-                  "1.0.0-linux-x64": { dist: { integrity: SHA512_LINUX_X64 } },
-                },
-              }),
+                  "1.0.0-linux-x64": { dist: { integrity: SHA512_LINUX_X64 } }
+                }
+              })
             ),
-          request: REQUEST,
-        },
+          request: REQUEST
+        }
       ]);
       await Effect.runPromise(
         npmPlatformPackageHashUpdateProgram({
@@ -213,16 +213,16 @@ describe("npm package hash updates", (): void => {
           jsonClient: strict.client,
           packageName: "example",
           pinFilePath,
-          suffixes: SUFFIXES,
-        }),
+          suffixes: SUFFIXES
+        })
       );
       assertEquals(JSON.parse(await Deno.readTextFile(pinFilePath)), {
         platformPackageHashes: {
           "aarch64-darwin": SHA512_DARWIN,
           "aarch64-linux": SHA512_LINUX_ARM,
-          "x86_64-linux": SHA512_LINUX_X64,
+          "x86_64-linux": SHA512_LINUX_X64
         },
-        version: "1.0.0",
+        version: "1.0.0"
       });
       strict.assertExhausted();
     });

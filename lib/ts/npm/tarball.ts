@@ -4,7 +4,7 @@ import {
   readTextFile,
   scriptPath,
   updateNewerPinVersion,
-  writeTextFile,
+  writeTextFile
 } from "coolheaded/core/updateScript.ts";
 import { generatedNpmPackageLock, prepareNpmTarballWorkspace } from "coolheaded/npm/lock.ts";
 import type { CommandRunner } from "coolheaded/core/commandRunner.ts";
@@ -32,7 +32,7 @@ function isRecord(value: unknown): value is Readonly<Record<string, unknown>> {
 
 function withoutDependencies(
   value: Readonly<Record<string, unknown>>,
-  dependenciesToRemove: readonly string[],
+  dependenciesToRemove: readonly string[]
 ): Record<string, unknown> {
   const dependencies: Record<string, unknown> = {};
   for (const [dependency, version] of Object.entries(value)) {
@@ -45,14 +45,14 @@ function withoutDependencies(
 
 function parsedPackageJson(
   contents: string,
-  packageJsonPath: string,
+  packageJsonPath: string
 ): Effect.Effect<unknown, Error> {
   try {
     const packageJson: unknown = JSON.parse(contents);
     return Effect.succeed(packageJson);
   } catch (error: unknown) {
     return Effect.fail(
-      error instanceof Error ? error : new UpdateError(`Failed to parse ${packageJsonPath}`),
+      error instanceof Error ? error : new UpdateError(`Failed to parse ${packageJsonPath}`)
     );
   }
 }
@@ -60,7 +60,7 @@ function parsedPackageJson(
 function runtimePackageJson(
   value: unknown,
   packageJsonPath: string,
-  removeDependencies: readonly string[],
+  removeDependencies: readonly string[]
 ): Effect.Effect<string, Error> {
   if (!isRecord(value)) {
     return Effect.fail(new UpdateError(`Invalid package JSON: ${packageJsonPath}`));
@@ -84,7 +84,7 @@ function runtimePackageJson(
 
 function sanitizePackageJson(
   packageJsonPath: string,
-  removeDependencies: readonly string[] = [],
+  removeDependencies: readonly string[] = []
 ): Effect.Effect<void, Error> {
   return Effect.flatMap(
     readTextFile(packageJsonPath),
@@ -95,16 +95,16 @@ function sanitizePackageJson(
           Effect.flatMap(
             runtimePackageJson(packageJson, packageJsonPath, removeDependencies),
             (runtimeJson: string): Effect.Effect<void, Error> =>
-              writeTextFile(packageJsonPath, runtimeJson),
-          ),
-      ),
+              writeTextFile(packageJsonPath, runtimeJson)
+          )
+      )
   );
 }
 
 function npmInstallPackageLock(
   repositoryRootPath: string,
   workspacePath: string,
-  runner: CommandRunner,
+  runner: CommandRunner
 ): Effect.Effect<void, Error> {
   return Effect.asVoid(
     commandOutput(
@@ -123,10 +123,10 @@ function npmInstallPackageLock(
         "--omit=dev",
         "--no-audit",
         "--no-fund",
-        "--silent",
+        "--silent"
       ],
-      workspacePath,
-    ),
+      workspacePath
+    )
   );
 }
 
@@ -134,7 +134,7 @@ function prepareNpmPackageLockWorkspace(
   options: NpmTarballPackageUpdate,
   repositoryRootPath: string,
   workspacePath: string,
-  version: string,
+  version: string
 ): Effect.Effect<void, Error> {
   return Effect.gen(function* prepareNpmPackageLockWorkspaceSteps(): Effect.fn.Return<void, Error> {
     yield* prepareNpmTarballWorkspace({
@@ -142,7 +142,7 @@ function prepareNpmPackageLockWorkspace(
       runner: options.runner,
       tarballBaseName: options.tarballBaseName ?? options.packageName,
       version,
-      workspacePath,
+      workspacePath
     });
     yield* sanitizePackageJson(`${workspacePath}/package.json`, options.removeDependencies);
     yield* npmInstallPackageLock(repositoryRootPath, workspacePath, options.runner);
@@ -165,24 +165,24 @@ function updateNpmTarballPackage(options: NpmTarballPackageUpdate): Effect.Effec
             prepareWorkspace: (workspacePath: string): Effect.Effect<void, Error> =>
               prepareNpmPackageLockWorkspace(options, repositoryRootPath, workspacePath, version),
             repositoryRootPath,
-            runner: options.runner,
+            runner: options.runner
           }),
           packageConfig: npmPackageHashConfig({
             jsonClient: options.jsonClient,
             packageName: options.packageName,
             systems: options.systems,
-            version,
-          }),
+            version
+          })
         }),
         ({ npmLock, packageConfig }): Effect.Effect<void, Error> =>
           Effect.zipRight(
             writePinJson(pinFilePath, {
               ...packageConfig,
-              npmVendorHash: npmLock.npmVendorHash,
+              npmVendorHash: npmLock.npmVendorHash
             }),
-            writeTextFile(packageLockFilePath, npmLock.packageLock),
-          ),
-      ),
+            writeTextFile(packageLockFilePath, npmLock.packageLock)
+          )
+      )
   );
 }
 

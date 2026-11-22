@@ -9,7 +9,7 @@ const MIN_FAST_CHECK_SEED = -2_147_483_648;
 const FAST_CHECK_ENVIRONMENT_VARIABLES = [
   "FAST_CHECK_SEED",
   "FAST_CHECK_PATH",
-  "FAST_CHECK_RUNS",
+  "FAST_CHECK_RUNS"
 ] as const;
 const CANONICAL_ENVIRONMENT_VARIABLE = /^[A-Z_][A-Z0-9_]*$/u;
 
@@ -50,7 +50,7 @@ function canonicalInteger(
   value: string,
   pattern: Readonly<RegExp>,
   minimum: number,
-  maximum: number,
+  maximum: number
 ): number {
   if (!pattern.test(value)) {
     throw new InvalidFastCheckEnvironmentError(`${name} must use canonical decimal syntax`);
@@ -68,12 +68,12 @@ function runtimeEnvironment(): FastCheckEnvironment {
   return {
     FAST_CHECK_PATH: Deno.env.get("FAST_CHECK_PATH"),
     FAST_CHECK_RUNS: Deno.env.get("FAST_CHECK_RUNS"),
-    FAST_CHECK_SEED: Deno.env.get("FAST_CHECK_SEED"),
+    FAST_CHECK_SEED: Deno.env.get("FAST_CHECK_SEED")
   };
 }
 
 function fastCheckConfig(
-  environment: FastCheckEnvironment = runtimeEnvironment(),
+  environment: FastCheckEnvironment = runtimeEnvironment()
 ): FastCheckConfig {
   const seedValue = environment["FAST_CHECK_SEED"];
   const runsValue = environment["FAST_CHECK_RUNS"];
@@ -86,7 +86,7 @@ function fastCheckConfig(
           seedValue,
           /^(?:0|-[1-9][0-9]*|[1-9][0-9]*)$/u,
           MIN_FAST_CHECK_SEED,
-          MAX_FAST_CHECK_SEED,
+          MAX_FAST_CHECK_SEED
         );
   const runs =
     runsValue === undefined
@@ -98,12 +98,12 @@ function fastCheckConfig(
   }
   if (seedValue === undefined) {
     throw new InvalidFastCheckEnvironmentError(
-      "FAST_CHECK_PATH requires an explicit FAST_CHECK_SEED",
+      "FAST_CHECK_PATH requires an explicit FAST_CHECK_SEED"
     );
   }
   if (!/^(?:0|[1-9][0-9]*)(?::(?:0|[1-9][0-9]*))*$/u.test(pathValue)) {
     throw new InvalidFastCheckEnvironmentError(
-      "FAST_CHECK_PATH must contain canonical colon-separated nonnegative decimals",
+      "FAST_CHECK_PATH must contain canonical colon-separated nonnegative decimals"
     );
   }
 
@@ -115,12 +115,12 @@ function validateUnsetEnvironmentVariables(unsetEnvironmentVariables: readonly s
   for (const name of unsetEnvironmentVariables) {
     if (!CANONICAL_ENVIRONMENT_VARIABLE.test(name)) {
       throw new InvalidFastCheckEnvironmentError(
-        `${name} must use canonical environment variable syntax`,
+        `${name} must use canonical environment variable syntax`
       );
     }
     if (
       FAST_CHECK_ENVIRONMENT_VARIABLES.some(
-        (fastCheckName: string): boolean => fastCheckName === name,
+        (fastCheckName: string): boolean => fastCheckName === name
       ) ||
       seen.has(name)
     ) {
@@ -134,7 +134,7 @@ function defineReplayTarget(
   file: string,
   filter: string,
   replayArgument?: () => string,
-  unsetEnvironmentVariables: readonly string[] = [],
+  unsetEnvironmentVariables: readonly string[] = []
 ): ReplayTarget {
   if (file.length === 0 || filter.length === 0 || file.includes("\0") || filter.includes("\0")) {
     throw new TypeError("Fast-check replay target must have a non-empty file and filter");
@@ -151,11 +151,11 @@ function defineReplayTarget(
     ...(unsetEnvironmentVariables.length === 0
       ? {}
       : {
-          unsetEnvironmentVariables: Object.freeze([...unsetEnvironmentVariables]),
+          unsetEnvironmentVariables: Object.freeze([...unsetEnvironmentVariables])
         }),
     file,
     filter,
-    ...(replayArgument === undefined ? {} : { replayArgument }),
+    ...(replayArgument === undefined ? {} : { replayArgument })
   });
 }
 
@@ -175,28 +175,28 @@ function assertResult(target: ReplayTarget, result: Readonly<FastCheckResult>, r
         ? []
         : [
             "env",
-            ...unsetEnvironmentVariables.flatMap((name: string): readonly string[] => ["-u", name]),
+            ...unsetEnvironmentVariables.flatMap((name: string): readonly string[] => ["-u", name])
           ]),
       "deno test --no-check",
       `--allow-env=${[...FAST_CHECK_ENVIRONMENT_VARIABLES, ...unsetEnvironmentVariables].join(
-        ",",
+        ","
       )}`,
       `--filter ${shellQuote(target.filter)}`,
       shellQuote(target.file),
       ...(replayArguments.length === 0
         ? []
-        : ["--", ...replayArguments.map((argument: string): string => shellQuote(argument))]),
+        : ["--", ...replayArguments.map((argument: string): string => shellQuote(argument))])
     ].join(" ");
     throw new FastCheckFailureError(
       target,
       {
         counterexample: result.counterexample,
         counterexamplePath: result.counterexamplePath,
-        seed: result.seed,
+        seed: result.seed
       },
       runs,
       replayCommand,
-      replayArguments,
+      replayArguments
     );
   }
 }
@@ -204,13 +204,13 @@ function assertResult(target: ReplayTarget, result: Readonly<FastCheckResult>, r
 function assertProperty<Parameters extends [unknown, ...unknown[]]>(
   target: ReplayTarget,
   property: Readonly<ReturnType<typeof fc.property<Parameters>>>,
-  environment?: FastCheckEnvironment,
+  environment?: FastCheckEnvironment
 ): void {
   const config = fastCheckConfig(environment);
   const result = fc.check(property, {
     ...(config.path === undefined ? {} : { path: config.path }),
     numRuns: config.runs,
-    seed: config.seed,
+    seed: config.seed
   });
   assertResult(target, result, config.runs);
 }
@@ -218,13 +218,13 @@ function assertProperty<Parameters extends [unknown, ...unknown[]]>(
 async function assertAsyncProperty<Parameters extends [unknown, ...unknown[]]>(
   target: ReplayTarget,
   property: Readonly<ReturnType<typeof fc.asyncProperty<Parameters>>>,
-  environment?: FastCheckEnvironment,
+  environment?: FastCheckEnvironment
 ): Promise<void> {
   const config = fastCheckConfig(environment);
   const result = await fc.check(property, {
     ...(config.path === undefined ? {} : { path: config.path }),
     numRuns: config.runs,
-    seed: config.seed,
+    seed: config.seed
   });
   assertResult(target, result, config.runs);
 }
@@ -237,7 +237,7 @@ export {
   assertAsyncProperty,
   assertProperty,
   defineReplayTarget,
-  fastCheckConfig,
+  fastCheckConfig
 };
 export { FastCheckFailureError } from "coolheadedTestSupport/fastCheckError.ts";
 export type { FastCheckConfig, FastCheckEnvironment, ReplayTarget };

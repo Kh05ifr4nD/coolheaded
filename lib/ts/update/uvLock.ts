@@ -2,7 +2,7 @@ import {
   UpdateError,
   commandOutput,
   updateNewerPinVersion,
-  writeTextFile,
+  writeTextFile
 } from "coolheaded/core/updateScript.ts";
 import type { CommandRunner } from "coolheaded/core/commandRunner.ts";
 import { Effect } from "effect";
@@ -13,7 +13,7 @@ import { writePinJson } from "coolheaded/pin/json.ts";
 const ROOT_PROJECT_NAME = "coolheaded-lock-input";
 const ROOT_PROJECT_VERSION = "0";
 const PYTHON_ENVIRONMENT_MARKERS = SYSTEM_TARGETS.map(
-  ({ pythonEnvironmentMarker }): string => pythonEnvironmentMarker,
+  ({ pythonEnvironmentMarker }): string => pythonEnvironmentMarker
 );
 
 interface UvProject {
@@ -73,7 +73,7 @@ function parsePythonMinorVersion(value: string, source: string): string {
 function nixpkgsPythonMinorVersion(
   repositoryRootPath: string,
   pythonPackage: string,
-  runner: CommandRunner,
+  runner: CommandRunner
 ): Effect.Effect<string, Error> {
   return Effect.map(
     commandOutput(runner, "nix", [
@@ -81,9 +81,9 @@ function nixpkgsPythonMinorVersion(
       "--inputs-from",
       repositoryRootPath,
       "--raw",
-      `nixpkgs#${pythonPackage}.pythonVersion`,
+      `nixpkgs#${pythonPackage}.pythonVersion`
     ]),
-    (version: string): string => parsePythonMinorVersion(version, pythonPackage),
+    (version: string): string => parsePythonMinorVersion(version, pythonPackage)
   );
 }
 
@@ -97,7 +97,7 @@ function tomlArray(values: readonly string[]): string {
 
 function tomlTableArrays(
   header: string,
-  values: Readonly<Record<string, readonly string[]>> | undefined,
+  values: Readonly<Record<string, readonly string[]>> | undefined
 ): string {
   if (values === undefined || Object.keys(values).length === 0) {
     return "";
@@ -107,12 +107,12 @@ function tomlTableArrays(
     .toSorted(
       (
         [left]: readonly [string, readonly string[]],
-        [right]: readonly [string, readonly string[]],
-      ) => left.localeCompare(right),
+        [right]: readonly [string, readonly string[]]
+      ) => left.localeCompare(right)
     )
     .map(
       ([name, packages]: readonly [string, readonly string[]]): string =>
-        `${name} = ${tomlArray(packages)}`,
+        `${name} = ${tomlArray(packages)}`
     )
     .join("\n");
 
@@ -134,7 +134,7 @@ ${tomlTableArrays("tool.uv.extra-build-dependencies", project.extraBuildDependen
 function generatedUvLock(
   repositoryRootPath: string,
   project: UvProject,
-  runner: CommandRunner,
+  runner: CommandRunner
 ): Effect.Effect<string, Error> {
   return withTemporaryDirectory((workspacePath: string): Effect.Effect<string, Error> =>
     Effect.zipRight(
@@ -152,13 +152,13 @@ function generatedUvLock(
             "lock",
             "--project",
             workspacePath,
-            "--no-progress",
+            "--no-progress"
           ],
-          repositoryRootPath,
+          repositoryRootPath
         ),
-        commandOutput(runner, "cat", [`${workspacePath}/uv.lock`]),
-      ),
-    ),
+        commandOutput(runner, "cat", [`${workspacePath}/uv.lock`])
+      )
+    )
   );
 }
 
@@ -173,14 +173,14 @@ function updateVersionedUvLock(options: VersionedUvLockUpdate): Effect.Effect<vo
         (uvLock: string): Effect.Effect<void> =>
           Effect.zipRight(
             writePinJson(options.pinFilePath, { version }),
-            writeTextFile(options.uvLockFilePath, `${uvLock.trim()}\n`),
-          ),
-      ),
+            writeTextFile(options.uvLockFilePath, `${uvLock.trim()}\n`)
+          )
+      )
   );
 }
 
 function updateVersionedNixpkgsPythonUvLock(
-  options: VersionedNixpkgsPythonUvLockUpdate,
+  options: VersionedNixpkgsPythonUvLockUpdate
 ): Effect.Effect<void, Error> {
   return Effect.flatMap(
     nixpkgsPythonMinorVersion(options.repositoryRootPath, options.pythonPackage, options.runner),
@@ -192,8 +192,8 @@ function updateVersionedNixpkgsPythonUvLock(
         project: (version: string): UvProject => options.project(version, pythonMinorVersion),
         repositoryRootPath: options.repositoryRootPath,
         runner: options.runner,
-        uvLockFilePath: options.uvLockFilePath,
-      }),
+        uvLockFilePath: options.uvLockFilePath
+      })
   );
 }
 
@@ -202,6 +202,6 @@ export {
   nixpkgsPythonMinorVersion,
   updateVersionedNixpkgsPythonUvLock,
   updateVersionedUvLock,
-  uvProjectContents,
+  uvProjectContents
 };
 export type { UvProject, VersionedNixpkgsPythonUvLockUpdate, VersionedUvLockUpdate };

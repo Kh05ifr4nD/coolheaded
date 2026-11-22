@@ -3,7 +3,7 @@ import {
   inputDecodeError,
   internalInvariantError,
   isLayoutError,
-  toolExecutionError,
+  toolExecutionError
 } from "coolheaded/repo/layout/model.ts";
 
 type CommandEnvironment = Readonly<{
@@ -13,7 +13,7 @@ type CommandEnvironment = Readonly<{
 
 const LAYOUT_COMMANDS = {
   cue: { environmentVariable: "COOLHEADED_CUE", versionArguments: ["version"] },
-  git: { environmentVariable: "COOLHEADED_GIT", versionArguments: ["--version"] },
+  git: { environmentVariable: "COOLHEADED_GIT", versionArguments: ["--version"] }
 } as const satisfies Readonly<
   Record<
     LayoutCommand,
@@ -27,13 +27,13 @@ function resolveToolExecutable(command: LayoutCommand): string {
 
   if (typeof executable !== "string" || executable.length === 0) {
     throw internalInvariantError(
-      `${environmentVariable} must contain an absolute ${command} executable path`,
+      `${environmentVariable} must contain an absolute ${command} executable path`
     );
   }
 
   if (!executable.startsWith("/")) {
     throw internalInvariantError(
-      `${environmentVariable} must contain an absolute ${command} executable path: ${executable}`,
+      `${environmentVariable} must contain an absolute ${command} executable path: ${executable}`
     );
   }
 
@@ -43,14 +43,14 @@ function resolveToolExecutable(command: LayoutCommand): string {
 function isolatedCommandEnvironment(): CommandEnvironment {
   return {
     clearEnv: true,
-    env: { PATH: Deno.env.get("PATH") ?? "" },
+    env: { PATH: Deno.env.get("PATH") ?? "" }
   };
 }
 
 async function executeCommand(
   command: LayoutCommand,
   args: readonly string[],
-  cwd: string | undefined,
+  cwd: string | undefined
 ): Promise<Readonly<{ executable: string; output: Deno.CommandOutput }>> {
   const executable = resolveToolExecutable(command);
 
@@ -61,7 +61,7 @@ async function executeCommand(
       ...(typeof cwd === "string" ? { cwd } : {}),
       stderr: "piped",
       stdin: "null",
-      stdout: "piped",
+      stdout: "piped"
     }).spawn();
 
     return { executable, output: await process.output() };
@@ -89,7 +89,7 @@ async function commandOutput(
   command: LayoutCommand,
   args: readonly string[],
   cwd?: string,
-  successCodes: readonly number[] = [0],
+  successCodes: readonly number[] = [0]
 ): Promise<string> {
   const { executable, output } = await executeCommand(command, args, cwd);
 
@@ -104,7 +104,7 @@ async function commandOutput(
 async function digestBytes(bytes: Readonly<ArrayLike<number>>): Promise<string> {
   const digest = await globalThis.crypto.subtle.digest("SHA-256", new Uint8Array(bytes));
   return Array.from(new Uint8Array(digest), (byte: number): string =>
-    byte.toString(16).padStart(2, "0"),
+    byte.toString(16).padStart(2, "0")
   ).join("");
 }
 
@@ -118,7 +118,7 @@ async function digestText(text: string): Promise<string> {
 
 async function toolExecutableBytes(
   command: LayoutCommand,
-  executable: string,
+  executable: string
 ): Promise<Uint8Array> {
   try {
     return await Deno.readFile(executable);
@@ -136,7 +136,7 @@ async function toolIdentity(command: LayoutCommand): Promise<ToolIdentity> {
   return {
     executable,
     sha256: await digestBytes(executableBytes),
-    version: version.trim(),
+    version: version.trim()
   };
 }
 
@@ -147,7 +147,7 @@ async function denoToolIdentity(): Promise<ToolIdentity> {
   return {
     executable,
     sha256: await digestBytes(executableBytes),
-    version: Deno.version.deno,
+    version: Deno.version.deno
   };
 }
 

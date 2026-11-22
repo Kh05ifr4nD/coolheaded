@@ -4,20 +4,20 @@ import {
   conformanceViolation,
   isToolExecutionError,
   layout,
-  snapshotChangedError,
+  snapshotChangedError
 } from "coolheaded/repo/layout/model.ts";
 import type {
   RepositorySnapshot,
   SnapshotChangedComponent,
   ToolExecutionError,
-  ToolIdentity,
+  ToolIdentity
 } from "coolheaded/repo/layout/types.ts";
 import {
   gitIndexEntriesFrom,
   gitPathsFrom,
   repositoryRoot,
   repositorySnapshot,
-  validateGitPathNames,
+  validateGitPathNames
 } from "coolheaded/repo/layout/git.ts";
 import { commandOutput } from "coolheaded/repo/layout/command.ts";
 import { join } from "@jsr/std__path";
@@ -28,7 +28,7 @@ const CUE_CONFORMANCE_MARKERS = [
   "field not allowed",
   "incomplete value",
   "invalid value",
-  "cannot unify",
+  "cannot unify"
 ] as const;
 
 type GitIndexEntry = Awaited<ReturnType<typeof gitIndexEntriesFrom>>[number];
@@ -49,10 +49,10 @@ function isCueConformanceFailure(error: Readonly<ToolExecutionError>): boolean {
 }
 
 async function withTemporaryDirectory<Success>(
-  useDirectory: (directoryPath: string) => Promise<Success>,
+  useDirectory: (directoryPath: string) => Promise<Success>
 ): Promise<Success> {
   const directoryPath = await Deno.makeTempDir({
-    prefix: "coolheaded-layout-",
+    prefix: "coolheaded-layout-"
   });
 
   try {
@@ -66,7 +66,7 @@ async function validateLayout(
   repositoryRootPath: string,
   spec: ReturnType<typeof layout>,
   label: string,
-  schemaName: string = CUE_SCHEMA_NAME,
+  schemaName: string = CUE_SCHEMA_NAME
 ): Promise<void> {
   await withTemporaryDirectory(async (directoryPath: string): Promise<void> => {
     const schemaPath = join(repositoryRootPath, LAYOUT_SCHEMA_FILE_NAME);
@@ -79,7 +79,7 @@ async function validateLayout(
     } catch (error: unknown) {
       if (isToolExecutionError(error) && isCueConformanceFailure(error)) {
         throw conformanceViolation(
-          `${label} does not conform to ${LAYOUT_SCHEMA_FILE_NAME}: ${error.stderr}`,
+          `${label} does not conform to ${LAYOUT_SCHEMA_FILE_NAME}: ${error.stderr}`
         );
       }
 
@@ -91,7 +91,7 @@ async function validateLayout(
 async function validateGitPaths(
   repositoryRootPath: string,
   label: string,
-  paths: readonly string[],
+  paths: readonly string[]
 ): Promise<void> {
   await validateLayout(repositoryRootPath, layout(paths), label);
 }
@@ -102,7 +102,7 @@ async function enumerateRepository(repositoryRootPath: string): Promise<LayoutEn
   const visiblePaths = await gitPathsFrom(repositoryRootPath, [
     "--cached",
     "--others",
-    "--exclude-standard",
+    "--exclude-standard"
   ]);
   validateGitPathNames([...indexPaths, ...visiblePaths]);
 
@@ -112,7 +112,7 @@ async function enumerateRepository(repositoryRootPath: string): Promise<LayoutEn
 function snapshotEnumeration(enumeration: LayoutEnumeration): RepositoryEnumeration {
   return {
     indexPaths: enumeration.indexPaths,
-    visiblePaths: enumeration.visiblePaths,
+    visiblePaths: enumeration.visiblePaths
   };
 }
 
@@ -126,16 +126,16 @@ const TOOL_IDENTITY_FIELDS = ["executable", "version", "sha256"] as const;
 
 function changedSnapshotComponents(
   before: RepositorySnapshot,
-  after: RepositorySnapshot,
+  after: RepositorySnapshot
 ): readonly SnapshotChangedComponent[] {
   const repositoryComponents = SNAPSHOT_FIELDS.filter(
-    (field): boolean => before[field] !== after[field],
+    (field): boolean => before[field] !== after[field]
   );
   const toolComponents = TOOL_COMMANDS.flatMap((command): readonly SnapshotChangedComponent[] =>
     TOOL_IDENTITY_FIELDS.filter(
       (field: keyof ToolIdentity): boolean =>
-        before.tools[command][field] !== after.tools[command][field],
-    ).map((field: keyof ToolIdentity): SnapshotChangedComponent => `tools.${command}.${field}`),
+        before.tools[command][field] !== after.tools[command][field]
+    ).map((field: keyof ToolIdentity): SnapshotChangedComponent => `tools.${command}.${field}`)
   );
 
   return [...repositoryComponents, ...toolComponents];
@@ -152,7 +152,7 @@ function assertSnapshotUnchanged(before: RepositorySnapshot, after: RepositorySn
 
 function validateGitIndexEntries(entries: readonly GitIndexEntry[]): void {
   const nonRegularEntries = entries.filter(
-    (entry: GitIndexEntry): boolean => entry.kind === "symlink" || entry.kind === "gitlink",
+    (entry: GitIndexEntry): boolean => entry.kind === "symlink" || entry.kind === "gitlink"
   );
 
   if (nonRegularEntries.length === 0) {
@@ -163,10 +163,9 @@ function validateGitIndexEntries(entries: readonly GitIndexEntry[]): void {
     [
       "git index contains nodes that are not regular files:",
       ...nonRegularEntries.map(
-        (entry: GitIndexEntry): string =>
-          `- ${entry.path} (mode ${entry.mode}, kind ${entry.kind})`,
-      ),
-    ].join("\n"),
+        (entry: GitIndexEntry): string => `- ${entry.path} (mode ${entry.mode}, kind ${entry.kind})`
+      )
+    ].join("\n")
   );
 }
 
@@ -174,7 +173,7 @@ async function checkLayout(repositoryRootPath: string): Promise<void> {
   const initialEnumeration = await enumerateRepository(repositoryRootPath);
   const beforeSnapshot = await repositorySnapshot(
     repositoryRootPath,
-    snapshotEnumeration(initialEnumeration),
+    snapshotEnumeration(initialEnumeration)
   );
 
   validateGitIndexEntries(initialEnumeration.indexEntries);
@@ -184,7 +183,7 @@ async function checkLayout(repositoryRootPath: string): Promise<void> {
   const afterEnumeration = await enumerateRepository(repositoryRootPath);
   const afterSnapshot = await repositorySnapshot(
     repositoryRootPath,
-    snapshotEnumeration(afterEnumeration),
+    snapshotEnumeration(afterEnumeration)
   );
   assertSnapshotUnchanged(beforeSnapshot, afterSnapshot);
 }

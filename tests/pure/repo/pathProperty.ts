@@ -18,8 +18,8 @@ Deno.test(decodeName, (): void => {
       (paths: readonly string[]): void => {
         const output = paths.length === 0 ? "" : `${paths.join("\0")}\0`;
         assertEquals(gitPaths(output), [...paths].toSorted());
-      },
-    ),
+      }
+    )
   );
 });
 
@@ -34,8 +34,8 @@ Deno.test(nfcName, (): void => {
         assertThrows((): void => {
           validateGitPathNames([`${decomposed}-${suffix}`]);
         });
-      },
-    ),
+      }
+    )
   );
 });
 
@@ -47,6 +47,6 @@ Deno.test(collisionName, (): void => {
       assertThrows((): void => {
         validateGitPathNames([path, path.toUpperCase()]);
       });
-    }),
+    })
   );
 });

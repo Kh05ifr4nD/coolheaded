@@ -54,7 +54,7 @@ const NATIVE_DETAILS = [
   "DA:26,59",
   "DA:28,1",
   "LH:19",
-  "LF:21",
+  "LF:21"
 ] as const;
 
 function lcov(lines: readonly string[], source: string = SOURCE): string {
@@ -74,8 +74,8 @@ Deno.test("LCOV parser derives native detail counters from absolute and file URL
     {
       branches: { covered: NATIVE_BRANCH_COVERED, total: NATIVE_BRANCH_TOTAL },
       lines: { covered: NATIVE_LINE_COVERED, total: NATIVE_LINE_TOTAL },
-      path: "lib/ts/core/version.ts",
-    },
+      path: "lib/ts/core/version.ts"
+    }
   ];
   const fileUrlSource = toFileUrl(SOURCE).href;
   assertEquals(parseLcov(lcov(NATIVE_DETAILS), ROOT), expected);
@@ -91,11 +91,11 @@ Deno.test("LCOV parser preserves ordered duplicate function occurrences", (): vo
   for (const functions of [
     ["FN:117,request", "FN:129,request", "FNDA:0,request", "FNDA:3,request", "FNF:2", "FNH:1"],
     ["FN:1,first", "FN:1,second", "FNDA:1,first", "FNDA:1,second", "FNF:2", "FNH:2"],
-    ["FN:1,request", "FN:2,request", "FNDA:1,request", "FNDA:1,request", "FNF:2", "FNH:2"],
+    ["FN:1,request", "FN:2,request", "FNDA:1,request", "FNDA:1,request", "FNF:2", "FNH:2"]
   ]) {
     assertEquals(parseLcov(lcov([...functions, ...EMPTY_COUNTERS]), ROOT)[0]?.lines, {
       covered: 0,
-      total: 0,
+      total: 0
     });
   }
 });
@@ -127,7 +127,7 @@ for (const [name, lines, field] of [
   ["duplicate function tuple", ["FN:1,name", "FN:1,name"], "FN"],
   ["reversed function counts", ["FN:1,first", "FN:2,second", "FNDA:1,second"], "FNDA"],
   ["interleaved function definition", ["FN:1,first", "FNDA:1,first", "FN:2,second"], "FN"],
-  ["function count after summary", ["FN:1,name", "FNF:1", "FNDA:1,name"], "FNDA"],
+  ["function count after summary", ["FN:1,name", "FNF:1", "FNDA:1,name"], "FNDA"]
 ] as const) {
   Deno.test(`LCOV parser rejects ${name}`, (): void => {
     const error = inputError(lcov(lines));
@@ -141,19 +141,19 @@ for (const [name, lines] of [
   ["inconsistent line summaries", ["LF:1", "LH:1", "BRF:0", "BRH:0", "FNF:0", "FNH:0"]],
   [
     "function without hit record",
-    ["FN:1,name", "LF:0", "LH:0", "BRF:0", "BRH:0", "FNF:1", "FNH:0"],
+    ["FN:1,name", "LF:0", "LH:0", "BRF:0", "BRH:0", "FNF:1", "FNH:0"]
   ],
   [
     "hit record without function",
-    ["FNDA:1,name", "LF:0", "LH:0", "BRF:0", "BRH:0", "FNF:1", "FNH:1"],
+    ["FNDA:1,name", "LF:0", "LH:0", "BRF:0", "BRH:0", "FNF:1", "FNH:1"]
   ],
   [
     "wrong function summary",
-    ["FN:1,name", "FNDA:1,name", "LF:0", "LH:0", "BRF:0", "BRH:0", "FNF:2", "FNH:1"],
+    ["FN:1,name", "FNDA:1,name", "LF:0", "LH:0", "BRF:0", "BRH:0", "FNF:2", "FNH:1"]
   ],
   ["duplicate summary", ["LF:0", "LF:0"]],
   ["branch hit exceeds found", ["LF:0", "LH:0", "BRF:1", "BRH:2", "FNF:0", "FNH:0"]],
-  ["function hit exceeds found", ["LF:0", "LH:0", "BRF:0", "BRH:0", "FNF:1", "FNH:2"]],
+  ["function hit exceeds found", ["LF:0", "LH:0", "BRF:0", "BRH:0", "FNF:1", "FNH:2"]]
 ] as const) {
   Deno.test(`LCOV parser rejects ${name}`, (): void => {
     assertEquals(inputError(lcov(lines)).kind, "malformedLcov");
@@ -165,7 +165,7 @@ for (const [name, source] of [
   ["outside paths", "/outside/version.ts"],
   ["unknown schemes", "https://example.com/version.ts"],
   ["URL queries", `${toFileUrl(SOURCE).href}?alias=1`],
-  ["invalid URL encoding", "file:///workspace/repository/%E0%A4%A"],
+  ["invalid URL encoding", "file:///workspace/repository/%E0%A4%A"]
 ] as const) {
   Deno.test(`LCOV parser rejects ${name}`, (): void => {
     const error = inputError(lcov(NATIVE_DETAILS, source));
@@ -176,15 +176,15 @@ for (const [name, source] of [
 
 function inventoryRunner(
   git: string,
-  result: Readonly<{ readonly code: number; readonly stderr: string; readonly stdout: string }>,
+  result: Readonly<{ readonly code: number; readonly stderr: string; readonly stdout: string }>
 ): FakeCommandRunner {
   return new FakeCommandRunner([
     {
       request: {
-        command: [git, "ls-files", "-z", "--", ".github/ci", "lib/ts", "packages"],
+        command: [git, "ls-files", "-z", "--", ".github/ci", "lib/ts", "packages"]
       },
-      result,
-    },
+      result
+    }
   ]);
 }
 
@@ -193,11 +193,11 @@ Deno.test("tracked runtime inventory uses one broad Git path query", async (): P
   const runner = inventoryRunner(git, {
     code: 0,
     stderr: "",
-    stdout: "tests/ignored.ts\0lib/ts/core/version.ts\0packages/codex/update.ts\0",
+    stdout: "tests/ignored.ts\0lib/ts/core/version.ts\0packages/codex/update.ts\0"
   });
   assertEquals(await trackedRuntimeSources(runner, git), [
     "lib/ts/core/version.ts",
-    "packages/codex/update.ts",
+    "packages/codex/update.ts"
   ]);
   runner.assertExhausted();
 });
@@ -210,9 +210,9 @@ Deno.test("tracked runtime inventory preserves nonzero result identity", async (
     Effect.flip(
       Effect.tryPromise({
         catch: (cause: unknown): unknown => cause,
-        try: (): Promise<readonly string[]> => trackedRuntimeSources(runner, git),
-      }),
-    ),
+        try: (): Promise<readonly string[]> => trackedRuntimeSources(runner, git)
+      })
+    )
   );
   assertInstanceOf(error, CoverageInputError);
   assertEquals(error.kind, "inventoryFailure");
@@ -223,23 +223,23 @@ Deno.test("tracked runtime inventory preserves runner rejection cause identity",
   const git = "/nix/store/git/bin/git";
   const cause = new Error("start");
   const rejectingRunner = {
-    run: (): Promise<never> => Promise.reject(cause),
+    run: (): Promise<never> => Promise.reject(cause)
   } satisfies CommandRunner;
   const runner = new FakeCommandRunner([
     {
       request: {
-        command: [git, "ls-files", "-z", "--", ".github/ci", "lib/ts", "packages"],
+        command: [git, "ls-files", "-z", "--", ".github/ci", "lib/ts", "packages"]
       },
-      runner: rejectingRunner,
-    },
+      runner: rejectingRunner
+    }
   ]);
   const error = await Effect.runPromise(
     Effect.flip(
       Effect.tryPromise({
         catch: (failure: unknown): unknown => failure,
-        try: (): Promise<readonly string[]> => trackedRuntimeSources(runner, git),
-      }),
-    ),
+        try: (): Promise<readonly string[]> => trackedRuntimeSources(runner, git)
+      })
+    )
   );
   assertInstanceOf(error, CoverageInputError);
   assertEquals(error.kind, "inventoryFailure");

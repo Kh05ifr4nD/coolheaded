@@ -56,19 +56,19 @@ function responseValue<Response extends JsonResponse>(response: Response): Respo
 
 function fetchNpmMetadata(
   packageName: string,
-  jsonClient: Readonly<JsonClient>,
+  jsonClient: Readonly<JsonClient>
 ): Effect.Effect<NpmPackageMetadata, JsonClientError | UpdateError> {
   const url = npmRegistryPackageUrl(packageName);
   return Effect.flatMap(
     Effect.map(
       jsonClient.request({ headers: {}, method: "GET", timeoutMs: REQUEST_TIMEOUT_MS, url }),
-      responseValue,
+      responseValue
     ),
     (value: unknown): Effect.Effect<NpmPackageMetadata, UpdateError> =>
       Effect.try({
         catch: (): UpdateError => new UpdateError(`Invalid npm registry JSON from ${url}`),
-        try: (): NpmPackageMetadata => parseRegistryMetadata(value, url),
-      }),
+        try: (): NpmPackageMetadata => parseRegistryMetadata(value, url)
+      })
   );
 }
 
@@ -76,7 +76,7 @@ function npmPlatformPackageHashConfig(
   packageName: string,
   version: string,
   suffixes: PlatformPackageSuffixes,
-  jsonClient: Readonly<JsonClient>,
+  jsonClient: Readonly<JsonClient>
 ): Effect.Effect<
   PackageHashConfig,
   InvalidNpmMetadataError | InvalidPackageHashConfigError | JsonClientError | UpdateError
@@ -84,26 +84,26 @@ function npmPlatformPackageHashConfig(
   return Effect.flatMap(
     fetchNpmMetadata(packageName, jsonClient),
     (
-      metadata: NpmPackageMetadata,
+      metadata: NpmPackageMetadata
     ): Effect.Effect<PackageHashConfig, InvalidNpmMetadataError | InvalidPackageHashConfigError> =>
-      npmHashConfigForSystems(metadata, version, suffixes),
+      npmHashConfigForSystems(metadata, version, suffixes)
   );
 }
 
 function npmPackageHash(
   packageName: string,
   version: string,
-  jsonClient: Readonly<JsonClient>,
+  jsonClient: Readonly<JsonClient>
 ): Effect.Effect<string, InvalidNpmMetadataError | JsonClientError | UpdateError> {
   return Effect.flatMap(
     fetchNpmMetadata(packageName, jsonClient),
     (metadata: NpmPackageMetadata): Effect.Effect<string, InvalidNpmMetadataError> =>
-      npmVersionIntegrity(metadata, version),
+      npmVersionIntegrity(metadata, version)
   );
 }
 
 function npmPackageHashConfig(
-  request: NpmPackageHashRequest,
+  request: NpmPackageHashRequest
 ): Effect.Effect<
   PackageHashConfig,
   InvalidNpmMetadataError | InvalidPackageHashConfigError | JsonClientError | UpdateError
@@ -113,19 +113,19 @@ function npmPackageHashConfig(
     (hash: string): Effect.Effect<PackageHashConfig, InvalidPackageHashConfigError> =>
       packageHashConfig({
         platformPackageHashes: Object.fromEntries(request.systems.map((system) => [system, hash])),
-        version: request.version,
-      }),
+        version: request.version
+      })
   );
 }
 
 function writePackageHashUpdate(
   options: NpmHashUpdateOptions,
   hashConfigForVersion: (
-    version: string,
+    version: string
   ) => Effect.Effect<
     PackageHashConfig,
     InvalidNpmMetadataError | InvalidPackageHashConfigError | JsonClientError | UpdateError
-  >,
+  >
 ): Effect.Effect<
   void,
   | InvalidNpmMetadataError
@@ -140,19 +140,19 @@ function writePackageHashUpdate(
       latestNpmVersion(options.packageName, options.jsonClient),
     options.pinFilePath,
     (
-      version: string,
+      version: string
     ): Effect.Effect<
       void,
       InvalidNpmMetadataError | InvalidPackageHashConfigError | JsonClientError | UpdateError
     > =>
       Effect.flatMap(hashConfigForVersion(version), (config): Effect.Effect<void> =>
-        writePackageHashConfig(options.pinFilePath, config),
-      ),
+        writePackageHashConfig(options.pinFilePath, config)
+      )
   );
 }
 
 function npmPackageHashUpdateProgram(
-  options: NpmPackageHashUpdateOptions,
+  options: NpmPackageHashUpdateOptions
 ): ReturnType<typeof writePackageHashUpdate> {
   return writePackageHashUpdate(
     options,
@@ -161,13 +161,13 @@ function npmPackageHashUpdateProgram(
         jsonClient: options.jsonClient,
         packageName: options.packageName,
         systems: options.systems,
-        version,
-      }),
+        version
+      })
   );
 }
 
 function npmPlatformPackageHashUpdateProgram(
-  options: NpmPlatformPackageHashUpdateOptions,
+  options: NpmPlatformPackageHashUpdateOptions
 ): ReturnType<typeof writePackageHashUpdate> {
   return writePackageHashUpdate(
     options,
@@ -176,8 +176,8 @@ function npmPlatformPackageHashUpdateProgram(
         options.packageName,
         version,
         options.suffixes,
-        options.jsonClient,
-      ),
+        options.jsonClient
+      )
   );
 }
 
@@ -186,5 +186,5 @@ export {
   npmPackageHashConfig,
   npmPackageHashUpdateProgram,
   npmPlatformPackageHashConfig,
-  npmPlatformPackageHashUpdateProgram,
+  npmPlatformPackageHashUpdateProgram
 };

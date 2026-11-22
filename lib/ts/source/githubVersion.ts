@@ -46,30 +46,30 @@ function gitHubHeaders(): Readonly<Record<string, string>> {
     ? { accept: "application/vnd.github+json" }
     : {
         accept: "application/vnd.github+json",
-        authorization: `Bearer ${token}`,
+        authorization: `Bearer ${token}`
       };
 }
 function sourceError(
   kind: "invalidMetadata" | "missingVersion" | "pagination",
   url: string,
-  message: string,
+  message: string
 ): VersionSourceError {
   return new VersionSourceError(kind, url, message);
 }
 function trustedPageUrl(
   candidateUrl: string,
-  requestedUrl: string,
+  requestedUrl: string
 ): Effect.Effect<string, VersionSourceError> {
   return candidateUrl === requestedUrl
     ? Effect.succeed(candidateUrl)
     : Effect.fail(
-        sourceError("pagination", candidateUrl, `Untrusted GitHub page from ${candidateUrl}`),
+        sourceError("pagination", candidateUrl, `Untrusted GitHub page from ${candidateUrl}`)
       );
 }
 function refNames(
   value: unknown,
   source: GitHubVersionSource,
-  url: string,
+  url: string
 ): Effect.Effect<readonly string[], VersionSourceError> {
   if (!Array.isArray(value)) {
     return Effect.fail(sourceError("invalidMetadata", url, `Invalid GitHub metadata from ${url}`));
@@ -80,7 +80,7 @@ function refNames(
   for (const entry of value) {
     if (!isRecord(entry) || typeof entry[key] !== "string") {
       return Effect.fail(
-        sourceError("invalidMetadata", url, `Invalid GitHub ${source} metadata from ${url}`),
+        sourceError("invalidMetadata", url, `Invalid GitHub ${source} metadata from ${url}`)
       );
     }
     names.push(entry[key]);
@@ -91,7 +91,7 @@ function trustedNextUrl(
   link: string | undefined,
   responseUrl: string,
   endpointUrl: string,
-  source: GitHubVersionSource,
+  source: GitHubVersionSource
 ): Effect.Effect<string | undefined, VersionSourceError> {
   if (link === undefined) {
     return Effect.succeed(void 0);
@@ -104,7 +104,7 @@ function trustedNextUrl(
     const target = match?.groups?.["target"];
     if (typeof relation !== "string" || typeof target !== "string") {
       return Effect.fail(
-        sourceError("pagination", responseUrl, `Invalid GitHub Link header from ${responseUrl}`),
+        sourceError("pagination", responseUrl, `Invalid GitHub Link header from ${responseUrl}`)
       );
     }
     if (relation === "next") {
@@ -116,7 +116,7 @@ function trustedNextUrl(
   }
   if (nextTargets.length > 1) {
     return Effect.fail(
-      sourceError("pagination", responseUrl, `Invalid GitHub Link header from ${responseUrl}`),
+      sourceError("pagination", responseUrl, `Invalid GitHub Link header from ${responseUrl}`)
     );
   }
   const nextTarget = nextTargets.join("");
@@ -154,13 +154,13 @@ function trustedNextUrl(
         throw new Error("Untrusted GitHub continuation");
       }
       return candidate.href;
-    },
+    }
   });
 }
 function allRefNames(
   endpointUrl: string,
   source: GitHubVersionSource,
-  jsonClient: Readonly<JsonClient>,
+  jsonClient: Readonly<JsonClient>
 ): Effect.Effect<readonly string[], GitHubVersionError> {
   return Effect.gen(function* fetchGitHubPages(): Effect.fn.Return<
     readonly string[],
@@ -173,7 +173,7 @@ function allRefNames(
     for (let page = 0; url !== undefined && page < MAX_GITHUB_PAGES; page += 1) {
       if (visited.has(url)) {
         return yield* Effect.fail(
-          sourceError("pagination", url, `GitHub pagination cycle at ${url}`),
+          sourceError("pagination", url, `GitHub pagination cycle at ${url}`)
         );
       }
       visited.add(url);
@@ -181,7 +181,7 @@ function allRefNames(
         headers,
         method: "GET",
         timeoutMs: REQUEST_TIMEOUT_MS,
-        url,
+        url
       });
       yield* trustedPageUrl(response.url, url);
       names.push(...(yield* refNames(value, source, response.url)));
@@ -189,7 +189,7 @@ function allRefNames(
     }
     if (url !== undefined) {
       return yield* Effect.fail(
-        sourceError("pagination", url, `GitHub pagination limit exceeded at ${url}`),
+        sourceError("pagination", url, `GitHub pagination limit exceeded at ${url}`)
       );
     }
     return names;
@@ -198,7 +198,7 @@ function allRefNames(
 function normalizedVersion(
   name: string,
   pattern: Readonly<RegExp>,
-  versionScheme: VersionScheme,
+  versionScheme: VersionScheme
 ): string | undefined {
   const stablePattern = new RegExp(pattern.source, pattern.flags.replaceAll(/[gy]/gu, ""));
   const version = stablePattern.exec(name)?.groups?.["version"];
@@ -208,10 +208,10 @@ function gitHubRelease(
   owner: string,
   repo: string,
   tag: string,
-  jsonClient: Readonly<JsonClient>,
+  jsonClient: Readonly<JsonClient>
 ): Effect.Effect<GitHubRelease, GitHubVersionError> {
   const url = `https://api.github.com/repos/${owner}/${repo}/releases/tags/${encodeURIComponent(
-    tag,
+    tag
   )}`;
   return Effect.gen(function* fetchGitHubRelease(): Effect.fn.Return<
     GitHubRelease,
@@ -221,12 +221,12 @@ function gitHubRelease(
       headers: gitHubHeaders(),
       method: "GET",
       timeoutMs: REQUEST_TIMEOUT_MS,
-      url,
+      url
     });
     yield* trustedPageUrl(response.url, url);
     if (!isRecord(value)) {
       return yield* Effect.fail(
-        sourceError("invalidMetadata", url, `Invalid GitHub release metadata from ${url}`),
+        sourceError("invalidMetadata", url, `Invalid GitHub release metadata from ${url}`)
       );
     }
     const { name, tag_name: tagName } = value;
@@ -236,13 +236,13 @@ function gitHubRelease(
       tagName.length > 0
       ? { name, tagName }
       : yield* Effect.fail(
-          sourceError("missingVersion", url, `Missing GitHub release metadata from ${url}`),
+          sourceError("missingVersion", url, `Missing GitHub release metadata from ${url}`)
         );
   });
 }
 function latestGitHubVersion(
   options: Readonly<LatestGitHubVersionOptions>,
-  jsonClient: Readonly<JsonClient>,
+  jsonClient: Readonly<JsonClient>
 ): Effect.Effect<string, GitHubVersionError> {
   const source = options.source ?? "tags";
   const endpointUrl = `https://api.github.com/repos/${options.owner}/${options.repo}/${source}?per_page=100`;
@@ -261,11 +261,11 @@ function latestGitHubVersion(
             sourceError(
               "missingVersion",
               endpointUrl,
-              `Missing GitHub latest version for ${options.owner}/${options.repo}`,
-            ),
+              `Missing GitHub latest version for ${options.owner}/${options.repo}`
+            )
           )
         : Effect.succeed(version);
-    },
+    }
   );
 }
 interface GitHubPathCommit {
@@ -276,10 +276,10 @@ function latestGitHubPathCommit(
   owner: string,
   repo: string,
   path: string,
-  jsonClient: Readonly<JsonClient>,
+  jsonClient: Readonly<JsonClient>
 ): Effect.Effect<GitHubPathCommit, GitHubVersionError> {
   const url = `https://api.github.com/repos/${owner}/${repo}/commits?path=${encodeURIComponent(
-    path,
+    path
   )}&per_page=1`;
   return Effect.gen(function* fetchGitHubPathCommit(): Effect.fn.Return<
     GitHubPathCommit,
@@ -289,7 +289,7 @@ function latestGitHubPathCommit(
       headers: gitHubHeaders(),
       method: "GET",
       timeoutMs: REQUEST_TIMEOUT_MS,
-      url,
+      url
     });
     yield* trustedPageUrl(response.url, url);
     const entry: unknown = Array.isArray(value) ? value[0] : undefined;
@@ -303,8 +303,8 @@ function latestGitHubPathCommit(
           sourceError(
             "missingVersion",
             url,
-            `Missing GitHub commit for ${path} in ${owner}/${repo}`,
-          ),
+            `Missing GitHub commit for ${path} in ${owner}/${repo}`
+          )
         );
   });
 }
@@ -314,5 +314,5 @@ export type {
   GitHubRelease,
   GitHubVersionError,
   GitHubVersionSource,
-  LatestGitHubVersionOptions,
+  LatestGitHubVersionOptions
 };

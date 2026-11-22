@@ -62,5 +62,5 @@ export type {
   UpdateFailure,
   UpdateModel,
   UpdateReal,
-  UpdateState,
+  UpdateState
 };

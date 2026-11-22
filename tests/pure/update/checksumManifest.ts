@@ -1,7 +1,7 @@
 import {
   ChecksumManifestError,
   parseChecksumManifest,
-  verifiedChecksumAssets,
+  verifiedChecksumAssets
 } from "coolheaded/update/checksumManifest.ts";
 import type { HttpRequest, HttpResponse } from "coolheaded/core/httpClient.ts";
 import { assertEquals, assertInstanceOf } from "@jsr/std__assert";
@@ -24,7 +24,7 @@ const TIMEOUT_MS = 30_000;
 const ASSET_URLS = {
   "empty.tar.gz": "https://example.com/empty.tar.gz",
   "non-utf8.tar.gz": "https://example.com/non-utf8.tar.gz",
-  "third.tar.gz": "https://example.com/third.tar.gz",
+  "third.tar.gz": "https://example.com/third.tar.gz"
 };
 type ExpectedHttpRequest = Parameters<typeof strictHttpClient>[0][number];
 
@@ -39,7 +39,7 @@ function response(url: string, body: readonly number[]): HttpResponse {
 function plan(url: string, body: readonly number[]): ExpectedHttpRequest {
   return {
     effect: (): Effect.Effect<HttpResponse> => Effect.succeed(response(url, body)),
-    request: request(url),
+    request: request(url)
   };
 }
 
@@ -49,15 +49,15 @@ function manifestBytes(thirdHash: string = THIRD_HASH): readonly number[] {
       [
         `${NON_UTF8_HASH}  non-utf8.tar.gz`,
         `${EMPTY_HASH} *empty.tar.gz`,
-        `${thirdHash}  third.tar.gz`,
-      ].join("\n"),
-    ),
+        `${thirdHash}  third.tar.gz`
+      ].join("\n")
+    )
   ];
 }
 
 async function manifestFailure(
   manifest: string,
-  assets: readonly string[],
+  assets: readonly string[]
 ): Promise<ChecksumManifestError> {
   const error = await Effect.runPromise(Effect.flip(parseChecksumManifest(manifest, assets)));
   assertInstanceOf(error, ChecksumManifestError);
@@ -70,14 +70,14 @@ Deno.test("checksum manifest selects exact requested GNU entries", async (): Pro
       [
         `${HASH_OTHER}  unrelated.tar.gz`,
         `${HASH_A}  tool-linux.tar.gz`,
-        `${HASH_B} *tool-darwin.tar.gz`,
+        `${HASH_B} *tool-darwin.tar.gz`
       ].join("\n"),
-      ["tool-linux.tar.gz", "tool-darwin.tar.gz"],
-    ),
+      ["tool-linux.tar.gz", "tool-darwin.tar.gz"]
+    )
   );
   assertEquals(parsed, {
     "tool-darwin.tar.gz": HASH_B,
-    "tool-linux.tar.gz": HASH_A,
+    "tool-linux.tar.gz": HASH_A
   });
 });
 
@@ -86,9 +86,9 @@ Deno.test("checksum manifest rejects non-UTF-8 manifest bodies", async (): Promi
   const error = await Effect.runPromise(
     Effect.flip(
       verifiedChecksumAssets(fake.client, MANIFEST_URL, {
-        "empty.tar.gz": ASSET_URLS["empty.tar.gz"],
-      }),
-    ),
+        "empty.tar.gz": ASSET_URLS["empty.tar.gz"]
+      })
+    )
   );
   assertInstanceOf(error, ChecksumManifestError);
   assertEquals({ asset: error.asset, kind: error.kind }, { asset: "manifest", kind: "malformed" });
@@ -100,18 +100,18 @@ for (const [name, manifest, kind, asset] of [
     "missing exact filename despite suffix collision",
     `${HASH_A}  prefix-tool.tar.gz`,
     "missing",
-    "tool.tar.gz",
+    "tool.tar.gz"
   ],
   [
     "duplicate requested filename",
     `${HASH_A}  tool.tar.gz\n${HASH_B} *tool.tar.gz`,
     "duplicate",
-    "tool.tar.gz",
+    "tool.tar.gz"
   ],
   ["uppercase digest", `${HASH_A.toUpperCase()}  tool.tar.gz`, "malformed", "manifest"],
   ["single-space separator", `${HASH_A} tool.tar.gz`, "malformed", "manifest"],
   ["tab separator", `${HASH_A}\ttool.tar.gz`, "malformed", "manifest"],
-  ["empty filename", `${HASH_A}  `, "malformed", "manifest"],
+  ["empty filename", `${HASH_A}  `, "malformed", "manifest"]
 ] as const) {
   Deno.test(`checksum manifest rejects ${name}`, async (): Promise<void> => {
     const error = await manifestFailure(manifest, [asset === "manifest" ? "tool.tar.gz" : asset]);
@@ -125,16 +125,16 @@ Deno.test("checksum verification hashes all raw asset bytes", async (): Promise<
     plan(MANIFEST_URL, manifestBytes()),
     plan(ASSET_URLS["empty.tar.gz"], []),
     plan(ASSET_URLS["non-utf8.tar.gz"], [NON_UTF8_BYTE, 0, 128]),
-    plan(ASSET_URLS["third.tar.gz"], [...new globalThis.TextEncoder().encode("asset-three")]),
+    plan(ASSET_URLS["third.tar.gz"], [...new globalThis.TextEncoder().encode("asset-three")])
   ]);
   const hashes = await Effect.runPromise(
-    verifiedChecksumAssets(fake.client, MANIFEST_URL, ASSET_URLS),
+    verifiedChecksumAssets(fake.client, MANIFEST_URL, ASSET_URLS)
   );
   const stringHashes: Readonly<Record<string, string>> = hashes;
   assertEquals(stringHashes, {
     "empty.tar.gz": EMPTY_SRI,
     "non-utf8.tar.gz": NON_UTF8_SRI,
-    "third.tar.gz": THIRD_SRI,
+    "third.tar.gz": THIRD_SRI
   });
   fake.assertExhausted();
 });
@@ -144,10 +144,10 @@ Deno.test("checksum verification rejects exact content mismatch", async (): Prom
     plan(MANIFEST_URL, manifestBytes(HASH_OTHER)),
     plan(ASSET_URLS["empty.tar.gz"], []),
     plan(ASSET_URLS["non-utf8.tar.gz"], [NON_UTF8_BYTE, 0, 128]),
-    plan(ASSET_URLS["third.tar.gz"], [...new globalThis.TextEncoder().encode("asset-three")]),
+    plan(ASSET_URLS["third.tar.gz"], [...new globalThis.TextEncoder().encode("asset-three")])
   ]);
   const error = await Effect.runPromise(
-    Effect.flip(verifiedChecksumAssets(fake.client, MANIFEST_URL, ASSET_URLS)),
+    Effect.flip(verifiedChecksumAssets(fake.client, MANIFEST_URL, ASSET_URLS))
   );
   assertInstanceOf(error, ChecksumManifestError);
   assertEquals(
@@ -155,14 +155,14 @@ Deno.test("checksum verification rejects exact content mismatch", async (): Prom
       actual: error.actual,
       asset: error.asset,
       expected: error.expected,
-      kind: error.kind,
+      kind: error.kind
     },
     {
       actual: THIRD_HASH,
       asset: "third.tar.gz",
       expected: HASH_OTHER,
-      kind: "mismatch",
-    },
+      kind: "mismatch"
+    }
   );
   fake.assertExhausted();
 });

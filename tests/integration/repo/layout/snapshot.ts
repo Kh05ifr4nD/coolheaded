@@ -3,7 +3,7 @@ import {
   requiredToolPath,
   runLayoutErrorProbe,
   withTemporaryDirectory,
-  writeRepositoryFixture,
+  writeRepositoryFixture
 } from "./fixture.ts";
 import { assertEquals, assertInstanceOf, assertStrictEquals } from "@jsr/std__assert";
 import { describe, it } from "@jsr/std__testing/bdd";
@@ -29,7 +29,7 @@ const COMPONENTS = [
   "tools.deno.sha256",
   "tools.git.executable",
   "tools.git.version",
-  "tools.git.sha256",
+  "tools.git.sha256"
 ] as const satisfies readonly SnapshotChangedComponent[];
 assertType<
   Exclude<SnapshotChangedComponent, (typeof COMPONENTS)[number]> extends never ? true : false
@@ -38,16 +38,16 @@ type SnapshotShapeComponent =
   | Exclude<keyof RepositorySnapshot, "tools">
   | `tools.${keyof RepositorySnapshot["tools"]}.${keyof ToolIdentity}`;
 assertType<Exclude<SnapshotShapeComponent, SnapshotChangedComponent> extends never ? true : false>(
-  true,
+  true
 );
 assertType<Exclude<SnapshotChangedComponent, SnapshotShapeComponent> extends never ? true : false>(
-  true,
+  true
 );
 
 const TOOLS = {
   cue: { executable: "/cue", sha256: "cue-sha", version: "cue-version" },
   deno: { executable: "/deno", sha256: "deno-sha", version: "deno-version" },
-  git: { executable: "/git", sha256: "git-sha", version: "git-version" },
+  git: { executable: "/git", sha256: "git-sha", version: "git-version" }
 } as const satisfies Readonly<Record<"cue" | "deno" | "git", ToolIdentity>>;
 
 const SNAPSHOT = {
@@ -55,7 +55,7 @@ const SNAPSHOT = {
   head: "head",
   indexTree: "index",
   layoutSha256: "layout",
-  tools: TOOLS,
+  tools: TOOLS
 } as const satisfies RepositorySnapshot;
 
 function changedSnapshot(component: SnapshotChangedComponent): RepositorySnapshot {
@@ -69,8 +69,8 @@ function changedSnapshot(component: SnapshotChangedComponent): RepositorySnapsho
         ...SNAPSHOT,
         tools: {
           ...TOOLS,
-          [command]: { ...TOOLS[command], [field]: `${TOOLS[command][field]}-changed` },
-        },
+          [command]: { ...TOOLS[command], [field]: `${TOOLS[command][field]}-changed` }
+        }
       };
     }
   }
@@ -90,7 +90,7 @@ function changedSnapshot(component: SnapshotChangedComponent): RepositorySnapsho
 async function executableSha256(executable: string): Promise<string> {
   const digest = await globalThis.crypto.subtle.digest("SHA-256", await Deno.readFile(executable));
   return Array.from(new Uint8Array(digest), (byte: number): string =>
-    byte.toString(16).padStart(2, "0"),
+    byte.toString(16).padStart(2, "0")
   ).join("");
 }
 
@@ -125,7 +125,7 @@ describe("snapshot identity", (): void => {
       await writeRepositoryFixture(repositoryRoot);
       const snapshot = await repositorySnapshot(repositoryRoot, {
         indexPaths: [".gitignore", "layout.cue"],
-        visiblePaths: [],
+        visiblePaths: []
       });
 
       assertEquals(snapshot.tools.deno.executable, Deno.execPath());
@@ -135,17 +135,17 @@ describe("snapshot identity", (): void => {
         (
           [
             ["cue", "COOLHEADED_CUE", ["version"]],
-            ["git", "COOLHEADED_GIT", ["--version"]],
+            ["git", "COOLHEADED_GIT", ["--version"]]
           ] as const
         ).map(async ([command, environmentVariable, versionArgs]): Promise<void> => {
           const executable = requiredToolPath(environmentVariable);
           assertEquals(snapshot.tools[command].executable, executable);
           assertEquals(
             snapshot.tools[command].version,
-            await executableVersion(executable, versionArgs),
+            await executableVersion(executable, versionArgs)
           );
           assertEquals(snapshot.tools[command].sha256, await executableSha256(executable));
-        }),
+        })
       );
     });
   });
@@ -166,7 +166,7 @@ if [ "$1" = "vet" ] && [ ! -f "$state" ]; then
   touch "$state"
 fi
 exec ${JSON.stringify(originalCue)} "$@"
-`,
+`
         );
         await Deno.chmod(wrapperPath, EXECUTABLE_MODE);
         const error = await runLayoutErrorProbe(repositoryRoot, wrapperPath);

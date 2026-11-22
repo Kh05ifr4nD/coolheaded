@@ -14,7 +14,7 @@ type WrapperFixture = Readonly<{
 
 async function writeWrapperFixture(
   repositoryRoot: string,
-  command: LayoutCommand,
+  command: LayoutCommand
 ): Promise<WrapperFixture> {
   const tools = actualToolEnvironment();
   const statePath = join(repositoryRoot, `${command}-version`);
@@ -38,7 +38,7 @@ describe("Git and CUE tool identity", (): void => {
     it(`isolates ${command} executable, version, and digest changes`, async (): Promise<void> => {
       await withTemporaryDirectory(async (repositoryRoot: string): Promise<void> => {
         await writeRepositoryFixture(repositoryRoot, {
-          gitignore: `${command}-first\n${command}-second\n${command}-version\n`,
+          gitignore: `${command}-first\n${command}-second\n${command}-version\n`
         });
         const wrapper = await writeWrapperFixture(repositoryRoot, command);
         const actualTools = actualToolEnvironment();
@@ -46,16 +46,16 @@ describe("Git and CUE tool identity", (): void => {
         const first = await runSnapshotProbe(repositoryRoot, firstTools);
         const pathChanged = await runSnapshotProbe(repositoryRoot, {
           ...actualTools,
-          [command]: wrapper.secondPath,
+          [command]: wrapper.secondPath
         });
         assertEquals(changedSnapshotComponents(first, pathChanged), [
-          `tools.${command}.executable`,
+          `tools.${command}.executable`
         ]);
 
         await Deno.writeTextFile(wrapper.statePath, "changed-version\n");
         const versionChanged = await runSnapshotProbe(repositoryRoot, firstTools);
         assertEquals(changedSnapshotComponents(first, versionChanged), [
-          `tools.${command}.version`,
+          `tools.${command}.version`
         ]);
 
         await Deno.writeTextFile(wrapper.statePath, "stable-version\n");

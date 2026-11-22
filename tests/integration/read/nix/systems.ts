@@ -25,7 +25,7 @@ describe("supported systems", (): void => {
   it("keeps flake-parts systems sourced from the shared system target contract", async (): Promise<void> => {
     assertEquals(
       await fileContains("flake.nix", "builtins.readFile ./lib/ts/system/targets.json"),
-      true,
+      true
     );
     assertEquals(await fileContains("flake.nix", "systems = supportedSystems;"), true);
   });
@@ -33,7 +33,7 @@ describe("supported systems", (): void => {
   it("keeps packageLib targets sourced from the shared system target contract", async (): Promise<void> => {
     assertEquals(
       await fileContains("lib/nix/base.nix", "builtins.readFile ../ts/system/targets.json"),
-      true,
+      true
     );
     assertEquals(await fileContains("lib/nix/base.nix", "targetAttrs"), true);
   });
@@ -41,7 +41,7 @@ describe("supported systems", (): void => {
   it("keeps uv lock environments sourced from the shared system target contract", async (): Promise<void> => {
     assertEquals(
       await fileContains("lib/nix/python.nix", "environments = base.pythonEnvironmentMarkers;"),
-      true,
+      true
     );
   });
 });

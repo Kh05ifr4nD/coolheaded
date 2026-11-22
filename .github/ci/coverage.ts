@@ -95,7 +95,7 @@ function parseRecordField(record: Readonly<MutableRecord>, field: string, value:
     rejectMalformed(
       (parts.length !== 2 && parts.length !== 3) ||
         (parts.length === 3 && !/^[0-9a-f]{32}$/u.test(parts[2] ?? "")),
-      { field, value },
+      { field, value }
     );
     const line = naturalNumber(parts[0] ?? "", field, true);
     const count = naturalNumber(parts[1] ?? "", field);
@@ -120,14 +120,14 @@ function parseRecordField(record: Readonly<MutableRecord>, field: string, value:
     if (field === "FN") {
       rejectMalformed(record.functionHits[0].length > 0 || hasSummary(record, ["FNF", "FNH"]), {
         field,
-        value,
+        value
       });
       const line = naturalNumber(number, field, true);
       rejectMalformed(
         record.functions[0].some(
-          ([functionLine, functionName]) => functionLine === line && functionName === name,
+          ([functionLine, functionName]) => functionLine === line && functionName === name
         ),
-        { field, value },
+        { field, value }
       );
       record.functions[1]([line, name]);
     } else {
@@ -165,7 +165,7 @@ function recordCounters(record: Readonly<MutableRecord>): SourceCoverage {
   return {
     branches: { covered: branchCovered, total: branchTotal },
     lines: { covered: lineCovered, total: lineTotal },
-    path: record.path,
+    path: record.path
   };
 }
 
@@ -188,7 +188,7 @@ function parseLcov(input: string, repositoryRoot: string): readonly SourceCovera
         functions: occurrences(),
         lines: new Map(),
         path,
-        summaries: new Map(),
+        summaries: new Map()
       };
     } else if (field === "end_of_record") {
       if (current === undefined || value.length > 0) {
@@ -210,7 +210,7 @@ function parseLcov(input: string, repositoryRoot: string): readonly SourceCovera
 
 async function trackedRuntimeSources(runner: CommandRunner, git: string): RuntimeSources {
   const request = {
-    command: [git, "ls-files", "-z", "--", ".github/ci", "lib/ts", "packages"],
+    command: [git, "ls-files", "-z", "--", ".github/ci", "lib/ts", "packages"]
   } as const;
   const result = await runner.run(request).catch((error: unknown): never => {
     throw new CoverageInputError("inventoryFailure", { cause: error, request }, error);

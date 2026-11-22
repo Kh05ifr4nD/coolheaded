@@ -19,7 +19,7 @@
     "strictPropertyInitialization": true,
     "types": ["./tsReset.d.ts"],
     "useUnknownInCatchVariables": true,
-    "verbatimModuleSyntax": true,
+    "verbatimModuleSyntax": true
   },
   "imports": {
     "@jsr/std__assert": "npm:@jsr/std__assert",
@@ -34,7 +34,7 @@
     "coolheadedTestSupport/": "./tests/support/",
     "effect": "npm:effect",
     "fast-check": "npm:fast-check",
-    "semver": "npm:semver@7.8.5",
+    "semver": "npm:semver@7.8.5"
   },
   "lint": {
     "exclude": ["packages/*/script/*.mjs"],
@@ -54,7 +54,7 @@
         "react-no-danger",
         "react-no-danger-with-children",
         "react-rules-of-hooks",
-        "require-await",
+        "require-await"
       ],
       "include": [
         "ban-untagged-todo",
@@ -78,13 +78,13 @@
         "no-undef",
         "no-useless-rename",
         "single-var-declarator",
-        "triple-slash-reference",
+        "triple-slash-reference"
       ],
-      "tags": ["jsr", "recommended", "workspace"],
-    },
+      "tags": ["jsr", "recommended", "workspace"]
+    }
   },
   "lock": {
-    "frozen": true,
+    "frozen": true
   },
   "nodeModulesDir": "auto",
   "tasks": {
@@ -105,10 +105,10 @@
     "test:integration:write": "env -u GH_TOKEN -u GITHUB_TOKEN TMPDIR=/tmp $COOLHEADED_DENO test --allow-env=GH_TOKEN,GITHUB_TOKEN --allow-read=/tmp --allow-write=/tmp 'tests/integration/write/**/*.ts'",
     "test:pure": "deno test --allow-env=FAST_CHECK_SEED,FAST_CHECK_PATH,FAST_CHECK_RUNS 'tests/pure/**/*.ts'",
     "test:runtime": "deno task test:pure --no-check && deno task test:integration:env --no-check && deno task test:integration:net --no-check && deno task test:integration:read --no-check && deno task test:integration:write --no-check && deno task test:integration:repo --no-check && deno task test:integration:update --no-check",
-    "update:denoDependencies": "deno run --allow-env --allow-read --allow-run --allow-write .github/ci/update/run/denoDependencies.ts",
+    "update:denoDependencies": "deno run --allow-env --allow-read --allow-run --allow-write .github/ci/update/run/denoDependencies.ts"
   },
   "test": {
     "exclude": ["tests/support/**/*.ts", "tests/type/**/*.ts"],
-    "include": ["tests/pure/**/*.ts", "tests/integration/**/*.ts"],
-  },
+    "include": ["tests/pure/**/*.ts", "tests/integration/**/*.ts"]
+  }
 }

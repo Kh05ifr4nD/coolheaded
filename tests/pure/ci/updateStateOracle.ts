@@ -2,7 +2,7 @@ import type {
   BranchScenario,
   CommandObservation,
   UpdateFailure,
-  UpdateState,
+  UpdateState
 } from "./updateStateContract.ts";
 import type { CommandRequest } from "coolheaded/core/commandRunner.ts";
 import type { ExpectedCommand } from "coolheadedTestSupport/commandRunner.ts";
@@ -23,7 +23,7 @@ function branchCommands(branch: string, scenario: BranchScenario): readonly Expe
     { request: { command: ["git", "fetch", "origin", "main"] }, result: success },
     {
       request: { command: ["git", "fetch", "origin", branch] },
-      result: scenario === "missing" ? { code: 1, stderr: "missing", stdout: "" } : success,
+      result: scenario === "missing" ? { code: 1, stderr: "missing", stdout: "" } : success
     },
     {
       request: {
@@ -32,26 +32,26 @@ function branchCommands(branch: string, scenario: BranchScenario): readonly Expe
           "checkout",
           "-B",
           branch,
-          scenario === "missing" ? "origin/main" : `origin/${branch}`,
-        ],
+          scenario === "missing" ? "origin/main" : `origin/${branch}`
+        ]
       },
-      result: success,
-    },
+      result: success
+    }
   ];
   if (scenario === "missing") {
     return commands;
   }
   commands.push({
     request: { command: ["git", "rebase", "origin/main"] },
-    result: scenario === "rebase" ? success : { code: 1, stderr: "conflict", stdout: "" },
+    result: scenario === "rebase" ? success : { code: 1, stderr: "conflict", stdout: "" }
   });
   if (scenario === "conflict") {
     commands.push(
       { request: { command: ["git", "rebase", "--abort"] }, result: success },
       {
         request: { command: ["git", "checkout", "-B", branch, "origin/main"] },
-        result: success,
-      },
+        result: success
+      }
     );
   }
   return commands;
@@ -59,7 +59,7 @@ function branchCommands(branch: string, scenario: BranchScenario): readonly Expe
 
 function gitStates(
   observation: Readonly<CommandObservation>,
-  previous: UpdateState | undefined,
+  previous: UpdateState | undefined
 ): readonly UpdateState[] {
   const { request, result } = observation;
   const [, action, argument, ref] = request.command;
@@ -104,7 +104,7 @@ function ghStates(observation: Readonly<CommandObservation>): readonly UpdateSta
 
 function observedStates(
   observations: readonly CommandObservation[],
-  failure: UpdateFailure | null,
+  failure: UpdateFailure | null
 ): readonly UpdateState[] {
   const states: UpdateState[] = ["clean"];
   for (const observation of observations) {

@@ -61,8 +61,8 @@ function flakeInputUpdates(lock: unknown, names: readonly string[] | null): read
     return [
       {
         currentVersion: lockedRev(node),
-        name,
-      },
+        name
+      }
     ];
   });
 }

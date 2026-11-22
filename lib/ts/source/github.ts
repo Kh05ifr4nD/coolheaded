@@ -35,8 +35,8 @@ function unpackedSourceHash(url: string, runner: CommandRunner): Effect.Effect<s
         "sha256",
         "--to",
         "sri",
-        hash,
-      ]),
+        hash
+      ])
   );
 }
 
@@ -48,7 +48,7 @@ function gitHubSourceVersion(source: VersionedGitHubSource, version: string): Gi
   return {
     owner: source.owner,
     repo: source.repo,
-    tag: source.tag(version),
+    tag: source.tag(version)
   };
 }
 
@@ -83,7 +83,7 @@ function parseHashMismatch(error: Readonly<Error>): Effect.Effect<string, Error>
 function fetchFromGitHubHash(
   source: GitHubSource,
   repositoryRootPath: string,
-  runner: CommandRunner,
+  runner: CommandRunner
 ): Effect.Effect<string, Error> {
   const expression = fetchFromGitHubExpression(source, repositoryRootPath);
 
@@ -93,12 +93,12 @@ function fetchFromGitHubHash(
         runner,
         "nix",
         ["build", "--impure", "--no-link", "--expr", expression],
-        repositoryRootPath,
+        repositoryRootPath
       ),
       (): Effect.Effect<string, Error> =>
-        Effect.fail(new UpdateError("Unexpected successful source prefetch")),
+        Effect.fail(new UpdateError("Unexpected successful source prefetch"))
     ),
-    parseHashMismatch,
+    parseHashMismatch
   );
 }
 
@@ -106,7 +106,7 @@ function fetchGitHubSourceHash(
   source: VersionedGitHubSource,
   version: string,
   repositoryRootPath: string,
-  runner: CommandRunner,
+  runner: CommandRunner
 ): Effect.Effect<string, Error> {
   return fetchFromGitHubHash(gitHubSourceVersion(source, version), repositoryRootPath, runner);
 }
@@ -115,7 +115,7 @@ function prepareGitHubTagTarballWorkspace(
   source: VersionedGitHubSource,
   workspacePath: string,
   version: string,
-  runner: CommandRunner,
+  runner: CommandRunner
 ): Effect.Effect<void, Error> {
   const archivePath = `${workspacePath}/source.tgz`;
   const versionedSource = gitHubSourceVersion(source, version);
@@ -123,13 +123,13 @@ function prepareGitHubTagTarballWorkspace(
     "-fsSL",
     gitHubTagTarballUrl(versionedSource),
     "-o",
-    archivePath,
+    archivePath
   ]);
   const extract = commandOutput(
     runner,
     "tar",
     ["-xzf", archivePath, "--strip-components=1"],
-    workspacePath,
+    workspacePath
   );
 
   return Effect.zipRight(download, Effect.asVoid(extract));
@@ -146,9 +146,9 @@ function updateGitHubSourcePin(options: GitHubSourcePinUpdate): Effect.Effect<vo
         (hash: string): Effect.Effect<void> =>
           writePinJson(options.pinFilePath, {
             sourceHash: hash,
-            version,
-          }),
-      ),
+            version
+          })
+      )
   );
 }
 
@@ -159,6 +159,6 @@ export {
   gitHubSourceVersion,
   prepareGitHubTagTarballWorkspace,
   unpackedSourceHash,
-  updateGitHubSourcePin,
+  updateGitHubSourcePin
 };
 export type { GitHubSource, GitHubSourcePinUpdate, VersionedGitHubSource };

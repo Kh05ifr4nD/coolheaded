@@ -15,7 +15,7 @@ const updateCommand = [
   "--allow-read",
   "--allow-run",
   "--allow-write",
-  `packages/${name}/update.ts`,
+  `packages/${name}/update.ts`
 ] as const;
 const allowedFilesExpression = `
 let
@@ -64,29 +64,29 @@ function changedPrefix(files: string): ConstructorParameters<typeof FakeCommandR
     { request: { command: updateCommand }, result: success },
     {
       request: { command: ["git", "diff", "--quiet"] },
-      result: { code: 1, stderr: "", stdout: "" },
+      result: { code: 1, stderr: "", stdout: "" }
     },
     {
       request: {
-        command: ["nix", "eval", "--impure", "--raw", "--expr", "builtins.currentSystem"],
+        command: ["nix", "eval", "--impure", "--raw", "--expr", "builtins.currentSystem"]
       },
-      result: { code: 0, stderr: "", stdout: system },
+      result: { code: 0, stderr: "", stdout: system }
     },
     {
       request: {
         command: ["nix", "eval", "--json", "--impure", "--expr", allowedFilesExpression],
-        env: { PACKAGE_UPDATE_CONFIG: JSON.stringify({ currentSystem: system, name }) },
+        env: { PACKAGE_UPDATE_CONFIG: JSON.stringify({ currentSystem: system, name }) }
       },
       result: {
         code: 0,
         stderr: "",
-        stdout: JSON.stringify({ system: packageSystem, updateAllowedFiles: [] }),
-      },
+        stdout: JSON.stringify({ system: packageSystem, updateAllowedFiles: [] })
+      }
     },
     {
       request: { command: ["git", "diff", "--name-only"] },
-      result: { code: 0, stderr: "", stdout: files },
-    },
+      result: { code: 0, stderr: "", stdout: files }
+    }
   ];
 }
 
@@ -95,7 +95,7 @@ Deno.test("package update stops without evaluation when updater changes nothing"
   try {
     const runner = new FakeCommandRunner([
       { request: { command: updateCommand }, result: success },
-      { request: { command: ["git", "diff", "--quiet"] }, result: success },
+      { request: { command: ["git", "diff", "--quiet"] }, result: success }
     ]);
     await runPackage(name, runner, undefined, "1.0.0");
     runner.assertExhausted();
@@ -114,18 +114,18 @@ Deno.test("package update validates changes and version before publishing output
       ...changedPrefix(`packages/${name}/pin.json\n`),
       {
         request: { command: ["nix", "eval", "--raw", `${attr}.version`] },
-        result: { code: 0, stderr: "", stdout: "1.1.0" },
+        result: { code: 0, stderr: "", stdout: "1.1.0" }
       },
       {
         request: { command: ["nix", "eval", "--raw", `${attr}.meta.changelog`] },
-        result: { code: 1, stderr: "missing", stdout: "" },
-      },
+        result: { code: 1, stderr: "missing", stdout: "" }
+      }
     ]);
     await runPackage(name, runner, undefined, "1.0.0");
     runner.assertExhausted();
     assertEquals(
       await Deno.readTextFile(fixture.output),
-      "updated=true\nnewVersion=1.1.0\nchangelog=\n",
+      "updated=true\nnewVersion=1.1.0\nchangelog=\n"
     );
   } finally {
     restoreOutput(fixture.previousOutput);
@@ -154,8 +154,8 @@ Deno.test("package update rejects a nonadvanced version before success outputs",
       ...changedPrefix(`packages/${name}/pin.json\n`),
       {
         request: { command: ["nix", "eval", "--raw", `${attr}.version`] },
-        result: { code: 0, stderr: "", stdout: "1.0.0" },
-      },
+        result: { code: 0, stderr: "", stdout: "1.0.0" }
+      }
     ]);
     const error = await assertRejects(() => runPackage(name, runner, undefined, "1.0.0"));
     assertInstanceOf(error, UpdateError);

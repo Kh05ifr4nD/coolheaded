@@ -7,7 +7,7 @@ async function pushBranch(
   seed: string,
   branch: string,
   file: string,
-  content: string,
+  content: string
 ): Promise<void> {
   await git(["checkout", "-B", branch, "main"], seed);
   await Deno.writeTextFile(`${seed}/${file}`, content);
@@ -19,7 +19,7 @@ async function pushBranch(
 function existingBranchCommands(
   checkout: string,
   branch: string,
-  conflict: boolean,
+  conflict: boolean
 ): ConstructorParameters<typeof FakeCommandRunner>[0] {
   return [
     realGit(["git", "fetch", "origin", "main"], checkout),
@@ -29,9 +29,9 @@ function existingBranchCommands(
     ...(conflict
       ? [
           realGit(["git", "rebase", "--abort"], checkout),
-          realGit(["git", "checkout", "-B", branch, "origin/main"], checkout),
+          realGit(["git", "checkout", "-B", branch, "origin/main"], checkout)
         ]
-      : []),
+      : [])
   ];
 }
 
@@ -76,7 +76,7 @@ Deno.test("conflicting update branch aborts rebase then falls back to main", asy
     assertEquals(await git(["status", "--porcelain"], checkout), "");
     assertEquals(
       await git(["rev-parse", "HEAD"], checkout),
-      await git(["rev-parse", "origin/main"], checkout),
+      await git(["rev-parse", "origin/main"], checkout)
     );
     assertEquals(await Deno.readTextFile(`${checkout}/tracked.txt`), "main\n");
   } finally {

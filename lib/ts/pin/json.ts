@@ -18,27 +18,27 @@ const NPM_DEPENDENCY_VENDOR_HASH_FIELD = "npmVendorHash";
 const VERSION_IDENTITY_FIELDS = [
   PACKAGE_VERSION_FIELD,
   WRAPPED_BINARY_VERSION_FIELD,
-  UPSTREAM_REVISION_FIELD,
+  UPSTREAM_REVISION_FIELD
 ] as const satisfies readonly string[];
 
 const UPSTREAM_ARTIFACT_HASH_FIELDS = [
   SINGLE_PACKAGE_ARTIFACT_HASH_FIELD,
   PLATFORM_PACKAGE_ARTIFACT_HASHES_FIELD,
-  AUXILIARY_UPSTREAM_SOURCE_HASH_FIELD,
+  AUXILIARY_UPSTREAM_SOURCE_HASH_FIELD
 ] as const satisfies readonly string[];
 
 const PLATFORM_ARTIFACT_HASH_FIELDS = SUPPORTED_SYSTEMS;
 
 const GENERATED_DEPENDENCY_HASH_FIELDS = [
   RUST_DEPENDENCY_VENDOR_HASH_FIELD,
-  NPM_DEPENDENCY_VENDOR_HASH_FIELD,
+  NPM_DEPENDENCY_VENDOR_HASH_FIELD
 ] as const satisfies readonly string[];
 
 const JSON_FIELD_ORDER = [
   ...VERSION_IDENTITY_FIELDS,
   ...UPSTREAM_ARTIFACT_HASH_FIELDS,
   ...PLATFORM_ARTIFACT_HASH_FIELDS,
-  ...GENERATED_DEPENDENCY_HASH_FIELDS,
+  ...GENERATED_DEPENDENCY_HASH_FIELDS
 ] as const satisfies readonly string[];
 
 interface PinJsonConfig {
@@ -66,7 +66,7 @@ function serializePackageHashConfig(config: Readonly<PackageHashConfig>): string
 
 function writePackageHashConfig(
   path: string,
-  config: Readonly<PackageHashConfig>,
+  config: Readonly<PackageHashConfig>
 ): Effect.Effect<void> {
   return writePinJson(path, config);
 }

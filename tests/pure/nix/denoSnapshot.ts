@@ -3,7 +3,7 @@ import {
   denoSnapshotHash,
   isDenoSnapshotHashMismatch,
   parsedNixHash,
-  replaceDenoSnapshotHash,
+  replaceDenoSnapshotHash
 } from "coolheaded/repo/denoSnapshot.ts";
 import { describe, it } from "@jsr/std__testing/bdd";
 import { assertEquals } from "@jsr/std__assert";
@@ -16,9 +16,9 @@ describe("Deno snapshot helpers", (): void => {
         {
           hash = "sha256-denoDependencies=";
         }
-        `,
+        `
       ),
-      "sha256-denoDependencies=",
+      "sha256-denoDependencies="
     );
   });
 
@@ -31,7 +31,7 @@ describe("Deno snapshot helpers", (): void => {
       replaceDenoSnapshotHash(content, "sha256-new="),
       `
       hash = "sha256-new=";
-    `,
+    `
     );
   });
 
@@ -41,7 +41,7 @@ describe("Deno snapshot helpers", (): void => {
       "build",
       ".#checks.x86_64-linux.denoDependencies",
       "--no-link",
-      "--print-build-logs",
+      "--print-build-logs"
     ]);
   });
 

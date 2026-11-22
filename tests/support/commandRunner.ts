@@ -1,7 +1,7 @@
 import type {
   CommandRequest,
   CommandResult,
-  CommandRunner,
+  CommandRunner
 } from "coolheaded/core/commandRunner.ts";
 
 type ExpectedCommand = Readonly<
@@ -68,8 +68,8 @@ class FakeCommandRunner implements CommandRunner {
       if (!structurallyEqual(request, expected.request)) {
         throw new Error(
           `command mismatch: expected ${JSON.stringify(
-            expected.request,
-          )}, received ${JSON.stringify(request)}`,
+            expected.request
+          )}, received ${JSON.stringify(request)}`
         );
       }
     } else {

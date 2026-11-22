@@ -60,7 +60,7 @@ function scriptPath(relativePath: string, moduleUrl: string): string {
 
 function requestedVersion(
   args: readonly string[],
-  usage: string,
+  usage: string
 ): Effect.Effect<string, UpdateError> {
   const [version] = args;
 
@@ -73,7 +73,7 @@ function requestedVersion(
 
 function requestedOrLatestVersion<LatestError extends Error>(
   args: readonly string[],
-  latestVersion: () => Effect.Effect<string, LatestError>,
+  latestVersion: () => Effect.Effect<string, LatestError>
 ): Effect.Effect<string, LatestError> {
   const [version] = args;
 
@@ -97,25 +97,25 @@ function readTextFile(path: string): Effect.Effect<string, UpdateError> {
 
       return new UpdateError(`Failed to read ${path}`);
     },
-    try: (): Promise<string> => denoRuntime().readTextFile(path),
+    try: (): Promise<string> => denoRuntime().readTextFile(path)
   });
 }
 
 function validVersion(
   version: string,
   source: string,
-  versionScheme: VersionScheme,
+  versionScheme: VersionScheme
 ): Effect.Effect<string, UpdateError> {
   return versionScheme.isValid(version)
     ? Effect.succeed(version)
     : Effect.fail(
-        new UpdateError(`${source} is not valid ${versionScheme.description}: ${version}`),
+        new UpdateError(`${source} is not valid ${versionScheme.description}: ${version}`)
       );
 }
 
 function currentPinVersion(
   pinPath: string,
-  versionScheme: VersionScheme,
+  versionScheme: VersionScheme
 ): Effect.Effect<string, UpdateError> {
   return Effect.flatMap(
     readTextFile(pinPath),
@@ -123,7 +123,7 @@ function currentPinVersion(
       Effect.flatMap(
         Effect.try({
           catch: (): UpdateError => new UpdateError(`Failed to parse ${pinPath}`),
-          try: (): unknown => JSON.parse(contents),
+          try: (): unknown => JSON.parse(contents)
         }),
         (pin: unknown): Effect.Effect<string, UpdateError> => {
           if (!isRecord(pin) || typeof pin["version"] !== "string" || pin["version"].length === 0) {
@@ -131,15 +131,15 @@ function currentPinVersion(
           }
 
           return validVersion(pin["version"], `${pinPath} version`, versionScheme);
-        },
-      ),
+        }
+      )
   );
 }
 
 function newerPinVersion(
   currentVersion: string,
   candidateVersion: string,
-  versionScheme: VersionScheme = semverVersionScheme,
+  versionScheme: VersionScheme = semverVersionScheme
 ): string | undefined {
   return versionScheme.compare(currentVersion, candidateVersion) < 0 ? candidateVersion : undefined;
 }
@@ -148,7 +148,7 @@ function requestedOrNewerPinVersion<LatestError extends Error>(
   args: readonly string[],
   latestVersion: () => Effect.Effect<string, LatestError>,
   pinPath: string,
-  versionScheme: VersionScheme = semverVersionScheme,
+  versionScheme: VersionScheme = semverVersionScheme
 ): Effect.Effect<string | undefined, LatestError | UpdateError> {
   const [version] = args;
 
@@ -161,9 +161,9 @@ function requestedOrNewerPinVersion<LatestError extends Error>(
       Effect.map(
         validVersion(candidateVersion, "Latest version", versionScheme),
         (validCandidateVersion: string): string | undefined =>
-          newerPinVersion(currentVersion, validCandidateVersion, versionScheme),
-      ),
-    ),
+          newerPinVersion(currentVersion, validCandidateVersion, versionScheme)
+      )
+    )
   );
 }
 
@@ -172,12 +172,12 @@ function updateNewerPinVersion<LatestError extends Error, UpdateVersionError ext
   latestVersion: () => Effect.Effect<string, LatestError>,
   pinPath: string,
   updateVersion: (version: string) => Effect.Effect<void, UpdateVersionError>,
-  versionScheme: VersionScheme = semverVersionScheme,
+  versionScheme: VersionScheme = semverVersionScheme
 ): Effect.Effect<void, LatestError | UpdateError | UpdateVersionError> {
   return Effect.flatMap(
     requestedOrNewerPinVersion(args, latestVersion, pinPath, versionScheme),
     (version: string | undefined): Effect.Effect<void, UpdateError | UpdateVersionError> =>
-      version === undefined ? Effect.void : updateVersion(version),
+      version === undefined ? Effect.void : updateVersion(version)
   );
 }
 
@@ -185,7 +185,7 @@ function commandOutput(
   runner: CommandRunner,
   command: string,
   args: readonly string[],
-  cwd?: string,
+  cwd?: string
 ): Effect.Effect<string, UpdateError> {
   return Effect.tryPromise({
     catch(error: unknown): UpdateError {
@@ -198,20 +198,18 @@ function commandOutput(
     async try(): Promise<string> {
       const output = await runner.run({
         command: [command, ...args],
-        ...(typeof cwd === "string" ? { cwd } : {}),
+        ...(typeof cwd === "string" ? { cwd } : {})
       });
 
       if (output.code !== 0) {
         const stderr = output.stderr.trim();
         throw new UpdateError(
-          `Failed to run ${command}: exit ${output.code}${
-            stderr.length === 0 ? "" : `: ${stderr}`
-          }`,
+          `Failed to run ${command}: exit ${output.code}${stderr.length === 0 ? "" : `: ${stderr}`}`
         );
       }
 
       return output.stdout.trim();
-    },
+    }
   });
 }
 
@@ -241,7 +239,7 @@ function reportErrorEffect(error: unknown): Effect.Effect<void> {
 
 function runUpdateScript(
   moduleUrl: string,
-  program: (args: readonly string[], runner: CommandRunner) => Effect.Effect<void, Error>,
+  program: (args: readonly string[], runner: CommandRunner) => Effect.Effect<void, Error>
 ): void {
   if (denoRuntime().mainModule === moduleUrl) {
     const updateEffect = program(denoRuntime().args, denoCommandRunner);
@@ -264,5 +262,5 @@ export {
   scriptPath,
   UpdateError,
   updateNewerPinVersion,
-  writeTextFile,
+  writeTextFile
 };

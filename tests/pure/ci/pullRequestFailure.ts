@@ -10,7 +10,7 @@ const config = {
   branch: "update/package/example",
   dryRun: false,
   labels: ["package"],
-  title: "example: update",
+  title: "example: update"
 };
 
 Deno.test("update control stops after commit failure", async (): Promise<void> => {
@@ -18,14 +18,14 @@ Deno.test("update control stops after commit failure", async (): Promise<void> =
     { request: { command: ["git", "add", "--update"] }, result: success },
     {
       request: { command: ["git", "diff", "--cached", "--quiet"] },
-      result: { code: 1, stderr: "", stdout: "" },
+      result: { code: 1, stderr: "", stdout: "" }
     },
     {
       request: {
-        command: ["git", "commit", "--signoff", "-m", config.title, "-m", config.body],
+        command: ["git", "commit", "--signoff", "-m", config.title, "-m", config.body]
       },
-      result: { code: 1, stderr: "commit failed", stdout: "" },
-    },
+      result: { code: 1, stderr: "commit failed", stdout: "" }
+    }
   ]);
   const error = await assertRejects(() => createOrUpdatePullRequest(config, runner));
   assertInstanceOf(error, CommandExitError);
@@ -37,20 +37,20 @@ Deno.test("update control stops after push failure", async (): Promise<void> => 
     { request: { command: ["git", "add", "--update"] }, result: success },
     {
       request: { command: ["git", "diff", "--cached", "--quiet"] },
-      result: { code: 1, stderr: "", stdout: "" },
+      result: { code: 1, stderr: "", stdout: "" }
     },
     {
       request: {
-        command: ["git", "commit", "--signoff", "-m", config.title, "-m", config.body],
+        command: ["git", "commit", "--signoff", "-m", config.title, "-m", config.body]
       },
-      result: success,
+      result: success
     },
     {
       request: {
-        command: ["git", "push", "--force-with-lease", "origin", `HEAD:${config.branch}`],
+        command: ["git", "push", "--force-with-lease", "origin", `HEAD:${config.branch}`]
       },
-      result: { code: 1, stderr: "push failed", stdout: "" },
-    },
+      result: { code: 1, stderr: "push failed", stdout: "" }
+    }
   ]);
   const error = await assertRejects(() => createOrUpdatePullRequest(config, runner));
   assertInstanceOf(error, CommandExitError);
@@ -62,18 +62,18 @@ Deno.test("auto-merge rejects missing repository before commands", async (): Pro
     [undefined, ""].map(async (repository: string | undefined): Promise<void> => {
       const runner = new FakeCommandRunner([]);
       await assertRejects(() =>
-        createOrUpdatePullRequest({ ...config, autoMerge: true }, runner, repository),
+        createOrUpdatePullRequest({ ...config, autoMerge: true }, runner, repository)
       );
       assertEquals(runner.calls(), []);
       runner.assertExhausted();
-    }),
+    })
   );
 });
 
 Deno.test("disabled auto-merge accepts missing repository", async (): Promise<void> => {
   const runner = new FakeCommandRunner([
     { request: { command: ["git", "add", "--update"] }, result: success },
-    { request: { command: ["git", "diff", "--cached", "--quiet"] }, result: success },
+    { request: { command: ["git", "diff", "--cached", "--quiet"] }, result: success }
   ]);
   await createOrUpdatePullRequest(config, runner);
   runner.assertExhausted();

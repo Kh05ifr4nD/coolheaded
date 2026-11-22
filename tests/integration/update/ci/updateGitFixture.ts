@@ -15,7 +15,7 @@ const gitExecutable = requiredGitExecutable();
 async function git(
   args: readonly string[],
   cwd?: string,
-  gitDir: string | undefined = cwd === undefined ? undefined : `${cwd}/.git`,
+  gitDir: string | undefined = cwd === undefined ? undefined : `${cwd}/.git`
 ): Promise<string> {
   const result = await denoCommandRunner.run({
     command: [gitExecutable, ...args],
@@ -26,9 +26,9 @@ async function git(
           env: {
             GIT_DIR: gitDir,
             GIT_INDEX_FILE: `${gitDir}/index`,
-            ...(cwd === undefined ? {} : { GIT_WORK_TREE: cwd }),
-          },
-        }),
+            ...(cwd === undefined ? {} : { GIT_WORK_TREE: cwd })
+          }
+        })
   });
   if (result.code !== 0) {
     throw new Error(result.stderr);
@@ -70,7 +70,7 @@ async function initializedRepositories(root: string): Promise<{
 
 function realGit(
   command: readonly [string, ...string[]],
-  cwd: string,
+  cwd: string
 ): ConstructorParameters<typeof FakeCommandRunner>[0][number] {
   return {
     delegateRequest: {
@@ -79,11 +79,11 @@ function realGit(
       env: {
         GIT_DIR: `${cwd}/.git`,
         GIT_INDEX_FILE: `${cwd}/.git/index`,
-        GIT_WORK_TREE: cwd,
-      },
+        GIT_WORK_TREE: cwd
+      }
     },
     request: { command },
-    runner: denoCommandRunner,
+    runner: denoCommandRunner
   };
 }
 

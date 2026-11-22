@@ -57,7 +57,7 @@ function isDenoSnapshotHashMismatch(output: string): boolean {
 
 async function buildDenoSnapshotCheck(
   system: string,
-  runner: CommandRunner,
+  runner: CommandRunner
 ): Promise<DenoSnapshotBuildResult> {
   const [command, ...args] = denoSnapshotBuildCommand(system);
   if (command === undefined) {
@@ -69,7 +69,7 @@ async function buildDenoSnapshotCheck(
   return {
     code: output.code,
     stderr: output.stderr.trim(),
-    stdout: output.stdout.trim(),
+    stdout: output.stdout.trim()
   };
 }
 
@@ -87,7 +87,7 @@ async function buildDenoSnapshotHashWithFakeHash(
   original: string,
   fake: string,
   runner: CommandRunner,
-  filePath: string,
+  filePath: string
 ): Promise<string> {
   await Deno.writeTextFile(filePath, fake);
   try {
@@ -100,7 +100,7 @@ async function buildDenoSnapshotHashWithFakeHash(
 async function updateDenoSnapshotHash(
   system: string,
   runner: CommandRunner,
-  filePath = DENO_SNAPSHOT_HASH_FILE_PATH,
+  filePath = DENO_SNAPSHOT_HASH_FILE_PATH
 ): Promise<void> {
   const original = await Deno.readTextFile(filePath);
   const fake = replaceDenoSnapshotHash(original, FAKE_HASH);
@@ -117,6 +117,6 @@ export {
   isDenoSnapshotHashMismatch,
   parsedNixHash,
   replaceDenoSnapshotHash,
-  updateDenoSnapshotHash,
+  updateDenoSnapshotHash
 };
 export type { DenoSnapshotBuildResult };

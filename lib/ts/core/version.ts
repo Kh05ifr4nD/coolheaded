@@ -65,7 +65,7 @@ const CALENDAR_MONTH_DAYS = [
   CALENDAR_SEPTEMBER_DAYS,
   CALENDAR_OCTOBER_DAYS,
   CALENDAR_NOVEMBER_DAYS,
-  CALENDAR_DECEMBER_DAYS,
+  CALENDAR_DECEMBER_DAYS
 ] as const;
 
 function calendarVersionParts(version: string): readonly [number, number, number] | null {
@@ -106,7 +106,7 @@ function compareCalendarVersions(left: string, right: string): number {
   const parts: readonly (readonly [number, number])[] = [
     [leftParts[0], rightParts[0]],
     [leftParts[1], rightParts[1]],
-    [leftParts[2], rightParts[2]],
+    [leftParts[2], rightParts[2]]
   ];
   for (const [leftPart, rightPart] of parts) {
     if (leftPart < rightPart) {
@@ -123,14 +123,14 @@ const semverVersionScheme: VersionScheme = {
   compare: compareVersions,
   description: "SemVer",
   isValid: isSemver,
-  name: "semver",
+  name: "semver"
 };
 
 const calendarVersionScheme: VersionScheme = {
   compare: compareCalendarVersions,
   description: "calendar version",
   isValid: isCalendarVersion,
-  name: "calendar",
+  name: "calendar"
 };
 
 function versionSchemeFromName(name: string | undefined): VersionScheme {
@@ -156,6 +156,6 @@ export {
   isCalendarVersion,
   isSemver,
   semverVersionScheme,
-  versionSchemeFromName,
+  versionSchemeFromName
 };
 export type { VersionScheme, VersionSchemeName };

@@ -37,7 +37,7 @@ function objectRecord(value: unknown, name: string): Readonly<Record<string, unk
 
 function hashForSystem(
   hashes: Readonly<Record<string, unknown>>,
-  system: SupportedSystem,
+  system: SupportedSystem
 ): SriHash {
   const hash = hashes[system];
   if (hash === undefined) {
@@ -56,7 +56,7 @@ function hashForSystem(
 
 function optionalNonEmptyString(
   object: Readonly<Record<string, unknown>>,
-  fieldName: string,
+  fieldName: string
 ): string | undefined {
   const value = object[fieldName];
   if (value === undefined) {
@@ -71,7 +71,7 @@ function optionalNonEmptyString(
 }
 
 function platformPackageHashes(
-  value: unknown,
+  value: unknown
 ): Readonly<Partial<Record<SupportedSystem, SriHash>>> {
   const hashes = objectRecord(value, "platformPackageHashes");
   const entries = Object.entries(hashes);
@@ -87,7 +87,7 @@ function platformPackageHashes(
         throw new InvalidPackageHashConfigError(`Unsupported system for pin hash: ${name}`);
       }
       return [system, hashForSystem(hashes, system)];
-    },
+    }
   );
   return Object.fromEntries(validEntries);
 }
@@ -104,16 +104,16 @@ function parsePackageHashConfig(value: unknown): PackageHashConfig {
   return {
     ...(binaryVersion === undefined ? {} : { binaryVersion }),
     platformPackageHashes: platformPackageHashes(object["platformPackageHashes"]),
-    version,
+    version
   };
 }
 
 function packageHashConfig(
-  value: unknown,
+  value: unknown
 ): Effect.Effect<PackageHashConfig, InvalidPackageHashConfigError> {
   return Effect.try({
     catch: packageHashConfigError,
-    try: (): PackageHashConfig => parsePackageHashConfig(value),
+    try: (): PackageHashConfig => parsePackageHashConfig(value)
   });
 }
 

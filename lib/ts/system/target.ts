@@ -62,7 +62,7 @@ function parseSystemTarget(value: unknown): SystemTarget {
     pythonEnvironmentMarker,
     runner,
     rustTargetTriple,
-    system,
+    system
   };
 }
 

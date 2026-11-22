@@ -28,7 +28,7 @@ const TYPE_ONLY_SOURCE_PATHS = new Set([
   "lib/ts/core/commandRunner.ts",
   "lib/ts/core/httpClient.ts",
   "lib/ts/npm/metadata.ts",
-  "lib/ts/repo/layout/types.ts",
+  "lib/ts/repo/layout/types.ts"
 ]);
 
 const SOURCE_CATEGORIES: Readonly<Record<string, "adapter" | "pure">> = {
@@ -65,7 +65,7 @@ const SOURCE_CATEGORIES: Readonly<Record<string, "adapter" | "pure">> = {
   "lib/ts/update/checksumManifest.ts": "adapter",
   "lib/ts/update/release.ts": "adapter",
   "lib/ts/update/rustPackage.ts": "adapter",
-  "lib/ts/update/uvLock.ts": "adapter",
+  "lib/ts/update/uvLock.ts": "adapter"
 };
 
 const ADAPTER_BRANCH_THRESHOLD = 80;
@@ -74,7 +74,7 @@ const PURE_BRANCH_THRESHOLD = 90;
 const PURE_LINE_THRESHOLD = 95;
 const THRESHOLDS = {
   adapter: { branches: ADAPTER_BRANCH_THRESHOLD, lines: ADAPTER_LINE_THRESHOLD },
-  pure: { branches: PURE_BRANCH_THRESHOLD, lines: PURE_LINE_THRESHOLD },
+  pure: { branches: PURE_BRANCH_THRESHOLD, lines: PURE_LINE_THRESHOLD }
 } as const;
 
 function sourceClassification(path: string): SourceClassification {
@@ -110,7 +110,7 @@ function addCounters(left: CoverageCounters, right: CoverageCounters): CoverageC
 function categoryCoverage(
   category: "adapter" | "pure",
   records: readonly SourceCoverage[],
-  classifications: Readonly<Map<string, CoverageCategory>>,
+  classifications: Readonly<Map<string, CoverageCategory>>
 ): CategoryCoverage {
   const sources = records.filter((record) => classifications.get(record.path) === category);
   if (sources.every((source: Readonly<SourceCoverage>) => source.lines.total === 0)) {
@@ -118,12 +118,12 @@ function categoryCoverage(
   }
   let coverage: CategoryCoverage = {
     branches: { covered: 0, total: 0 },
-    lines: { covered: 0, total: 0 },
+    lines: { covered: 0, total: 0 }
   };
   for (const source of sources) {
     coverage = {
       branches: addCounters(coverage.branches, source.branches),
-      lines: addCounters(coverage.lines, source.lines),
+      lines: addCounters(coverage.lines, source.lines)
     };
   }
   return coverage;
@@ -138,7 +138,7 @@ function meetsThreshold(counters: CoverageCounters, required: number): boolean {
 
 function evaluateCoverage(
   inventory: readonly string[],
-  records: readonly SourceCoverage[],
+  records: readonly SourceCoverage[]
 ): CoverageSummary {
   const classifications = new Map<string, CoverageCategory>();
   const unclassified: string[] = [];
@@ -154,12 +154,12 @@ function evaluateCoverage(
     throw new CoveragePolicyError("unclassifiedSources", { paths: unclassified.toSorted() });
   }
   const runtimeTypeOnly = records.find(
-    (record: Readonly<SourceCoverage>) => sourceClassification(record.path) === "typeOnly",
+    (record: Readonly<SourceCoverage>) => sourceClassification(record.path) === "typeOnly"
   );
   if (runtimeTypeOnly !== undefined) {
     throw new CoveragePolicyError("invalidClassification", {
       path: runtimeTypeOnly.path,
-      rule: "typeOnlyRuntimeRecord",
+      rule: "typeOnlyRuntimeRecord"
     });
   }
 
@@ -176,7 +176,7 @@ function evaluateCoverage(
 
   const summary = {
     adapter: categoryCoverage("adapter", records, classifications),
-    pure: categoryCoverage("pure", records, classifications),
+    pure: categoryCoverage("pure", records, classifications)
   };
 
   for (const category of ["adapter", "pure"] as const) {
@@ -188,7 +188,7 @@ function evaluateCoverage(
           actual: counters,
           category,
           metric,
-          required,
+          required
         });
       }
     }

@@ -14,7 +14,7 @@ Deno.test("update control uses real Git and never executes gh", async (): Promis
     const gitRunner = new FakeCommandRunner([
       realGit(["git", "fetch", "origin", "main"], checkout),
       realGit(["git", "fetch", "origin", branch], checkout),
-      realGit(["git", "checkout", "-B", branch, "origin/main"], checkout),
+      realGit(["git", "checkout", "-B", branch, "origin/main"], checkout)
     ]);
     await prepareBranch(branch, gitRunner);
     gitRunner.assertExhausted();
@@ -39,10 +39,10 @@ Deno.test("update control uses real Git and never executes gh", async (): Promis
             "--json",
             "number",
             "--jq",
-            ".[0].number // empty",
-          ],
+            ".[0].number // empty"
+          ]
         },
-        result: success,
+        result: success
       },
       {
         request: {
@@ -55,10 +55,10 @@ Deno.test("update control uses real Git and never executes gh", async (): Promis
             "0e8a16",
             "--description",
             "Managed by update automation",
-            "--force",
-          ],
+            "--force"
+          ]
         },
-        result: success,
+        result: success
       },
       {
         request: {
@@ -75,10 +75,10 @@ Deno.test("update control uses real Git and never executes gh", async (): Promis
             "--body",
             body,
             "--label",
-            "package",
-          ],
+            "package"
+          ]
         },
-        result: success,
+        result: success
       },
       {
         request: {
@@ -91,20 +91,20 @@ Deno.test("update control uses real Git and never executes gh", async (): Promis
             "--json",
             "number",
             "--jq",
-            ".[0].number // empty",
-          ],
+            ".[0].number // empty"
+          ]
         },
-        result: { code: 0, stderr: "", stdout: "42" },
-      },
+        result: { code: 0, stderr: "", stdout: "42" }
+      }
     ]);
     await createOrUpdatePullRequest(
       { autoMerge: false, body, branch, dryRun: false, labels: ["package"], title },
-      runner,
+      runner
     );
     runner.assertExhausted();
     assertEquals(
       await git(["--git-dir", remote, "rev-parse", `refs/heads/${branch}`]),
-      await git(["rev-parse", "HEAD"], checkout),
+      await git(["rev-parse", "HEAD"], checkout)
     );
   } finally {
     await Deno.remove(root, { recursive: true });

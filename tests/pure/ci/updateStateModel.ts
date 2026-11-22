@@ -17,7 +17,7 @@ function recordObservations(real: Readonly<UpdateReal>, runner: Readonly<FakeCom
 
 function prepareCommand(
   branch: string,
-  scenario: BranchScenario,
+  scenario: BranchScenario
 ): fc.AsyncCommand<UpdateModel, UpdateReal> {
   return {
     check(model: Readonly<UpdateModel>): boolean {
@@ -43,7 +43,7 @@ function prepareCommand(
     },
     toString(): string {
       return `prepare(${scenario},${branch})`;
-    },
+    }
   };
 }
 
@@ -57,8 +57,8 @@ function noChangeCommand(): fc.AsyncCommand<UpdateModel, UpdateReal> {
         { request: { command: ["git", "add", "--update"] }, result: success },
         {
           request: { command: ["git", "diff", "--cached", "--quiet"] },
-          result: success,
-        },
+          result: success
+        }
       ];
       const runner = new FakeCommandRunner(expected);
       await createOrUpdatePullRequest(
@@ -68,9 +68,9 @@ function noChangeCommand(): fc.AsyncCommand<UpdateModel, UpdateReal> {
           branch: model.branch.get(),
           dryRun: false,
           labels: ["package"],
-          title: "update",
+          title: "update"
         },
-        runner,
+        runner
       );
       runner.assertExhausted();
       assertEquals(runner.calls(), requests(expected));
@@ -81,7 +81,7 @@ function noChangeCommand(): fc.AsyncCommand<UpdateModel, UpdateReal> {
     },
     toString(): string {
       return "noChange";
-    },
+    }
   };
 }
 
@@ -102,7 +102,7 @@ function refreshCommand(): fc.AsyncCommand<UpdateModel, UpdateReal> {
     },
     toString(): string {
       return "refresh";
-    },
+    }
   };
 }
 
@@ -117,12 +117,12 @@ function failureCommand(): fc.AsyncCommand<UpdateModel, UpdateReal> {
         { request: { command: ["git", "add", "--update"] }, result: success },
         {
           request: { command: ["git", "diff", "--cached", "--quiet"] },
-          result: { code: 1, stderr: "", stdout: "" },
+          result: { code: 1, stderr: "", stdout: "" }
         },
         {
           request: { command: ["git", "commit", "--signoff", "-m", "update", "-m", "body"] },
-          result: { code: 1, stderr: "failed", stdout: "" },
-        },
+          result: { code: 1, stderr: "failed", stdout: "" }
+        }
       ];
       const runner = new FakeCommandRunner(expected);
       const error = await assertRejects(() =>
@@ -133,10 +133,10 @@ function failureCommand(): fc.AsyncCommand<UpdateModel, UpdateReal> {
             branch: model.branch.get(),
             dryRun: false,
             labels: ["package"],
-            title: "update",
+            title: "update"
           },
-          runner,
-        ),
+          runner
+        )
       );
       assertInstanceOf(error, CommandExitError);
       runner.assertExhausted();
@@ -149,29 +149,29 @@ function failureCommand(): fc.AsyncCommand<UpdateModel, UpdateReal> {
     },
     toString(): string {
       return command;
-    },
+    }
   };
 }
 
 const branch = fc.stringMatching(/^update\/package\/[a-z]{1,8}$/u);
 function updateCommands(
-  replayPath?: string,
+  replayPath?: string
 ): fc.Arbitrary<Iterable<fc.AsyncCommand<UpdateModel, UpdateReal>>> {
   return fc.commands(
     [
       fc
         .tuple(branch, fc.constantFrom<BranchScenario>("missing", "rebase", "conflict"))
         .map(([value, scenario]: readonly [string, BranchScenario]) =>
-          prepareCommand(value, scenario),
+          prepareCommand(value, scenario)
         ),
       fc.constant(noChangeCommand()),
       fc.constant(refreshCommand()),
       fc.constant(failureCommand()),
       fc
         .tuple(fc.boolean(), fc.boolean())
-        .map(([existing, merge]: readonly [boolean, boolean]) => completeCommand(existing, merge)),
+        .map(([existing, merge]: readonly [boolean, boolean]) => completeCommand(existing, merge))
     ],
-    { maxCommands: 5, ...(replayPath === undefined ? {} : { replayPath }) },
+    { maxCommands: 5, ...(replayPath === undefined ? {} : { replayPath }) }
   );
 }
 

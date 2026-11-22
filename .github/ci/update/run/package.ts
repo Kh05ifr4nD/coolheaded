@@ -8,7 +8,7 @@ import {
   isRecord,
   nixEvalRaw,
   run,
-  writeOutput,
+  writeOutput
 } from "coolheadedCi/process.ts";
 import { semverVersionScheme, versionSchemeFromName } from "coolheaded/core/version.ts";
 import type { CommandRunner } from "coolheaded/core/commandRunner.ts";
@@ -63,7 +63,7 @@ function parsePackageUpdateConfig(value: unknown): PackageUpdateConfig {
 async function packageUpdateConfig(
   system: string,
   name: string,
-  runner: CommandRunner,
+  runner: CommandRunner
 ): Promise<PackageUpdateConfig> {
   const result = await run(
     runner,
@@ -71,9 +71,9 @@ async function packageUpdateConfig(
     {
       capture: true,
       env: {
-        PACKAGE_UPDATE_CONFIG: JSON.stringify({ currentSystem: system, name }),
-      },
-    },
+        PACKAGE_UPDATE_CONFIG: JSON.stringify({ currentSystem: system, name })
+      }
+    }
   );
   const parsed: unknown = JSON.parse(result.stdout);
   return parsePackageUpdateConfig(parsed);
@@ -87,7 +87,7 @@ function assertVersionAdvanced(
   name: string,
   currentVersion: string | undefined,
   newVersion: string,
-  versionScheme: VersionScheme = semverVersionScheme,
+  versionScheme: VersionScheme = semverVersionScheme
 ): void {
   if (!versionScheme.isValid(newVersion)) {
     throw new UpdateError(`${name} produced invalid ${versionScheme.description}: ${newVersion}`);
@@ -96,13 +96,13 @@ function assertVersionAdvanced(
   if (currentVersion !== undefined && currentVersion.length > 0) {
     if (!versionScheme.isValid(currentVersion)) {
       throw new UpdateError(
-        `${name} has invalid current ${versionScheme.description}: ${currentVersion}`,
+        `${name} has invalid current ${versionScheme.description}: ${currentVersion}`
       );
     }
 
     if (versionScheme.compare(currentVersion, newVersion) >= 0) {
       throw new UpdateError(
-        `${name} produced package changes without a version advance: ${currentVersion} -> ${newVersion}`,
+        `${name} produced package changes without a version advance: ${currentVersion} -> ${newVersion}`
       );
     }
   }
@@ -113,7 +113,7 @@ async function runPackage(
   runner: CommandRunner,
   version?: string,
   currentVersion = Deno.env.get("CURRENT_VERSION"),
-  versionScheme: VersionScheme = semverVersionScheme,
+  versionScheme: VersionScheme = semverVersionScheme
 ): Promise<void> {
   await run(
     runner,
@@ -126,9 +126,9 @@ async function runPackage(
       "--allow-run",
       "--allow-write",
       `packages/${name}/update.ts`,
-      ...(version === undefined ? [] : [version]),
+      ...(version === undefined ? [] : [version])
     ],
-    { capture: false },
+    { capture: false }
   );
 
   if (!(await gitHasChanges(runner))) {
@@ -140,11 +140,11 @@ async function runPackage(
   const { allowedFiles: extraAllowedFiles, system } = await packageUpdateConfig(
     current,
     name,
-    runner,
+    runner
   );
   const files = await changedFiles(runner);
   assertOnlyChangedFiles(files, (file: string): boolean =>
-    packageAllowedFile(name, extraAllowedFiles, file),
+    packageAllowedFile(name, extraAllowedFiles, file)
   );
 
   const attr = `.#packages.${system}.${JSON.stringify(name)}`;
@@ -155,7 +155,7 @@ async function runPackage(
   await writeOutput("newVersion", newVersion);
   const changelog = await run(runner, ["nix", "eval", "--raw", `${attr}.meta.changelog`], {
     capture: true,
-    check: false,
+    check: false
   });
   await writeOutput("changelog", changelog.code === 0 ? changelog.stdout : "");
 }
@@ -171,7 +171,7 @@ async function main(args: readonly string[]): Promise<void> {
     denoCommandRunner,
     version,
     undefined,
-    versionSchemeFromName(Deno.env.get("VERSION_SCHEME")),
+    versionSchemeFromName(Deno.env.get("VERSION_SCHEME"))
   );
 }
 

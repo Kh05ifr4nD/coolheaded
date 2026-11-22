@@ -1,7 +1,7 @@
 import { assertEquals, assertInstanceOf, assertRejects } from "@jsr/std__assert";
 import {
   cargoVendorHash,
-  cargoVendorHashPrefetchExpression,
+  cargoVendorHashPrefetchExpression
 } from "coolheaded/update/rustPackage.ts";
 import { CommandStartError } from "coolheaded/core/denoCommandRunner.ts";
 import { Effect } from "effect";
@@ -11,7 +11,7 @@ const source = {
   owner: "owner",
   pname: "example",
   repo: "repo",
-  tag: (version: string): string => `v${version}`,
+  tag: (version: string): string => `v${version}`
 };
 const root = "/repository";
 const version = "1.2.3";
@@ -22,40 +22,40 @@ const command = [
   "--impure",
   "--no-link",
   "--expr",
-  cargoVendorHashPrefetchExpression(source, root, version, sourceHash),
+  cargoVendorHashPrefetchExpression(source, root, version, sourceHash)
 ] as const;
 
 Deno.test("Rust cargo vendor hash uses injected runner and parses mismatch", async (): Promise<void> => {
   const runner = new FakeCommandRunner([
     {
       request: { command, cwd: root },
-      result: { code: 1, stderr: "got: sha256-vendorHash=", stdout: "" },
-    },
+      result: { code: 1, stderr: "got: sha256-vendorHash=", stdout: "" }
+    }
   ]);
   assertEquals(
     await Effect.runPromise(cargoVendorHash(source, root, version, sourceHash, runner)),
-    "sha256-vendorHash=",
+    "sha256-vendorHash="
   );
   runner.assertExhausted();
 });
 
 Deno.test("Rust cargo vendor hash rejects success and unrelated failure", async (): Promise<void> => {
   const successful = new FakeCommandRunner([
-    { request: { command, cwd: root }, result: { code: 0, stderr: "", stdout: "" } },
+    { request: { command, cwd: root }, result: { code: 0, stderr: "", stdout: "" } }
   ]);
   await assertRejects(() =>
-    Effect.runPromise(cargoVendorHash(source, root, version, sourceHash, successful)),
+    Effect.runPromise(cargoVendorHash(source, root, version, sourceHash, successful))
   );
   successful.assertExhausted();
 
   const unrelated = new FakeCommandRunner([
     {
       request: { command, cwd: root },
-      result: { code: 1, stderr: "unrelated failure", stdout: "" },
-    },
+      result: { code: 1, stderr: "unrelated failure", stdout: "" }
+    }
   ]);
   await assertRejects(() =>
-    Effect.runPromise(cargoVendorHash(source, root, version, sourceHash, unrelated)),
+    Effect.runPromise(cargoVendorHash(source, root, version, sourceHash, unrelated))
   );
   unrelated.assertExhausted();
 });
@@ -64,11 +64,11 @@ Deno.test("Rust cargo vendor hash rejects malformed mismatch output", async (): 
   const runner = new FakeCommandRunner([
     {
       request: { command, cwd: root },
-      result: { code: 1, stderr: "got: sha256-***", stdout: "" },
-    },
+      result: { code: 1, stderr: "got: sha256-***", stdout: "" }
+    }
   ]);
   await assertRejects(() =>
-    Effect.runPromise(cargoVendorHash(source, root, version, sourceHash, runner)),
+    Effect.runPromise(cargoVendorHash(source, root, version, sourceHash, runner))
   );
   runner.assertExhausted();
 });
@@ -82,11 +82,11 @@ Deno.test("Rust cargo vendor hash preserves typed command start failure", async 
         throw new CommandStartError(request, cause);
       },
       request,
-      result: { code: 0, stderr: "", stdout: "" },
-    },
+      result: { code: 0, stderr: "", stdout: "" }
+    }
   ]);
   const error = await Effect.runPromise(
-    Effect.flip(cargoVendorHash(source, root, version, sourceHash, runner)),
+    Effect.flip(cargoVendorHash(source, root, version, sourceHash, runner))
   );
   assertInstanceOf(error, CommandStartError);
   assertEquals(error.request, request);

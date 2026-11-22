@@ -8,17 +8,17 @@ const LOCK = {
   nodes: {
     alpha: { locked: { rev: "1234567890" } },
     beta: { locked: {} },
-    root: { inputs: { alpha: "alpha", beta: "beta", missing: "missing" } },
-  },
+    root: { inputs: { alpha: "alpha", beta: "beta", missing: "missing" } }
+  }
 };
 
 Deno.test("flake input discovery validates filters and locked revisions", (): void => {
   assertEquals(flakeInputUpdates(LOCK, null), [
     { currentVersion: "12345678", name: "alpha" },
-    { currentVersion: "unknown", name: "beta" },
+    { currentVersion: "unknown", name: "beta" }
   ]);
   assertEquals(flakeInputUpdates(LOCK, ["missing", "alpha"]), [
-    { currentVersion: "12345678", name: "alpha" },
+    { currentVersion: "12345678", name: "alpha" }
   ]);
   assertEquals(flakeInputUpdates({}, null), []);
 });
@@ -28,12 +28,12 @@ Deno.test("package discovery validates and sorts evaluated versions", (): void =
     packageUpdates({
       alpha: { version: "1.0.0", versionScheme: "semver" },
       ignored: null,
-      zeta: { version: "2.0.0", versionScheme: "semver" },
+      zeta: { version: "2.0.0", versionScheme: "semver" }
     }),
     [
       { currentVersion: "1.0.0", name: "alpha", versionScheme: "semver" },
-      { currentVersion: "2.0.0", name: "zeta", versionScheme: "semver" },
-    ],
+      { currentVersion: "2.0.0", name: "zeta", versionScheme: "semver" }
+    ]
   );
   const error = assertThrows((): void => {
     packageUpdates([]);
@@ -54,21 +54,21 @@ Deno.test("package discovery queries all systems independently of its runner", a
         command: ["nix", "eval", "--json", "--impure", "--expr", NIX_EXPR],
         env: {
           DISCOVERY_CONFIG: JSON.stringify({
-            filter: ["zeta", "alpha"],
-          }),
-        },
+            filter: ["zeta", "alpha"]
+          })
+        }
       },
       result: {
         code: 0,
         stderr: "",
         stdout:
-          '{"zeta":{"version":"2.0.0","versionScheme":"semver"},"alpha":{"version":"1.0.0","versionScheme":"semver"}}',
-      },
-    },
+          '{"zeta":{"version":"2.0.0","versionScheme":"semver"},"alpha":{"version":"1.0.0","versionScheme":"semver"}}'
+      }
+    }
   ]);
   assertEquals(await discoverPackage(runner, ["zeta", "alpha"]), [
     { currentVersion: "1.0.0", name: "alpha", versionScheme: "semver" },
-    { currentVersion: "2.0.0", name: "zeta", versionScheme: "semver" },
+    { currentVersion: "2.0.0", name: "zeta", versionScheme: "semver" }
   ]);
   runner.assertExhausted();
 });
@@ -79,7 +79,7 @@ Deno.test("discovery plan omits disabled reads and runner actions", async (): Pr
     flakeInputNames: ["nixpkgs"],
     flakeInputs: false,
     packageNames: ["codex"],
-    packages: false,
+    packages: false
   };
   const plan = discoveryPlan(selection);
   assertEquals(plan, []);
@@ -95,13 +95,13 @@ Deno.test("discovery plan preserves package then flake then Deno order", (): voi
       flakeInputNames: ["nixpkgs"],
       flakeInputs: true,
       packageNames: ["codex"],
-      packages: true,
+      packages: true
     }),
     [
       { kind: "package", names: ["codex"] },
       { kind: "flakeInput", names: ["nixpkgs"] },
-      { kind: "denoDependencies" },
-    ],
+      { kind: "denoDependencies" }
+    ]
   );
 });
 
@@ -110,16 +110,16 @@ Deno.test("update lanes use stable kind and name ordering", (): void => {
     updateLanes(
       [
         { currentVersion: "2", name: "zeta", versionScheme: "semver" },
-        { currentVersion: "1", name: "alpha", versionScheme: "semver" },
+        { currentVersion: "1", name: "alpha", versionScheme: "semver" }
       ],
       [{ currentVersion: "f", name: "nixpkgs" }],
-      true,
+      true
     ),
     [
       { currentVersion: "deno.lock", kind: "denoDependencies", name: "denoDependencies" },
       { currentVersion: "f", kind: "flakeInput", name: "nixpkgs" },
       { currentVersion: "1", kind: "package", name: "alpha", versionScheme: "semver" },
-      { currentVersion: "2", kind: "package", name: "zeta", versionScheme: "semver" },
-    ],
+      { currentVersion: "2", kind: "package", name: "zeta", versionScheme: "semver" }
+    ]
   );
 });

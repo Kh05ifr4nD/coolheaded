@@ -13,11 +13,11 @@ describe("temporary filesystem permissions", (): void => {
 
     await assertRejects(
       (): Promise<string> => Deno.readTextFile("deno.jsonc"),
-      Deno.errors.NotCapable,
+      Deno.errors.NotCapable
     );
     await assertRejects(
       (): Promise<void> => Deno.writeTextFile(".permissionProbe", ""),
-      Deno.errors.NotCapable,
+      Deno.errors.NotCapable
     );
   });
 });

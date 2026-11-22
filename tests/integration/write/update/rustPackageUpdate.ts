@@ -15,7 +15,7 @@ function options(
   runner: Readonly<FakeCommandRunner>,
   args: readonly string[] = [VERSION],
   latestVersion: () => Effect.Effect<string, Error> = (): Effect.Effect<string, Error> =>
-    Effect.succeed(VERSION),
+    Effect.succeed(VERSION)
 ): Parameters<typeof updateGitHubRustPackagePin>[0] {
   return {
     args,
@@ -24,11 +24,11 @@ function options(
       owner: "example",
       pname: "tool",
       repo: "tool",
-      tag: (version: string): string => `v${version}`,
+      tag: (version: string): string => `v${version}`
     },
     pinFilePath,
     repositoryRootPath: ROOT,
-    runner,
+    runner
   } as const;
 }
 
@@ -43,7 +43,7 @@ Deno.test("Rust package update writes source and cargo vendor hashes", async ():
           "build",
           "--impure",
           "--no-link",
-          "--expr",
+          "--expr"
         ]);
         assertEquals(request.cwd, ROOT);
         const expression = request.command.at(5);
@@ -55,7 +55,7 @@ Deno.test("Rust package update writes source and cargo vendor hashes", async ():
         assertStringIncludes(expression, 'tag = "v1.2.3"');
         assertStringIncludes(expression, "hash = pkgs.lib.fakeHash");
       },
-      result: { code: 1, stderr: `error: got: ${SOURCE_HASH}`, stdout: "" },
+      result: { code: 1, stderr: `error: got: ${SOURCE_HASH}`, stdout: "" }
     },
     {
       assertRequest(request: CommandRequest): void {
@@ -64,7 +64,7 @@ Deno.test("Rust package update writes source and cargo vendor hashes", async ():
           "build",
           "--impure",
           "--no-link",
-          "--expr",
+          "--expr"
         ]);
         assertEquals(request.cwd, ROOT);
         const expression = request.command.at(5);
@@ -76,14 +76,14 @@ Deno.test("Rust package update writes source and cargo vendor hashes", async ():
         assertStringIncludes(expression, `hash = "${SOURCE_HASH}"`);
         assertStringIncludes(expression, "cargoHash = pkgs.lib.fakeHash");
       },
-      result: { code: 1, stderr: `error: got: ${CARGO_HASH}`, stdout: "" },
-    },
+      result: { code: 1, stderr: `error: got: ${CARGO_HASH}`, stdout: "" }
+    }
   ]);
   try {
     await Effect.runPromise(updateGitHubRustPackagePin(options(pinFilePath, runner)));
     assertEquals(
       await Deno.readTextFile(pinFilePath),
-      `{\n  "version": "${VERSION}",\n  "sourceHash": "${SOURCE_HASH}",\n  "cargoVendorHash": "${CARGO_HASH}"\n}\n`,
+      `{\n  "version": "${VERSION}",\n  "sourceHash": "${SOURCE_HASH}",\n  "cargoVendorHash": "${CARGO_HASH}"\n}\n`
     );
     runner.assertExhausted();
   } finally {
@@ -99,7 +99,7 @@ Deno.test("Rust package update preserves pin and latest-version error identity",
   const error = new Error("latest version unavailable");
   try {
     const updateEffect = updateGitHubRustPackagePin(
-      options(pinFilePath, runner, [], (): Effect.Effect<string, Error> => Effect.fail(error)),
+      options(pinFilePath, runner, [], (): Effect.Effect<string, Error> => Effect.fail(error))
     );
     const failureEffect = Effect.flip(updateEffect);
     const failure = await Effect.runPromise(failureEffect);

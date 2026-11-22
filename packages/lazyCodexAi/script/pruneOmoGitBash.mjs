@@ -139,13 +139,13 @@ function pruneRuntimeConfig(file) {
     file,
     source,
     /(?<prefix>function[ \t]+ensureOmoBuiltinMcpPolicies[ \t]*\([^)\r\n]*\)[ \t]*\{[\s\S]*?)^[ \t]*const[ \t]+gitBashEnabled[ \t]*=[^\r\n]*\r?\n/gmu,
-    "$<prefix>",
+    "$<prefix>"
   );
   source = replaceSingleRuntimePattern(
     file,
     source,
     /(?<prefix>function[ \t]+ensureOmoBuiltinMcpPolicies[ \t]*\([^)\r\n]*\)[ \t]*\{[\s\S]*?)^(?<indent>[ \t]*)(?<config>[A-Za-z_$][A-Za-z0-9_$]*)[ \t]*=[ \t]*ensurePluginMcpEnabled\([ \t]*\k<config>,[ \t]*"omo@sisyphuslabs",[ \t]*"git_bash",[ \t]*gitBashEnabled[ \t]*\);[ \t]*$/gmu,
-    "$<prefix>$<indent>$<config> = removeGitBashMcpConfig($<config>);",
+    "$<prefix>$<indent>$<config> = removeGitBashMcpConfig($<config>);"
   );
   source = replaceSingleRuntimePattern(
     file,
@@ -190,7 +190,7 @@ function tomlAssignmentKey(line) {
   }
   return null;
 }
-$&`,
+$&`
   );
   nodeFs.writeFileSync(file, source);
 }
@@ -211,7 +211,7 @@ for (const file of [
   "dist/cli-node/index.js",
   "dist/cli/index.js",
   "packages/omo-codex/scripts/install-dist/install-local.mjs",
-  "packages/omo-codex/plugin/components/bootstrap/dist/cli.js",
+  "packages/omo-codex/plugin/components/bootstrap/dist/cli.js"
 ]) {
   pruneRuntimeConfig(joinPath(packageRoot, file));
 }
@@ -223,7 +223,7 @@ removeArrayValues(
   rootPackage,
   "files",
   ["packages/omo-codex/plugin/components/git-bash/dist/cli.js", "packages/git-bash-mcp/dist"],
-  rootPackageFile,
+  rootPackageFile
 );
 writeJson(rootPackageFile, rootPackage, 2);
 
@@ -249,7 +249,7 @@ writeJson(mcpFile, mcp, "\t");
 const manifestFile = joinPath(pluginRoot, ".codex-plugin/plugin.json");
 const manifest = readJson(manifestFile);
 manifest.hooks = requiredStringArray(manifest, "hooks", manifestFile).filter(
-  (hook) => !hook.includes("git-bash"),
+  (hook) => !hook.includes("git-bash")
 );
 const pluginInterface = requiredRecord(manifest, "interface", manifestFile);
 if (typeof pluginInterface.longDescription !== "string") {

@@ -78,20 +78,20 @@ function packageUpdates(value: unknown): readonly MatrixItem[] {
       return [{ currentVersion, name, versionScheme }];
     })
     .toSorted((left: Readonly<MatrixItem>, right: Readonly<MatrixItem>): number =>
-      left.name.localeCompare(right.name),
+      left.name.localeCompare(right.name)
     );
 }
 
 async function discoverPackage(
   runner: CommandRunner,
-  filter: readonly string[] | null,
+  filter: readonly string[] | null
 ): Promise<readonly MatrixItem[]> {
   const config = JSON.stringify({
-    filter,
+    filter
   });
   const result = await run(runner, ["nix", "eval", "--json", "--impure", "--expr", NIX_EXPR], {
     capture: true,
-    env: { DISCOVERY_CONFIG: config },
+    env: { DISCOVERY_CONFIG: config }
   });
   return packageUpdates(JSON.parse(result.stdout));
 }

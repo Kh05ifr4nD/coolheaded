@@ -9,7 +9,7 @@ const buildCommand = [
   "build",
   `.#checks.${system}.denoDependencies`,
   "--no-link",
-  "--print-build-logs",
+  "--print-build-logs"
 ] as const;
 
 async function outputFixture(): Promise<{
@@ -26,7 +26,7 @@ async function outputFixture(): Promise<{
   const previousOutput = Deno.env.get("GITHUB_OUTPUT");
   await Deno.writeTextFile(
     lock,
-    JSON.stringify({ nodes: { example: { locked: { rev: "1234567890abcdef" } } } }),
+    JSON.stringify({ nodes: { example: { locked: { rev: "1234567890abcdef" } } } })
   );
   await Deno.writeTextFile(output, "");
   await Deno.writeTextFile(snapshot, 'hash = "sha256-old=";\n');
@@ -49,8 +49,8 @@ Deno.test("flake input update stops without later commands when lock is unchange
       { request: { command: ["nix", "flake", "update", "example"] }, result: success },
       {
         request: { command: ["git", "diff", "--quiet", "flake.lock"] },
-        result: success,
-      },
+        result: success
+      }
     ]);
     await runFlakeInput("example", runner, fixture.lock, fixture.snapshot);
     runner.assertExhausted();
@@ -69,33 +69,33 @@ Deno.test("flake input update repairs only a Deno snapshot mismatch before outpu
       { request: { command: ["nix", "flake", "update", "example"] }, result: success },
       {
         request: { command: ["git", "diff", "--quiet", "flake.lock"] },
-        result: { code: 1, stderr: "", stdout: "" },
+        result: { code: 1, stderr: "", stdout: "" }
       },
       {
         request: {
-          command: ["nix", "eval", "--impure", "--raw", "--expr", "builtins.currentSystem"],
+          command: ["nix", "eval", "--impure", "--raw", "--expr", "builtins.currentSystem"]
         },
-        result: { code: 0, stderr: "", stdout: system },
+        result: { code: 0, stderr: "", stdout: system }
       },
       {
         request: { command: buildCommand },
-        result: { code: 1, stderr: mismatch, stdout: "" },
+        result: { code: 1, stderr: mismatch, stdout: "" }
       },
       {
         request: { command: buildCommand },
-        result: { code: 1, stderr: mismatch, stdout: "" },
+        result: { code: 1, stderr: mismatch, stdout: "" }
       },
       {
         request: { command: ["git", "diff", "--name-only"] },
-        result: { code: 0, stderr: "", stdout: "flake.lock\nflake/denoDependencies.nix\n" },
-      },
+        result: { code: 0, stderr: "", stdout: "flake.lock\nflake/denoDependencies.nix\n" }
+      }
     ]);
     await runFlakeInput("example", runner, fixture.lock, fixture.snapshot);
     runner.assertExhausted();
     assertEquals(await Deno.readTextFile(fixture.snapshot), 'hash = "sha256-newSnapshotHash=";\n');
     assertEquals(
       await Deno.readTextFile(fixture.output),
-      "updated=true\nnewVersion=12345678\nchangelog=\n",
+      "updated=true\nnewVersion=12345678\nchangelog=\n"
     );
   } finally {
     restoreOutput(fixture.previousOutput);
@@ -110,18 +110,18 @@ Deno.test("flake input update rejects unrelated snapshot failures before outputs
       { request: { command: ["nix", "flake", "update", "example"] }, result: success },
       {
         request: { command: ["git", "diff", "--quiet", "flake.lock"] },
-        result: { code: 1, stderr: "", stdout: "" },
+        result: { code: 1, stderr: "", stdout: "" }
       },
       {
         request: {
-          command: ["nix", "eval", "--impure", "--raw", "--expr", "builtins.currentSystem"],
+          command: ["nix", "eval", "--impure", "--raw", "--expr", "builtins.currentSystem"]
         },
-        result: { code: 0, stderr: "", stdout: system },
+        result: { code: 0, stderr: "", stdout: system }
       },
       {
         request: { command: buildCommand },
-        result: { code: 1, stderr: "unrelated failure", stdout: "" },
-      },
+        result: { code: 1, stderr: "unrelated failure", stdout: "" }
+      }
     ]);
     await assertRejects(() => runFlakeInput("example", runner, fixture.lock, fixture.snapshot));
     runner.assertExhausted();

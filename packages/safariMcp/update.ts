@@ -11,6 +11,6 @@ runUpdateScript(import.meta.url, (args, runner) =>
     jsonClient: fetchJsonClient,
     packageName: "safari-mcp",
     runner,
-    systems: parsePackageSystems(systems),
-  }),
+    systems: parsePackageSystems(systems)
+  })
 );

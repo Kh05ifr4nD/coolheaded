@@ -5,7 +5,7 @@ import type {
   HttpResponse,
   JsonClient,
   JsonClientError,
-  JsonResponse,
+  JsonResponse
 } from "coolheaded/core/httpClient.ts";
 import type { Effect } from "effect";
 import { assertEquals } from "@jsr/std__assert";
@@ -48,8 +48,8 @@ function strictHttpClient(expected: readonly ExpectedHttpRequest[]): StrictHttpC
         }
         assertEquals(request, next.request);
         return next.effect();
-      },
-    },
+      }
+    }
   };
 }
 
@@ -70,8 +70,8 @@ function strictJsonClient(expected: readonly ExpectedJsonRequest[]): StrictJsonC
         }
         assertEquals(request, next.request);
         return next.effect();
-      },
-    },
+      }
+    }
   };
 }
 

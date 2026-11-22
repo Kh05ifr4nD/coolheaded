@@ -2,7 +2,7 @@
 
 import {
   DENO_SNAPSHOT_HASH_FILE_PATH,
-  updateDenoSnapshotHash,
+  updateDenoSnapshotHash
 } from "coolheaded/repo/denoSnapshot.ts";
 import {
   assertOnlyChangedFiles,
@@ -12,7 +12,7 @@ import {
   isRecord,
   readJson,
   run,
-  writeOutput,
+  writeOutput
 } from "coolheadedCi/process.ts";
 import type { CommandRunner } from "coolheaded/core/commandRunner.ts";
 import { denoCommandRunner } from "coolheaded/core/denoCommandRunner.ts";
@@ -34,7 +34,7 @@ function directSpecifierVersions(lock: unknown): Readonly<Record<string, string>
 
 function versionChanges(
   before: Readonly<Record<string, string>>,
-  after: Readonly<Record<string, string>>,
+  after: Readonly<Record<string, string>>
 ): string {
   const changes: string[] = [];
   for (const [specifier, version] of Object.entries(after)) {
@@ -50,7 +50,7 @@ function versionChanges(
 async function runDenoDependencyUpdate(
   runner: CommandRunner,
   lockFilePath = "deno.lock",
-  snapshotFilePath = DENO_SNAPSHOT_HASH_FILE_PATH,
+  snapshotFilePath = DENO_SNAPSHOT_HASH_FILE_PATH
 ): Promise<void> {
   const before = directSpecifierVersions(await readJson(lockFilePath));
   await run(runner, ["deno", "install", "--frozen=false"], { capture: false });
@@ -64,7 +64,7 @@ async function runDenoDependencyUpdate(
 
   assertOnlyChangedFiles(
     await changedFiles(runner),
-    (file: string): boolean => file === lockFilePath || file === snapshotFilePath,
+    (file: string): boolean => file === lockFilePath || file === snapshotFilePath
   );
   const after = directSpecifierVersions(await readJson(lockFilePath));
   await writeOutput("updated", "true");

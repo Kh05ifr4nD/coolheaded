@@ -38,7 +38,7 @@ function requiredToolPath(environmentVariable: string): string {
 async function runGit(
   repositoryRoot: string,
   args: readonly string[],
-  input?: string,
+  input?: string
 ): Promise<string> {
   const process = new Deno.Command(requiredToolPath("COOLHEADED_GIT"), {
     args: [...args],
@@ -47,7 +47,7 @@ async function runGit(
     env: { PATH: Deno.env.get("PATH") ?? "" },
     stderr: "piped",
     stdin: input === undefined ? "null" : "piped",
-    stdout: "piped",
+    stdout: "piped"
   }).spawn();
   if (input !== undefined) {
     const writer = process.stdin.getWriter();
@@ -66,7 +66,7 @@ async function runGit(
 async function runGitBytes(
   repositoryRoot: string,
   args: readonly string[],
-  input: readonly number[],
+  input: readonly number[]
 ): Promise<void> {
   const process = new Deno.Command(requiredToolPath("COOLHEADED_GIT"), {
     args: [...args],
@@ -75,7 +75,7 @@ async function runGitBytes(
     env: { PATH: Deno.env.get("PATH") ?? "" },
     stderr: "piped",
     stdin: "piped",
-    stdout: "piped",
+    stdout: "piped"
   }).spawn();
   const writer = process.stdin.getWriter();
   await writer.write(Uint8Array.from(input));
@@ -88,7 +88,7 @@ async function runGitBytes(
 
 async function writeRepositoryFixture(
   repositoryRoot: string,
-  fixture: RepositoryFixture = {},
+  fixture: RepositoryFixture = {}
 ): Promise<void> {
   const pathFields = fixture.pathFields ?? "";
   const requiredFields = fixture.requiredFields ?? "";
@@ -111,7 +111,7 @@ ${pathFields}
 	"layout.cue"!: #RegularFile
 ${requiredFields}
 }
-`,
+`
   );
   await Promise.all(
     (fixture.files ?? []).map(async (file: FixtureFile): Promise<void> => {
@@ -119,14 +119,14 @@ ${requiredFields}
       const parent = join(path, "..");
       await Deno.mkdir(parent, { recursive: true });
       await Deno.writeTextFile(path, file.contents);
-    }),
+    })
   );
   await runGit(repositoryRoot, ["add", ".gitignore", "layout.cue"]);
 }
 
 async function runLayoutChecker(
   repositoryRoot: string,
-  cuePath: string,
+  cuePath: string
 ): Promise<LayoutCheckerOutput> {
   const gitPath = requiredToolPath("COOLHEADED_GIT");
   const repositoryAccessPath = await Deno.realPath(repositoryRoot);
@@ -140,7 +140,7 @@ async function runLayoutChecker(
       `--allow-read=${repositoryRoot},${repositoryAccessPath},${temporaryRoot},${temporaryAccessRoot},${cuePath},${gitPath},${Deno.execPath()}`,
       `--allow-run=${cuePath},${gitPath}`,
       `--allow-write=${temporaryRoot},${temporaryAccessRoot}`,
-      join(REPOSITORY_ROOT_PATH, "lib/ts/repo/layout.ts"),
+      join(REPOSITORY_ROOT_PATH, "lib/ts/repo/layout.ts")
     ],
     clearEnv: true,
     cwd: repositoryRoot,
@@ -148,21 +148,21 @@ async function runLayoutChecker(
       COOLHEADED_CUE: cuePath,
       COOLHEADED_GIT: gitPath,
       PATH: Deno.env.get("PATH") ?? "",
-      TMPDIR: temporaryRoot,
+      TMPDIR: temporaryRoot
     },
     stderr: "piped",
-    stdout: "piped",
+    stdout: "piped"
   }).output();
 
   return {
     stderr: new globalThis.TextDecoder().decode(output.stderr),
-    success: output.success,
+    success: output.success
   };
 }
 
 async function runLayoutErrorProbe(
   repositoryRoot: string,
-  cuePath: string,
+  cuePath: string
 ): Promise<LayoutProbeResult> {
   const probePath = await Deno.makeTempFile({ prefix: "coolheaded-layout-probe-" });
   try {
@@ -172,7 +172,7 @@ async function runLayoutErrorProbe(
     const temporaryAccessRoot = dirname(await Deno.realPath(probePath));
     const checkModule = new globalThis.URL(
       "lib/ts/repo/layout/check.ts",
-      new globalThis.URL(`file://${REPOSITORY_ROOT_PATH}/`),
+      new globalThis.URL(`file://${REPOSITORY_ROOT_PATH}/`)
     ).href;
     await Deno.writeTextFile(
       probePath,
@@ -187,7 +187,7 @@ try {
   }
   throw error;
 }
-`,
+`
     );
     const output = await new Deno.Command(Deno.execPath(), {
       args: [
@@ -199,7 +199,7 @@ try {
         `--allow-run=${cuePath},${gitPath}`,
         `--allow-write=${temporaryRoot},${temporaryAccessRoot}`,
         probePath,
-        repositoryRoot,
+        repositoryRoot
       ],
       clearEnv: true,
       cwd: repositoryRoot,
@@ -207,10 +207,10 @@ try {
         COOLHEADED_CUE: cuePath,
         COOLHEADED_GIT: gitPath,
         PATH: Deno.env.get("PATH") ?? "",
-        TMPDIR: temporaryRoot,
+        TMPDIR: temporaryRoot
       },
       stderr: "piped",
-      stdout: "piped",
+      stdout: "piped"
     }).output();
     if (output.code !== PROBE_ERROR_EXIT_CODE) {
       throw new Error(new globalThis.TextDecoder().decode(output.stderr).trim());
@@ -226,7 +226,7 @@ try {
 }
 
 async function withTemporaryDirectory<Success>(
-  useDirectory: (directoryPath: string) => Promise<Success>,
+  useDirectory: (directoryPath: string) => Promise<Success>
 ): Promise<Success> {
   const directoryPath = await Deno.makeTempDir({ prefix: "coolheaded-layout-test-" });
   try {
@@ -245,6 +245,6 @@ export {
   runGit,
   runGitBytes,
   withTemporaryDirectory,
-  writeRepositoryFixture,
+  writeRepositoryFixture
 };
 export type { RepositoryFixture };

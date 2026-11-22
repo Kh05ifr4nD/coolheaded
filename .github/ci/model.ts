@@ -28,7 +28,7 @@ function activatedCheck(name: string, runner: string, system: string): Activated
     kind: activatedCheckKind(name),
     name,
     runner,
-    system,
+    system
   };
 }
 

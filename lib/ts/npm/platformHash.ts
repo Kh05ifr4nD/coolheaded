@@ -11,14 +11,14 @@ type NpmPlatformSuffixes<System extends string = string> = Readonly<Record<Syste
 function entryHashEffect(
   metadata: NpmPackageMetadata,
   version: string,
-  entry: readonly [string, string],
+  entry: readonly [string, string]
 ): Effect.Effect<readonly [string, string], InvalidNpmMetadataError> {
   const [system, suffix] = entry;
   const platformVersion = npmPlatformPackageVersion(version, suffix);
 
   return Effect.map(
     npmVersionIntegrity(metadata, platformVersion),
-    (integrity: string): readonly [string, string] => [system, integrity],
+    (integrity: string): readonly [string, string] => [system, integrity]
   );
 }
 
@@ -44,30 +44,30 @@ function suffixEntries(suffixes: NpmPlatformSuffixes): readonly (readonly [strin
 function npmHashesForSystems(
   metadata: NpmPackageMetadata,
   version: string,
-  suffixes: NpmPlatformSuffixes,
+  suffixes: NpmPlatformSuffixes
 ): Effect.Effect<Record<string, string>, InvalidNpmMetadataError> {
   return Effect.all(
     suffixEntries(suffixes).map(
       (
-        entry: readonly [string, string],
+        entry: readonly [string, string]
       ): Effect.Effect<readonly [string, string], InvalidNpmMetadataError> =>
-        entryHashEffect(metadata, version, entry),
-    ),
+        entryHashEffect(metadata, version, entry)
+    )
   ).pipe(Effect.map(entriesToHashes));
 }
 
 function npmHashConfigForSystems(
   metadata: NpmPackageMetadata,
   version: string,
-  suffixes: NpmPlatformSuffixes,
+  suffixes: NpmPlatformSuffixes
 ): Effect.Effect<PackageHashConfig, InvalidNpmMetadataError | InvalidPackageHashConfigError> {
   return Effect.flatMap(
     npmHashesForSystems(metadata, version, suffixes),
     (platformPackageHashes: Readonly<Record<string, string>>) =>
       packageHashConfig({
         platformPackageHashes,
-        version,
-      }),
+        version
+      })
   );
 }
 

@@ -13,19 +13,19 @@ const DEPENDENCY_FIELDS = [
   "dependencies",
   "devDependencies",
   "optionalDependencies",
-  "peerDependencies",
+  "peerDependencies"
 ] as const satisfies readonly string[];
 const RESOLVED_DEPENDENCY_FIELDS: readonly string[] = [
   "dependencies",
   "devDependencies",
-  "optionalDependencies",
+  "optionalDependencies"
 ];
 
 const SUPPORTED_NPM_PLATFORMS: readonly NpmPlatform[] = SYSTEM_TARGETS.map(
   ({ npmReleaseTarget }): NpmPlatform => {
     const [os = "", cpu = ""] = npmReleaseTarget.split("-");
     return { cpu, os };
-  },
+  }
 );
 
 function isRecord(value: unknown): value is JsonRecord {
@@ -54,7 +54,7 @@ function supportsPlatform(entry: JsonRecord, platform: NpmPlatform): boolean {
 
 function supportsAnyPlatform(entry: JsonRecord): boolean {
   return SUPPORTED_NPM_PLATFORMS.some((platform: NpmPlatform): boolean =>
-    supportsPlatform(entry, platform),
+    supportsPlatform(entry, platform)
   );
 }
 
@@ -71,7 +71,7 @@ function dependencyNames(entry: JsonRecord): readonly string[] {
 }
 
 function reachableEntries(
-  entries: readonly (readonly [string, JsonRecord])[],
+  entries: readonly (readonly [string, JsonRecord])[]
 ): ReadonlyMap<string, JsonRecord> {
   const referenced = new Set<string>();
   let kept = new Map<string, JsonRecord>();
@@ -81,8 +81,8 @@ function reachableEntries(
     kept = new Map(
       entries.filter(
         ([path, entry]: readonly [string, JsonRecord]): boolean =>
-          path === "" || entry["inBundle"] === true || referenced.has(packageName(path)),
-      ),
+          path === "" || entry["inBundle"] === true || referenced.has(packageName(path))
+      )
     );
     for (const entry of kept.values()) {
       for (const name of dependencyNames(entry)) {
@@ -107,7 +107,7 @@ function ancestorPaths(path: string): readonly string[] {
 
 function resolvableDependency(paths: readonly string[], path: string, name: string): boolean {
   return ancestorPaths(path).some((base: string): boolean =>
-    paths.includes(`${base}${base === "" ? "" : "/"}${NODE_MODULES_SEGMENT}${name}`),
+    paths.includes(`${base}${base === "" ? "" : "/"}${NODE_MODULES_SEGMENT}${name}`)
   );
 }
 
@@ -118,8 +118,8 @@ function supportedLockEntry(paths: readonly string[], path: string, entry: JsonR
     if (isRecord(dependencies)) {
       result[field] = Object.fromEntries(
         Object.entries(dependencies).filter(([name]: readonly [string, unknown]): boolean =>
-          resolvableDependency(paths, path, name),
-        ),
+          resolvableDependency(paths, path, name)
+        )
       );
     }
   }
@@ -133,15 +133,15 @@ function supportedPackageLock(packageLockText: string): string {
   }
   const platformEntries = Object.entries(packageLock["packages"]).filter(
     (pair: readonly [string, unknown]): pair is [string, JsonRecord] =>
-      isRecord(pair[1]) && supportsAnyPlatform(pair[1]),
+      isRecord(pair[1]) && supportsAnyPlatform(pair[1])
   );
   const kept = reachableEntries(platformEntries);
   const keptPaths = [...kept.keys()];
   const packages = Object.fromEntries(
     [...kept].map(([path, entry]: readonly [string, JsonRecord]): readonly [string, JsonRecord] => [
       path,
-      supportedLockEntry(keptPaths, path, entry),
-    ]),
+      supportedLockEntry(keptPaths, path, entry)
+    ])
   );
   return `${JSON.stringify({ ...packageLock, packages }, undefined, 2)}\n`;
 }

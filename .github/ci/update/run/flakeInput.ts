@@ -4,7 +4,7 @@ import {
   DENO_SNAPSHOT_HASH_FILE_PATH,
   buildDenoSnapshotCheck,
   isDenoSnapshotHashMismatch,
-  updateDenoSnapshotHash,
+  updateDenoSnapshotHash
 } from "coolheaded/repo/denoSnapshot.ts";
 import {
   assertOnlyChangedFiles,
@@ -14,7 +14,7 @@ import {
   isRecord,
   readJson,
   run,
-  writeOutput,
+  writeOutput
 } from "coolheadedCi/process.ts";
 import type { CommandRunner } from "coolheaded/core/commandRunner.ts";
 import { denoCommandRunner } from "coolheaded/core/denoCommandRunner.ts";
@@ -38,7 +38,7 @@ async function lockedRevision(name: string, lockFilePath: string): Promise<strin
 async function repairDenoSnapshotHashIfNeeded(
   system: string,
   runner: CommandRunner,
-  snapshotFilePath: string,
+  snapshotFilePath: string
 ): Promise<void> {
   const result = await buildDenoSnapshotCheck(system, runner);
 
@@ -58,7 +58,7 @@ async function runFlakeInput(
   name: string,
   runner: CommandRunner,
   lockFilePath = "flake.lock",
-  snapshotFilePath = DENO_SNAPSHOT_HASH_FILE_PATH,
+  snapshotFilePath = DENO_SNAPSHOT_HASH_FILE_PATH
 ): Promise<void> {
   await run(runner, ["nix", "flake", "update", name], { capture: false });
 
@@ -71,7 +71,7 @@ async function runFlakeInput(
 
   assertOnlyChangedFiles(
     await changedFiles(runner),
-    (file: string): boolean => file === "flake.lock" || file === DENO_SNAPSHOT_HASH_FILE_PATH,
+    (file: string): boolean => file === "flake.lock" || file === DENO_SNAPSHOT_HASH_FILE_PATH
   );
   await writeOutput("updated", "true");
   await writeOutput("newVersion", await lockedRevision(name, lockFilePath));

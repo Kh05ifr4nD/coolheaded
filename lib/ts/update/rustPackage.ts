@@ -34,7 +34,7 @@ function cargoVendorHashPrefetchExpression(
   source: GitHubRustPackage,
   repositoryRootPath: string,
   version: string,
-  hash: string,
+  hash: string
 ): string {
   return `
 let
@@ -57,7 +57,7 @@ pkgs.rustPlatform.buildRustPackage {
 
 function parseCargoVendorHash(
   packageName: string,
-  error: Readonly<Error>,
+  error: Readonly<Error>
 ): Effect.Effect<string, Error> {
   const match = /got:\s+(?<vendorHash>sha256-[A-Za-z0-9+/=]+)/u.exec(error.message);
   if (match?.groups?.["vendorHash"] !== undefined) {
@@ -72,7 +72,7 @@ function cargoVendorHash(
   repositoryRootPath: string,
   version: string,
   hash: string,
-  runner: CommandRunner,
+  runner: CommandRunner
 ): Effect.Effect<string, Error> {
   return Effect.tryPromise({
     catch(error: unknown): Error {
@@ -86,9 +86,9 @@ function cargoVendorHash(
           "--impure",
           "--no-link",
           "--expr",
-          cargoVendorHashPrefetchExpression(source, repositoryRootPath, version, hash),
+          cargoVendorHashPrefetchExpression(source, repositoryRootPath, version, hash)
         ],
-        cwd: repositoryRootPath,
+        cwd: repositoryRootPath
       });
 
       if (output.code === 0) {
@@ -96,7 +96,7 @@ function cargoVendorHash(
       }
 
       return await Effect.runPromise(parseCargoVendorHash(source.pname, new Error(output.stderr)));
-    },
+    }
   });
 }
 
@@ -115,16 +115,16 @@ function updateGitHubRustPackagePin(options: GitHubRustPackageUpdate): Effect.Ef
               options.repositoryRootPath,
               version,
               hash,
-              options.runner,
+              options.runner
             ),
             (cargoVendorHashValue: string): Effect.Effect<void> =>
               writePinJson(options.pinFilePath, {
                 cargoVendorHash: cargoVendorHashValue,
                 sourceHash: hash,
-                version,
-              }),
-          ),
-      ),
+                version
+              })
+          )
+      )
   );
 }
 

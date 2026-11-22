@@ -5,7 +5,7 @@ import {
   compareCalendarVersions,
   compareVersions,
   isSemver,
-  versionSchemeFromName,
+  versionSchemeFromName
 } from "coolheaded/core/version.ts";
 import { describe, it } from "@jsr/std__testing/bdd";
 import fc from "fast-check";
@@ -16,12 +16,12 @@ const coreVersion = fc
   .tuple(versionPart, versionPart, versionPart)
   .map(
     ([major, minor, patch]: readonly [number, number, number]): string =>
-      `${major}.${minor}.${patch}`,
+      `${major}.${minor}.${patch}`
   );
 const buildIdentifier = fc.stringMatching(/^[0-9A-Za-z-]{1,16}$/u);
 const numericPrereleaseIdentifier = fc.integer({ max: MAX_VERSION_PART, min: 0 }).map(String);
 const nonnumericPrereleaseIdentifier = fc.stringMatching(
-  /^(?:[A-Za-z-][0-9A-Za-z-]{0,15}|[0-9][0-9A-Za-z-]{0,14}[A-Za-z-][0-9A-Za-z-]*)$/u,
+  /^(?:[A-Za-z-][0-9A-Za-z-]{0,15}|[0-9][0-9A-Za-z-]{0,14}[A-Za-z-][0-9A-Za-z-]*)$/u
 );
 const prereleaseIdentifier = fc.oneof(numericPrereleaseIdentifier, nonnumericPrereleaseIdentifier);
 const prerelease = fc
@@ -33,12 +33,12 @@ const buildMetadata = fc
 const precedenceVersion = fc
   .tuple(coreVersion, fc.option(prerelease, { nil: undefined }))
   .map(([core, prereleaseValue]: readonly [string, string | undefined]): string =>
-    prereleaseValue === undefined ? core : `${core}-${prereleaseValue}`,
+    prereleaseValue === undefined ? core : `${core}-${prereleaseValue}`
   );
 const fullVersion = fc
   .tuple(precedenceVersion, fc.option(buildMetadata, { nil: undefined }))
   .map(([precedence, build]: readonly [string, string | undefined]): string =>
-    build === undefined ? precedence : `${precedence}+${build}`,
+    build === undefined ? precedence : `${precedence}+${build}`
   );
 
 describe("SemVer", (): void => {
@@ -48,7 +48,7 @@ describe("SemVer", (): void => {
       "1.0.0-alpha",
       "1.0.0-alpha.1",
       "1.0.0+build.1",
-      "1.0.0-alpha+build.1",
+      "1.0.0-alpha+build.1"
     ]) {
       assertEquals(isSemver(version), true);
     }
@@ -71,7 +71,7 @@ describe("SemVer", (): void => {
       "1.0.0-alpha_1",
       "1.0.0+",
       "1.0.0+build+extra",
-      "v1.0.0",
+      "v1.0.0"
     ]) {
       assertEquals(isSemver(version), false);
     }
@@ -86,7 +86,7 @@ describe("SemVer", (): void => {
       "1.0.0-beta.2",
       "1.0.0-beta.11",
       "1.0.0-rc.1",
-      "1.0.0",
+      "1.0.0"
     ] as const;
 
     for (const [index, version] of ascendingVersions.entries()) {
@@ -132,14 +132,14 @@ describe("calendar versions", (): void => {
         compareCalendarVersions("2026.02.29", "2026.07.04");
       },
       TypeError,
-      "Invalid calendar version: 2026.02.29",
+      "Invalid calendar version: 2026.02.29"
     );
     assertThrows(
       (): void => {
         compareCalendarVersions("2026.07.04", "2026.02.29");
       },
       TypeError,
-      "Invalid calendar version: 2026.02.29",
+      "Invalid calendar version: 2026.02.29"
     );
   });
 });
@@ -154,7 +154,7 @@ Deno.test("version schemes resolve by their stable names", (): void => {
       versionSchemeFromName("unknown");
     },
     TypeError,
-    "Unknown version scheme: unknown",
+    "Unknown version scheme: unknown"
   );
 });
 
@@ -164,7 +164,7 @@ Deno.test("version comparison rejects invalid SemVer", (): void => {
       compareVersions("1.0.0-", "1.0.0");
     },
     TypeError,
-    "Invalid SemVer: 1.0.0-",
+    "Invalid SemVer: 1.0.0-"
   );
 });
 
@@ -174,7 +174,7 @@ Deno.test(validName, (): void => {
     defineReplayTarget("tests/pure/core/version.ts", validName),
     fc.property(fullVersion, (version: string): void => {
       assertEquals(isSemver(version), true);
-    }),
+    })
   );
 });
 
@@ -186,9 +186,9 @@ Deno.test(symmetryName, (): void => {
       assertEquals(compareVersions(left, left), 0);
       assertEquals(
         Math.sign(compareVersions(left, right)),
-        -Math.sign(compareVersions(right, left)),
+        -Math.sign(compareVersions(right, left))
       );
-    }),
+    })
   );
 });
 
@@ -207,8 +207,8 @@ Deno.test(transitiveName, (): void => {
         if (compareVersions(left, middle) >= 0 && compareVersions(middle, right) >= 0) {
           assertEquals(compareVersions(left, right) >= 0, true);
         }
-      },
-    ),
+      }
+    )
   );
 });
 
@@ -222,8 +222,8 @@ Deno.test(buildName, (): void => {
       buildMetadata,
       (version: string, leftBuild: string, rightBuild: string): void => {
         assertEquals(compareVersions(`${version}+${leftBuild}`, `${version}+${rightBuild}`), 0);
-      },
-    ),
+      }
+    )
   );
 });
 
@@ -237,7 +237,7 @@ Deno.test(formatName, (): void => {
       assertEquals(isSemver(formatted), true);
       assertEquals(compareVersions(formatted, formatted), 0);
       assertEquals(compareVersions(formatted, version), 0);
-    }),
+    })
   );
 });
 
@@ -250,7 +250,7 @@ Deno.test(prereleaseName, (): void => {
       prereleaseIdentifier,
       (version: string, prereleaseValue: string): void => {
         assertEquals(compareVersions(`${version}-${prereleaseValue}`, version) < 0, true);
-      },
-    ),
+      }
+    )
   );
 });

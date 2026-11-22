@@ -1,13 +1,13 @@
 import {
   ChecksumManifestError,
-  checksumManifestUpdateProgram,
+  checksumManifestUpdateProgram
 } from "coolheaded/update/checksumManifest.ts";
 import type { HttpRequest, HttpResponse } from "coolheaded/core/httpClient.ts";
 import { assertEquals, assertInstanceOf } from "@jsr/std__assert";
 import {
   releaseHashConfig,
   releaseHashUpdateProgram,
-  releaseUrlsFromTargets,
+  releaseUrlsFromTargets
 } from "coolheaded/update/release.ts";
 import { Effect } from "effect";
 import { InvalidPackageHashConfigError } from "coolheaded/pin/packageHashConfig.ts";
@@ -22,12 +22,12 @@ const MANIFEST_URL = "https://example.test/SHA256SUMS";
 const INITIAL_PIN = '{"version":"0.0.0"}\n';
 const DECLARATIONS = [
   { "aarch64-darwin": "darwin.tar.gz" },
-  { "aarch64-linux": "linux-arm.tar.gz", "x86_64-linux": "linux-x64.tar.gz" },
+  { "aarch64-linux": "linux-arm.tar.gz", "x86_64-linux": "linux-x64.tar.gz" }
 ] as const;
 
 function plan(
   url: string,
-  body: readonly number[],
+  body: readonly number[]
 ): Parameters<typeof strictHttpClient>[0][number] {
   const request: HttpRequest = { headers: {}, method: "GET", timeoutMs: REQUEST_TIMEOUT_MS, url };
   const response: HttpResponse = {
@@ -35,7 +35,7 @@ function plan(
     headers: {},
     status: HTTP_OK,
     statusText: "OK",
-    url,
+    url
   };
   return { effect: () => Effect.succeed(response), request };
 }
@@ -67,8 +67,8 @@ for (const declaration of DECLARATIONS) {
           latestVersion: () => Effect.succeed(VERSION),
           pinFilePath,
           source: "sha256Digest",
-          urlsForVersion: () => urls,
-        }),
+          urlsForVersion: () => urls
+        })
       );
       const pin: unknown = JSON.parse(await Deno.readTextFile(pinFilePath));
       assertEquals(pin, expectedPin);
@@ -82,7 +82,7 @@ for (const declaration of DECLARATIONS) {
       .join("\n");
     const http = strictHttpClient([
       plan(MANIFEST_URL, [...new globalThis.TextEncoder().encode(manifest)]),
-      ...Object.values(declaration).map((asset) => plan(`https://example.test/${asset}`, [])),
+      ...Object.values(declaration).map((asset) => plan(`https://example.test/${asset}`, []))
     ]);
     await withPin(async (pinFilePath) => {
       await Effect.runPromise(
@@ -93,8 +93,8 @@ for (const declaration of DECLARATIONS) {
           httpClient: http.client,
           latestVersion: () => Effect.succeed(VERSION),
           manifestUrl: () => MANIFEST_URL,
-          pinFilePath,
-        }),
+          pinFilePath
+        })
       );
       const pin: unknown = JSON.parse(await Deno.readTextFile(pinFilePath));
       assertEquals(pin, expectedPin);
@@ -106,7 +106,7 @@ for (const declaration of DECLARATIONS) {
 Deno.test("release hash configuration rejects an empty platform declaration", async () => {
   const http = strictHttpClient([]);
   const error = await Effect.runPromise(
-    Effect.flip(releaseHashConfig(VERSION, {}, "sha256Digest", http.client)),
+    Effect.flip(releaseHashConfig(VERSION, {}, "sha256Digest", http.client))
   );
   assertInstanceOf(error, InvalidPackageHashConfigError);
   http.assertExhausted();
@@ -124,9 +124,9 @@ Deno.test("manifest update preserves pin for an empty platform declaration", asy
           httpClient: http.client,
           latestVersion: () => Effect.succeed(VERSION),
           manifestUrl: () => MANIFEST_URL,
-          pinFilePath,
-        }),
-      ),
+          pinFilePath
+        })
+      )
     );
     assertInstanceOf(error, InvalidPackageHashConfigError);
     assertEquals(await Deno.readTextFile(pinFilePath), INITIAL_PIN);
@@ -137,7 +137,7 @@ Deno.test("manifest update preserves pin for an empty platform declaration", asy
 Deno.test("sparse manifest update preserves pin when declared asset is missing", async () => {
   const manifest = `${EMPTY_HEX}  unrelated.tar.gz`;
   const http = strictHttpClient([
-    plan(MANIFEST_URL, [...new globalThis.TextEncoder().encode(manifest)]),
+    plan(MANIFEST_URL, [...new globalThis.TextEncoder().encode(manifest)])
   ]);
   await withPin(async (pinFilePath) => {
     const error = await Effect.runPromise(
@@ -149,14 +149,14 @@ Deno.test("sparse manifest update preserves pin when declared asset is missing",
           httpClient: http.client,
           latestVersion: () => Effect.succeed(VERSION),
           manifestUrl: () => MANIFEST_URL,
-          pinFilePath,
-        }),
-      ),
+          pinFilePath
+        })
+      )
     );
     assertInstanceOf(error, ChecksumManifestError);
     assertEquals(
       { asset: error.asset, kind: error.kind },
-      { asset: "darwin.tar.gz", kind: "missing" },
+      { asset: "darwin.tar.gz", kind: "missing" }
     );
     assertEquals(await Deno.readTextFile(pinFilePath), INITIAL_PIN);
     http.assertExhausted();

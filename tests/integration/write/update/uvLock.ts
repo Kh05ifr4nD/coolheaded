@@ -4,7 +4,7 @@ import {
   assertEquals,
   assertInstanceOf,
   assertRejects,
-  assertStrictEquals,
+  assertStrictEquals
 } from "@jsr/std__assert";
 import { Effect } from "effect";
 import { FakeCommandRunner } from "coolheadedTestSupport/commandRunner.ts";
@@ -24,7 +24,7 @@ const UV_LOCK = "version = 1\n";
 const PIN_SENTINEL = new Uint8Array([0, NON_TEXT_BYTE, 1]);
 const LOCK_SENTINEL = new Uint8Array([2, SECOND_NON_TEXT_BYTE, 3]);
 const ENVIRONMENTS = SYSTEM_TARGETS.map(({ pythonEnvironmentMarker }) =>
-  JSON.stringify(pythonEnvironmentMarker),
+  JSON.stringify(pythonEnvironmentMarker)
 ).join(", ");
 const PYPROJECT = `[project]
 name = "coolheaded-lock-input"
@@ -47,7 +47,7 @@ function dependencies(
   directory: string,
   runner: Readonly<CommandRunner>,
   latestVersion: () => Effect.Effect<string, Error> = (): Effect.Effect<string, Error> =>
-    Effect.succeed(VERSION),
+    Effect.succeed(VERSION)
 ): Parameters<typeof updateVersionedNixpkgsPythonUvLock>[0] {
   return {
     args: [],
@@ -57,12 +57,12 @@ function dependencies(
       dependencies: [`tool==${version}`],
       extraBuildDependencies: { tool: ["setuptools"] },
       optionalDependencies: { dev: ["pytest"], docs: ["mkdocs"] },
-      pythonMinorVersion,
+      pythonMinorVersion
     }),
     pythonPackage: "python313",
     repositoryRootPath: directory,
     runner,
-    uvLockFilePath: `${directory}/uv.lock`,
+    uvLockFilePath: `${directory}/uv.lock`
   };
 }
 
@@ -87,10 +87,10 @@ Deno.test("UV lock update writes exact generated project, lock, and pin", async 
           "--inputs-from",
           directory,
           "--raw",
-          "nixpkgs#python313.pythonVersion",
-        ],
+          "nixpkgs#python313.pythonVersion"
+        ]
       },
-      result: { ...COMMAND_OK, stdout: "3.13\n" },
+      result: { ...COMMAND_OK, stdout: "3.13\n" }
     },
     {
       assertRequest(request): void {
@@ -109,13 +109,13 @@ Deno.test("UV lock update writes exact generated project, lock, and pin", async 
             "lock",
             "--project",
             workspacePath,
-            "--no-progress",
+            "--no-progress"
           ],
-          cwd: directory,
+          cwd: directory
         });
       },
       effect: prepareUvLock,
-      result: COMMAND_OK,
+      result: COMMAND_OK
     },
     {
       assertRequest(request): void {
@@ -126,14 +126,14 @@ Deno.test("UV lock update writes exact generated project, lock, and pin", async 
         assertEquals(request, { command: ["cat", uvLockFilePath] });
         assertEquals(uvLockFilePath.endsWith("/uv.lock"), true);
       },
-      result: { ...COMMAND_OK, stdout: UV_LOCK },
-    },
+      result: { ...COMMAND_OK, stdout: UV_LOCK }
+    }
   ]);
   try {
     await Effect.runPromise(updateVersionedNixpkgsPythonUvLock(dependencies(directory, runner)));
     assertEquals(
       await Deno.readTextFile(`${directory}/pin.json`),
-      `{\n  "version": "${VERSION}"\n}\n`,
+      `{\n  "version": "${VERSION}"\n}\n`
     );
     assertEquals(await Deno.readTextFile(`${directory}/uv.lock`), UV_LOCK);
     const uvRequest = runner.calls().at(1);
@@ -161,11 +161,11 @@ Deno.test("UV lock update preserves targets after Python query failure", async (
           "--inputs-from",
           directory,
           "--raw",
-          "nixpkgs#python313.pythonVersion",
-        ],
+          "nixpkgs#python313.pythonVersion"
+        ]
       },
-      result: failureResult,
-    },
+      result: failureResult
+    }
   ]);
   try {
     const update = updateVersionedNixpkgsPythonUvLock(dependencies(directory, runner));
@@ -190,14 +190,14 @@ Deno.test("UV lock update preserves latest JSON error identity and targets", asy
     headers: {},
     method: "GET",
     timeoutMs: REQUEST_TIMEOUT_MS,
-    url: "https://example.test/latest",
+    url: "https://example.test/latest"
   };
   const response: HttpResponse = {
     body: new Uint8Array(),
     headers: {},
     status: HTTP_OK,
     statusText: "OK",
-    url: request.url,
+    url: request.url
   };
   const error = httpJsonError(request, response, new Error("latest JSON sentinel"));
   const runner = new FakeCommandRunner([
@@ -209,15 +209,15 @@ Deno.test("UV lock update preserves latest JSON error identity and targets", asy
           "--inputs-from",
           directory,
           "--raw",
-          "nixpkgs#python313.pythonVersion",
-        ],
+          "nixpkgs#python313.pythonVersion"
+        ]
       },
-      result: { ...COMMAND_OK, stdout: "3.13\n" },
-    },
+      result: { ...COMMAND_OK, stdout: "3.13\n" }
+    }
   ]);
   try {
     const updateEffect = updateVersionedNixpkgsPythonUvLock(
-      dependencies(directory, runner, (): Effect.Effect<string, Error> => Effect.fail(error)),
+      dependencies(directory, runner, (): Effect.Effect<string, Error> => Effect.fail(error))
     );
     const failureEffect = Effect.flip(updateEffect);
     const failure = await Effect.runPromise(failureEffect);

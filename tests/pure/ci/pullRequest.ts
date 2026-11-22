@@ -2,7 +2,7 @@ import {
   classicProtectionHasRequiredChecks,
   createOrUpdatePullRequest,
   parseConfig,
-  rulesetHasRequiredChecks,
+  rulesetHasRequiredChecks
 } from "coolheadedCi/update/pullRequest.ts";
 import { describe, it } from "@jsr/std__testing/bdd";
 import { FakeCommandRunner } from "coolheadedTestSupport/commandRunner.ts";
@@ -17,7 +17,7 @@ describe("update pull request config", (): void => {
         "--branch",
         "update/package/examplePackage",
         "--title",
-        "examplePackage: 1.0.0 -> 1.0.1",
+        "examplePackage: 1.0.0 -> 1.0.1"
       ]),
       {
         autoMerge: true,
@@ -25,8 +25,8 @@ describe("update pull request config", (): void => {
         branch: "update/package/examplePackage",
         dryRun: false,
         labels: ["dependencies", "automated"],
-        title: "examplePackage: 1.0.0 -> 1.0.1",
-      },
+        title: "examplePackage: 1.0.0 -> 1.0.1"
+      }
     );
   });
 
@@ -43,7 +43,7 @@ describe("update pull request config", (): void => {
         "dependencies,automated,denoDependencies",
         "--auto-merge",
         "false",
-        "--dry-run",
+        "--dry-run"
       ]),
       {
         autoMerge: false,
@@ -51,8 +51,8 @@ describe("update pull request config", (): void => {
         branch: "update/denoDependencies",
         dryRun: true,
         labels: ["dependencies", "automated", "denoDependencies"],
-        title: "deno.lock: update Deno dependencies",
-      },
+        title: "deno.lock: update Deno dependencies"
+      }
     );
   });
 });
@@ -73,16 +73,16 @@ describe("update pull request auto-merge gates", (): void => {
           rules: [
             {
               parameters: {
-                required_status_checks: [{ context: "CI / check" }],
+                required_status_checks: [{ context: "CI / check" }]
               },
-              type: "required_status_checks",
-            },
+              type: "required_status_checks"
+            }
           ],
-          target: "branch",
+          target: "branch"
         },
-        "main",
+        "main"
       ),
-      true,
+      true
     );
   });
 
@@ -92,11 +92,11 @@ describe("update pull request auto-merge gates", (): void => {
         {
           enforcement: "active",
           rules: [{ parameters: { required_status_checks: [] }, type: "required_status_checks" }],
-          target: "branch",
+          target: "branch"
         },
-        "main",
+        "main"
       ),
-      false,
+      false
     );
   });
 });
@@ -109,25 +109,25 @@ describe("update pull request command order", (): void => {
       branch: "update/package/example",
       dryRun: false,
       labels: ["package"],
-      title: "example: 1.0.0 -> 1.0.1",
+      title: "example: 1.0.0 -> 1.0.1"
     };
     const runner = new FakeCommandRunner([
       { request: { command: ["git", "add", "--update"] }, result: success },
       {
         request: { command: ["git", "diff", "--cached", "--quiet"] },
-        result: { code: 1, stderr: "", stdout: "" },
+        result: { code: 1, stderr: "", stdout: "" }
       },
       {
         request: {
-          command: ["git", "commit", "--signoff", "-m", config.title, "-m", config.body],
+          command: ["git", "commit", "--signoff", "-m", config.title, "-m", config.body]
         },
-        result: success,
+        result: success
       },
       {
         request: {
-          command: ["git", "push", "--force-with-lease", "origin", `HEAD:${config.branch}`],
+          command: ["git", "push", "--force-with-lease", "origin", `HEAD:${config.branch}`]
         },
-        result: success,
+        result: success
       },
       {
         request: {
@@ -140,10 +140,10 @@ describe("update pull request command order", (): void => {
             "--json",
             "number",
             "--jq",
-            ".[0].number // empty",
-          ],
+            ".[0].number // empty"
+          ]
         },
-        result: success,
+        result: success
       },
       {
         request: {
@@ -156,10 +156,10 @@ describe("update pull request command order", (): void => {
             "0e8a16",
             "--description",
             "Managed by update automation",
-            "--force",
-          ],
+            "--force"
+          ]
         },
-        result: success,
+        result: success
       },
       {
         request: {
@@ -176,10 +176,10 @@ describe("update pull request command order", (): void => {
             "--body",
             config.body,
             "--label",
-            "package",
-          ],
+            "package"
+          ]
         },
-        result: success,
+        result: success
       },
       {
         request: {
@@ -192,17 +192,17 @@ describe("update pull request command order", (): void => {
             "--json",
             "number",
             "--jq",
-            ".[0].number // empty",
-          ],
+            ".[0].number // empty"
+          ]
         },
-        result: { code: 0, stderr: "", stdout: "42" },
-      },
+        result: { code: 0, stderr: "", stdout: "42" }
+      }
     ]);
 
     await createOrUpdatePullRequest(config, runner);
     assertEquals(
       runner.calls().map((request): string => request.command[0]),
-      ["git", "git", "git", "git", "gh", "gh", "gh", "gh"],
+      ["git", "git", "git", "git", "gh", "gh", "gh", "gh"]
     );
     runner.assertExhausted();
   });
@@ -210,7 +210,7 @@ describe("update pull request command order", (): void => {
   it("stops without commit when staged diff is empty", async (): Promise<void> => {
     const runner = new FakeCommandRunner([
       { request: { command: ["git", "add", "--update"] }, result: success },
-      { request: { command: ["git", "diff", "--cached", "--quiet"] }, result: success },
+      { request: { command: ["git", "diff", "--cached", "--quiet"] }, result: success }
     ]);
 
     await createOrUpdatePullRequest(
@@ -220,10 +220,10 @@ describe("update pull request command order", (): void => {
         branch: "update/flakeInput/example",
         dryRun: false,
         labels: ["flakeInput"],
-        title: "example: update",
+        title: "example: update"
       },
       runner,
-      "owner/repository",
+      "owner/repository"
     );
     runner.assertExhausted();
   });

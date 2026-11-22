@@ -1,6 +1,6 @@
 import {
   InvalidPackageHashConfigError,
-  parsePackageHashConfig,
+  parsePackageHashConfig
 } from "coolheaded/pin/packageHashConfig.ts";
 import { assertEquals, assertThrows } from "@jsr/std__assert";
 import { assertProperty, defineReplayTarget } from "coolheadedTestSupport/fastCheck.ts";
@@ -29,14 +29,14 @@ const SHA512_ZERO = parseSriHash(zeroHash("sha512", SHA512_LENGTH));
 const COMPLETE_HASHES = {
   "aarch64-darwin": SHA256_ZERO,
   "aarch64-linux": SHA512_ZERO,
-  "x86_64-linux": SHA256_ZERO,
+  "x86_64-linux": SHA256_ZERO
 } as const;
 
 describe("parsePackageHashConfig", (): void => {
   it("accepts complete package pins", (): void => {
     const config = parsePackageHashConfig({
       platformPackageHashes: COMPLETE_HASHES,
-      version: "0.137.0",
+      version: "0.137.0"
     });
 
     assertEquals(config.version, "0.137.0");
@@ -47,7 +47,7 @@ describe("parsePackageHashConfig", (): void => {
     const config = parsePackageHashConfig({
       binaryVersion: "0.54.0",
       platformPackageHashes: COMPLETE_HASHES,
-      version: "1.69.0",
+      version: "1.69.0"
     });
 
     assertEquals(config.binaryVersion, "0.54.0");
@@ -60,18 +60,18 @@ describe("parsePackageHashConfig", (): void => {
         parsePackageHashConfig({
           binaryVersion: "",
           platformPackageHashes: COMPLETE_HASHES,
-          version: "1.69.0",
+          version: "1.69.0"
         });
       },
       Error,
-      "binaryVersion must be a non-empty string",
+      "binaryVersion must be a non-empty string"
     );
   });
 
   it("accepts a single platform pin", (): void => {
     const config = parsePackageHashConfig({
       platformPackageHashes: { "aarch64-darwin": SHA256_ZERO },
-      version: "2.23.0",
+      version: "2.23.0"
     });
 
     assertEquals(config.platformPackageHashes, { "aarch64-darwin": SHA256_ZERO });
@@ -80,7 +80,7 @@ describe("parsePackageHashConfig", (): void => {
   it("preserves any selected platform pins", (): void => {
     const platformPackageHashes = {
       "aarch64-darwin": SHA256_ZERO,
-      "x86_64-linux": SHA512_ZERO,
+      "x86_64-linux": SHA512_ZERO
     } as const;
     const config = parsePackageHashConfig({ platformPackageHashes, version: "1.0.0" });
 
@@ -92,11 +92,11 @@ describe("parsePackageHashConfig", (): void => {
       (): void => {
         parsePackageHashConfig({
           platformPackageHashes: {},
-          version: "0.137.0",
+          version: "0.137.0"
         });
       },
       InvalidPackageHashConfigError,
-      "platformPackageHashes must not be empty",
+      "platformPackageHashes must not be empty"
     );
   });
 
@@ -105,11 +105,11 @@ describe("parsePackageHashConfig", (): void => {
       (): void => {
         parsePackageHashConfig({
           platformPackageHashes: { "linux-riscv64": SHA256_ZERO },
-          version: "0.137.0",
+          version: "0.137.0"
         });
       },
       InvalidPackageHashConfigError,
-      "Unsupported system for pin hash: linux-riscv64",
+      "Unsupported system for pin hash: linux-riscv64"
     );
   });
 
@@ -120,13 +120,13 @@ describe("parsePackageHashConfig", (): void => {
           parsePackageHashConfig({
             platformPackageHashes: {
               ...COMPLETE_HASHES,
-              "aarch64-linux": invalidHash,
+              "aarch64-linux": invalidHash
             },
-            version: "0.137.0",
+            version: "0.137.0"
           });
         },
         InvalidPackageHashConfigError,
-        "Invalid hash for aarch64-linux",
+        "Invalid hash for aarch64-linux"
       );
     }
   });
@@ -143,7 +143,7 @@ describe("parsePackageSystems", (): void => {
         parsePackageSystems([]);
       },
       TypeError,
-      "Package systems must be a non-empty array",
+      "Package systems must be a non-empty array"
     );
   });
 
@@ -153,14 +153,14 @@ describe("parsePackageSystems", (): void => {
         parsePackageSystems(null);
       },
       TypeError,
-      "Package systems must be a non-empty array",
+      "Package systems must be a non-empty array"
     );
     assertThrows(
       (): void => {
         parsePackageSystems([42]);
       },
       TypeError,
-      "Unsupported package system: 42",
+      "Unsupported package system: 42"
     );
   });
 
@@ -170,14 +170,14 @@ describe("parsePackageSystems", (): void => {
         parsePackageSystems(["linux-riscv64"]);
       },
       TypeError,
-      "Unsupported package system: linux-riscv64",
+      "Unsupported package system: linux-riscv64"
     );
     assertThrows(
       (): void => {
         parsePackageSystems(["aarch64-darwin", "aarch64-darwin"]);
       },
       TypeError,
-      "Duplicate package system: aarch64-darwin",
+      "Duplicate package system: aarch64-darwin"
     );
   });
 });
@@ -197,15 +197,15 @@ Deno.test(validHashesName, (): void => {
           platformPackageHashes: {
             "aarch64-darwin": sha256,
             "aarch64-linux": sha512,
-            "x86_64-linux": sha256,
+            "x86_64-linux": sha256
           },
-          version: "0.137.0",
+          version: "0.137.0"
         });
 
         assertEquals(config.platformPackageHashes["aarch64-darwin"], sha256);
         assertEquals(config.platformPackageHashes["aarch64-linux"], sha512);
         assertEquals(config.platformPackageHashes["x86_64-linux"], sha256);
-      },
-    ),
+      }
+    )
   );
 });

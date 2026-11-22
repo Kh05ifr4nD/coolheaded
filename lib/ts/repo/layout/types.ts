@@ -80,5 +80,5 @@ export type {
   SnapshotChangedComponent,
   SnapshotChangedError,
   ToolExecutionError,
-  ToolIdentity,
+  ToolIdentity
 };

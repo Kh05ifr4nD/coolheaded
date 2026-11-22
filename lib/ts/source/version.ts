@@ -29,22 +29,22 @@ function responseValue<Response extends JsonResponse>(response: Response): Respo
 
 function jsonValue(
   url: string,
-  jsonClient: Readonly<JsonClient>,
+  jsonClient: Readonly<JsonClient>
 ): Effect.Effect<unknown, JsonClientError> {
   return Effect.map(
     jsonClient.request({
       headers: {},
       method: "GET",
       timeoutMs: REQUEST_TIMEOUT_MS,
-      url,
+      url
     }),
-    responseValue,
+    responseValue
   );
 }
 
 function latestNpmVersion(
   packageName: string,
-  jsonClient: Readonly<JsonClient>,
+  jsonClient: Readonly<JsonClient>
 ): Effect.Effect<string, JsonClientError | VersionSourceError> {
   const url = npmRegistryPackageUrl(packageName);
 
@@ -53,7 +53,7 @@ function latestNpmVersion(
     (metadata: unknown): Effect.Effect<string, VersionSourceError> => {
       if (!isRecord(metadata)) {
         return Effect.fail(
-          new VersionSourceError("invalidMetadata", url, `Invalid npm metadata for ${url}`),
+          new VersionSourceError("invalidMetadata", url, `Invalid npm metadata for ${url}`)
         );
       }
 
@@ -61,7 +61,7 @@ function latestNpmVersion(
       const version = isRecord(distTags) ? distTags["latest"] : undefined;
       if (typeof version !== "string" || version.length === 0) {
         return Effect.fail(
-          new VersionSourceError("missingVersion", url, `Missing npm latest version for ${url}`),
+          new VersionSourceError("missingVersion", url, `Missing npm latest version for ${url}`)
         );
       }
 
@@ -71,16 +71,16 @@ function latestNpmVersion(
             new VersionSourceError(
               "invalidMetadata",
               url,
-              `Invalid npm latest version for ${url}: ${version}`,
-            ),
+              `Invalid npm latest version for ${url}: ${version}`
+            )
           );
-    },
+    }
   );
 }
 
 function latestPyPiVersion(
   projectName: string,
-  jsonClient: Readonly<JsonClient>,
+  jsonClient: Readonly<JsonClient>
 ): Effect.Effect<string, JsonClientError | VersionSourceError> {
   const url = `https://pypi.org/pypi/${encodeURIComponent(projectName)}/json`;
 
@@ -89,7 +89,7 @@ function latestPyPiVersion(
     (metadata: unknown): Effect.Effect<string, VersionSourceError> => {
       if (!isRecord(metadata)) {
         return Effect.fail(
-          new VersionSourceError("invalidMetadata", url, `Invalid PyPI metadata for ${url}`),
+          new VersionSourceError("invalidMetadata", url, `Invalid PyPI metadata for ${url}`)
         );
       }
 
@@ -97,7 +97,7 @@ function latestPyPiVersion(
       const version = isRecord(info) ? info["version"] : undefined;
       if (typeof version !== "string" || version.length === 0) {
         return Effect.fail(
-          new VersionSourceError("missingVersion", url, `Missing PyPI latest version for ${url}`),
+          new VersionSourceError("missingVersion", url, `Missing PyPI latest version for ${url}`)
         );
       }
 
@@ -107,10 +107,10 @@ function latestPyPiVersion(
             new VersionSourceError(
               "invalidMetadata",
               url,
-              `Invalid PyPI latest version for ${url}: ${version}`,
-            ),
+              `Invalid PyPI latest version for ${url}: ${version}`
+            )
           );
-    },
+    }
   );
 }
 

@@ -24,7 +24,7 @@ function parseToolIdentity(value: unknown): ToolIdentity {
   return {
     executable: value["executable"],
     sha256: value["sha256"],
-    version: value["version"],
+    version: value["version"]
   };
 }
 
@@ -48,14 +48,14 @@ function parseRepositorySnapshot(value: unknown): RepositorySnapshot {
     tools: {
       cue: parseToolIdentity(value["tools"]["cue"]),
       deno: parseToolIdentity(value["tools"]["deno"]),
-      git: parseToolIdentity(value["tools"]["git"]),
-    },
+      git: parseToolIdentity(value["tools"]["git"])
+    }
   };
 }
 
 async function runSnapshotProbe(
   repositoryRoot: string,
-  tools: ToolEnvironment,
+  tools: ToolEnvironment
 ): Promise<RepositorySnapshot> {
   const probePath = await Deno.makeTempFile({ prefix: "coolheaded-snapshot-probe-" });
   try {
@@ -64,7 +64,7 @@ async function runSnapshotProbe(
     const temporaryAccessRoot = dirname(await Deno.realPath(probePath));
     const gitModule = new globalThis.URL(
       "lib/ts/repo/layout/git.ts",
-      new globalThis.URL(`file://${REPOSITORY_ROOT_PATH}/`),
+      new globalThis.URL(`file://${REPOSITORY_ROOT_PATH}/`)
     ).href;
     await Deno.writeTextFile(
       probePath,
@@ -74,7 +74,7 @@ const snapshot = await repositorySnapshot(Deno.args[0] ?? "", {
   visiblePaths: [],
 });
 console.log(JSON.stringify(snapshot));
-`,
+`
     );
     const output = await new Deno.Command(Deno.execPath(), {
       args: [
@@ -85,17 +85,17 @@ console.log(JSON.stringify(snapshot));
         `--allow-read=${repositoryRoot},${repositoryAccessPath},${temporaryRoot},${temporaryAccessRoot},${tools.cue},${tools.git},${Deno.execPath()}`,
         `--allow-run=${tools.cue},${tools.git}`,
         probePath,
-        repositoryRoot,
+        repositoryRoot
       ],
       clearEnv: true,
       cwd: repositoryRoot,
       env: {
         COOLHEADED_CUE: tools.cue,
         COOLHEADED_GIT: tools.git,
-        PATH: Deno.env.get("PATH") ?? "",
+        PATH: Deno.env.get("PATH") ?? ""
       },
       stderr: "piped",
-      stdout: "piped",
+      stdout: "piped"
     }).output();
     if (!output.success) {
       throw new Error(new globalThis.TextDecoder().decode(output.stderr).trim());
@@ -109,7 +109,7 @@ console.log(JSON.stringify(snapshot));
 function actualToolEnvironment(): ToolEnvironment {
   return {
     cue: requiredToolPath("COOLHEADED_CUE"),
-    git: requiredToolPath("COOLHEADED_GIT"),
+    git: requiredToolPath("COOLHEADED_GIT")
   };
 }
 

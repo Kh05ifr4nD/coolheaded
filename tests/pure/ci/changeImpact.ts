@@ -7,7 +7,7 @@ import {
   checksFromInput,
   comparesCheckedOutBase,
   requestedActivatedChecks,
-  selectBaselineRevision,
+  selectBaselineRevision
 } from "coolheadedCi/impact.ts";
 import { assertProperty, defineReplayTarget } from "coolheadedTestSupport/fastCheck.ts";
 import { describe, it } from "@jsr/std__testing/bdd";
@@ -24,14 +24,14 @@ function defineInputTests(): void {
   it("keeps CI runner targets aligned with supported systems", (): void => {
     assertEquals(
       SYSTEM_TARGETS.map(({ system }) => system).toSorted(),
-      [...SUPPORTED_SYSTEMS].toSorted(),
+      [...SUPPORTED_SYSTEMS].toSorted()
     );
   });
 
   it("parses explicit check inputs", (): void => {
     assertEquals(checksFromInput("betaPackage alphaPackage betaPackage"), [
       "alphaPackage",
-      "betaPackage",
+      "betaPackage"
     ]);
     assertEquals(checksFromInput(""), []);
   });
@@ -67,14 +67,14 @@ function defineBaselineTests(): void {
         assertRequest: ({ command }: CommandRequest): void => {
           assertEquals(command, ["git", "rev-parse", "--verify", `${baseline}^{commit}`]);
         },
-        result: { code: 1, stderr: "unknown revision", stdout: "" },
-      },
+        result: { code: 1, stderr: "unknown revision", stdout: "" }
+      }
     ]);
     const availableBySystem = Object.fromEntries(
-      SYSTEM_TARGETS.map(({ system }) => [system, ["shared"]]),
+      SYSTEM_TARGETS.map(({ system }) => [system, ["shared"]])
     );
     const currentDrvPathsBySystem = Object.fromEntries(
-      SYSTEM_TARGETS.map(({ system }) => [system, { shared: "/nix/store/current.drv" }]),
+      SYSTEM_TARGETS.map(({ system }) => [system, { shared: "/nix/store/current.drv" }])
     );
 
     assertEquals(
@@ -84,9 +84,9 @@ function defineBaselineTests(): void {
         undefined,
         availableBySystem,
         currentDrvPathsBySystem,
-        runner,
+        runner
       ),
-      buildMatrix(["shared"], availableBySystem),
+      buildMatrix(["shared"], availableBySystem)
     );
     runner.assertExhausted();
   });
@@ -100,7 +100,7 @@ function defineBaselineTests(): void {
         assertRequest: ({ command }: CommandRequest): void => {
           assertEquals(command, ["git", "rev-parse", "--verify", `${baseline}^{commit}`]);
         },
-        result: { code: 0, stderr: "", stdout: `${resolvedBaseline}\n` },
+        result: { code: 0, stderr: "", stdout: `${resolvedBaseline}\n` }
       },
       ...SYSTEM_TARGETS.map(() => ({
         assertRequest: ({ command }: CommandRequest): void => {
@@ -113,20 +113,20 @@ function defineBaselineTests(): void {
           }
           baselineFlakeRefs.push(flakeRef);
         },
-        result: { code: 1, stderr: "evaluation failed", stdout: "" },
+        result: { code: 1, stderr: "evaluation failed", stdout: "" }
       })),
       {
         assertRequest: ({ command }: CommandRequest): void => {
           assertEquals(command, ["git", "diff", "--name-only", resolvedBaseline, "HEAD", "--"]);
         },
-        result: { code: 0, stderr: "", stdout: ".github/ci/impact.ts\n" },
-      },
+        result: { code: 0, stderr: "", stdout: ".github/ci/impact.ts\n" }
+      }
     ]);
     const availableBySystem = Object.fromEntries(
-      SYSTEM_TARGETS.map(({ system }) => [system, ["shared"]]),
+      SYSTEM_TARGETS.map(({ system }) => [system, ["shared"]])
     );
     const currentDrvPathsBySystem = Object.fromEntries(
-      SYSTEM_TARGETS.map(({ system }) => [system, { shared: "/nix/store/current.drv" }]),
+      SYSTEM_TARGETS.map(({ system }) => [system, { shared: "/nix/store/current.drv" }])
     );
 
     assertEquals(
@@ -136,21 +136,21 @@ function defineBaselineTests(): void {
         undefined,
         availableBySystem,
         currentDrvPathsBySystem,
-        runner,
+        runner
       ),
-      [],
+      []
     );
     assertEquals(
       baselineFlakeRefs.every((flakeRef: string): boolean =>
-        flakeRef.includes(`?rev=${encodeURIComponent(resolvedBaseline)}#checks.`),
+        flakeRef.includes(`?rev=${encodeURIComponent(resolvedBaseline)}#checks.`)
       ),
-      true,
+      true
     );
     assertEquals(
       new Set(
-        baselineFlakeRefs.map((flakeRef: string): string => flakeRef.replace(/#checks\..*$/u, "")),
+        baselineFlakeRefs.map((flakeRef: string): string => flakeRef.replace(/#checks\..*$/u, ""))
       ).size,
-      1,
+      1
     );
     runner.assertExhausted();
   });
@@ -170,15 +170,15 @@ function defineDerivationTests(): void {
         {
           changed: "/nix/store/source-changed.drv",
           removed: "/nix/store/source-removed.drv",
-          unchanged: "/nix/store/source-unchanged.drv",
+          unchanged: "/nix/store/source-unchanged.drv"
         },
         {
           added: "/nix/store/target-added.drv",
           changed: "/nix/store/target-changed.drv",
-          unchanged: "/nix/store/source-unchanged.drv",
-        },
+          unchanged: "/nix/store/source-unchanged.drv"
+        }
       ),
-      ["added", "changed"],
+      ["added", "changed"]
     );
   });
 
@@ -188,46 +188,46 @@ function defineDerivationTests(): void {
         {
           "aarch64-darwin": {
             denoDependencies: "/nix/store/darwin-deno-snapshot-old.drv",
-            shared: "/nix/store/darwin-shared.drv",
+            shared: "/nix/store/darwin-shared.drv"
           },
           "aarch64-linux": {
             linuxOnly: "/nix/store/arm-old.drv",
-            shared: "/nix/store/arm-shared.drv",
+            shared: "/nix/store/arm-shared.drv"
           },
           "x86_64-linux": {
             linuxOnly: "/nix/store/x86-old.drv",
-            shared: "/nix/store/x86-shared.drv",
-          },
+            shared: "/nix/store/x86-shared.drv"
+          }
         },
         {
           "aarch64-darwin": {
             denoDependencies: "/nix/store/darwin-deno-snapshot-new.drv",
-            shared: "/nix/store/darwin-shared.drv",
+            shared: "/nix/store/darwin-shared.drv"
           },
           "aarch64-linux": {
             linuxOnly: "/nix/store/arm-new.drv",
-            shared: "/nix/store/arm-shared.drv",
+            shared: "/nix/store/arm-shared.drv"
           },
           "x86_64-linux": {
             linuxOnly: "/nix/store/x86-old.drv",
-            shared: "/nix/store/x86-shared.drv",
-          },
-        },
+            shared: "/nix/store/x86-shared.drv"
+          }
+        }
       ),
       [
         {
           kind: "denoSnapshot",
           name: "denoDependencies",
           runner: "macos-26",
-          system: "aarch64-darwin",
+          system: "aarch64-darwin"
         },
         {
           kind: "package",
           name: "linuxOnly",
           runner: "ubuntu-24.04-arm",
-          system: "aarch64-linux",
-        },
-      ],
+          system: "aarch64-linux"
+        }
+      ]
     );
   });
 
@@ -236,7 +236,7 @@ function defineDerivationTests(): void {
       buildMatrix(["denoDependencies", "linuxOnly", "shared"], {
         "aarch64-darwin": ["shared"],
         "aarch64-linux": ["shared"],
-        "x86_64-linux": ["denoDependencies", "linuxOnly", "shared"],
+        "x86_64-linux": ["denoDependencies", "linuxOnly", "shared"]
       }),
       [
         { kind: "package", name: "shared", runner: "macos-26", system: "aarch64-darwin" },
@@ -245,16 +245,16 @@ function defineDerivationTests(): void {
           kind: "denoSnapshot",
           name: "denoDependencies",
           runner: "ubuntu-24.04",
-          system: "x86_64-linux",
+          system: "x86_64-linux"
         },
         {
           kind: "package",
           name: "linuxOnly",
           runner: "ubuntu-24.04",
-          system: "x86_64-linux",
+          system: "x86_64-linux"
         },
-        { kind: "package", name: "shared", runner: "ubuntu-24.04", system: "x86_64-linux" },
-      ],
+        { kind: "package", name: "shared", runner: "ubuntu-24.04", system: "x86_64-linux" }
+      ]
     );
   });
 }
@@ -270,9 +270,9 @@ function defineChangedFilesTests(): void {
         "minerUTorch",
         "paseo",
         "paseoHomeModule",
-        "unrelated",
+        "unrelated"
       ],
-      "aarch64-linux": ["codex", "codexDaemon", "paseo", "unrelated"],
+      "aarch64-linux": ["codex", "codexDaemon", "paseo", "unrelated"]
     };
 
     assertEquals(
@@ -283,9 +283,9 @@ function defineChangedFilesTests(): void {
           "homeModules/codex.nix",
           "packages/minerU/package.nix",
           "packages/paseo/check.nix",
-          "tests/changeImpact.ts",
+          "tests/changeImpact.ts"
         ],
-        available,
+        available
       ),
       [
         "codex",
@@ -295,21 +295,21 @@ function defineChangedFilesTests(): void {
         "minerUFull",
         "minerUTorch",
         "paseo",
-        "paseoHomeModule",
-      ],
+        "paseoHomeModule"
+      ]
     );
   });
 
   it("falls back to all checks for shared or unmapped changes", (): void => {
     const available = {
       "aarch64-darwin": ["codex", "paseo"],
-      "aarch64-linux": ["codex", "paseo"],
+      "aarch64-linux": ["codex", "paseo"]
     };
 
     assertEquals(checksFromChangedFiles(["lib/nix/github.nix"], available), ["codex", "paseo"]);
     assertEquals(checksFromChangedFiles(["packages/missing/package.nix"], available), [
       "codex",
-      "paseo",
+      "paseo"
     ]);
     assertEquals(checksFromChangedFiles([".github/ci/impact.ts"], available), []);
   });
@@ -317,7 +317,7 @@ function defineChangedFilesTests(): void {
 
 const MAX_CHECK_IDENTIFIER = 1_000_000;
 const checkIdentifiers = fc.uniqueArray(fc.integer({ max: MAX_CHECK_IDENTIFIER, min: 0 }), {
-  minLength: 1,
+  minLength: 1
 });
 describe("CI change impact discovery", (): void => {
   defineInputTests();
@@ -340,17 +340,17 @@ Deno.test(derivationName, (): void => {
           throw new TypeError("Generated check names must not be empty");
         }
         const before = Object.fromEntries(
-          names.map((name: string): readonly [string, string] => [name, `/old/${name}`]),
+          names.map((name: string): readonly [string, string] => [name, `/old/${name}`])
         );
         const after = {
           ...before,
           added: "/new/added",
-          [changedName]: `/new/${changedName}`,
+          [changedName]: `/new/${changedName}`
         };
 
         assertEquals(changedDerivationChecks(before, after), ["added", changedName].toSorted());
-      },
-    ),
+      }
+    )
   );
 });
 
@@ -365,22 +365,22 @@ Deno.test(pathImpactName, (): void => {
       const available = {
         "aarch64-darwin": [prefix, `${prefix}Full`, unrelated],
         "aarch64-linux": [`${prefix}Full`, unrelated],
-        "x86_64-linux": [prefix, unrelated],
+        "x86_64-linux": [prefix, unrelated]
       };
 
       assertEquals(
         checksFromChangedFiles(
           [`packages/${prefix}/package.nix`, `homeModules/${prefix}.nix`],
-          available,
+          available
         ),
-        owned,
+        owned
       );
       assertEquals(checksFromChangedFiles([`unknown/${prefix}.nix`], available), all);
       assertEquals(checksFromChangedFiles([`lib/ts/${prefix}.ts`], available), all);
       assertEquals(
         checksFromChangedFiles([`.github/ci/${prefix}.ts`, `tests/ci/${prefix}.ts`], available),
-        [],
+        []
       );
-    }),
+    })
   );
 });

@@ -13,10 +13,10 @@ const REQUEST = {
   headers: {},
   method: "GET",
   timeoutMs: REQUEST_TIMEOUT_MS,
-  url: "https://registry.npmjs.org/example",
+  url: "https://registry.npmjs.org/example"
 } as const;
 const SHA512_LINUX_ARM = parseSriHash(
-  "sha512-AgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAg==",
+  "sha512-AgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAg=="
 );
 const SHA512_LINUX_X64 =
   "sha512-AwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAw==";
@@ -28,9 +28,9 @@ function metadata(value: unknown): JsonResponse {
       headers: {},
       status: HTTP_OK,
       statusText: "OK",
-      url: REQUEST.url,
+      url: REQUEST.url
     },
-    value,
+    value
   };
 }
 
@@ -41,26 +41,26 @@ describe("npm package hash boundaries", (): void => {
         effect: (): Effect.Effect<JsonResponse> =>
           Effect.succeed(
             metadata({
-              versions: { "1.0.0": { dist: { integrity: SHA512_LINUX_ARM } } },
-            }),
+              versions: { "1.0.0": { dist: { integrity: SHA512_LINUX_ARM } } }
+            })
           ),
-        request: REQUEST,
-      },
+        request: REQUEST
+      }
     ]);
     const config = await Effect.runPromise(
       npmPackageHashConfig({
         jsonClient: strict.client,
         packageName: "example",
         systems: ["aarch64-linux", "aarch64-darwin"],
-        version: "1.0.0",
-      }),
+        version: "1.0.0"
+      })
     );
     assertEquals(config, {
       platformPackageHashes: {
         "aarch64-darwin": SHA512_LINUX_ARM,
-        "aarch64-linux": SHA512_LINUX_ARM,
+        "aarch64-linux": SHA512_LINUX_ARM
       },
-      version: "1.0.0",
+      version: "1.0.0"
     });
     strict.assertExhausted();
   });
@@ -71,11 +71,11 @@ describe("npm package hash boundaries", (): void => {
         effect: (): Effect.Effect<JsonResponse> =>
           Effect.succeed(
             metadata({
-              versions: { "1.0.0": { dist: { integrity: "sha512-invalid" } } },
-            }),
+              versions: { "1.0.0": { dist: { integrity: "sha512-invalid" } } }
+            })
           ),
-        request: REQUEST,
-      },
+        request: REQUEST
+      }
     ]);
     const error = await Effect.runPromise(
       Effect.flip(
@@ -83,9 +83,9 @@ describe("npm package hash boundaries", (): void => {
           jsonClient: strict.client,
           packageName: "example",
           systems: ["aarch64-darwin"],
-          version: "1.0.0",
-        }),
-      ),
+          version: "1.0.0"
+        })
+      )
     );
     assertInstanceOf(error, InvalidPackageHashConfigError);
     strict.assertExhausted();
@@ -100,12 +100,12 @@ describe("npm package hash boundaries", (): void => {
               versions: {
                 "1.0.0-darwin-arm64": { dist: { integrity: "sha512-invalid" } },
                 "1.0.0-linux-arm64": { dist: { integrity: SHA512_LINUX_ARM } },
-                "1.0.0-linux-x64": { dist: { integrity: SHA512_LINUX_X64 } },
-              },
-            }),
+                "1.0.0-linux-x64": { dist: { integrity: SHA512_LINUX_X64 } }
+              }
+            })
           ),
-        request: REQUEST,
-      },
+        request: REQUEST
+      }
     ]);
     const error = await Effect.runPromise(
       Effect.flip(
@@ -115,11 +115,11 @@ describe("npm package hash boundaries", (): void => {
           {
             "aarch64-darwin": "darwin-arm64",
             "aarch64-linux": "linux-arm64",
-            "x86_64-linux": "linux-x64",
+            "x86_64-linux": "linux-x64"
           },
-          strict.client,
-        ),
-      ),
+          strict.client
+        )
+      )
     );
     assertInstanceOf(error, InvalidPackageHashConfigError);
     strict.assertExhausted();

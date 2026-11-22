@@ -24,11 +24,11 @@ class FastCheckFailureError extends Error {
     },
     runs: number,
     replayCommand: string,
-    replayArguments: readonly string[],
+    replayArguments: readonly string[]
   ) {
     const counterexampleText = result.counterexample.map(String);
     super(
-      `Property failed. Counterexample: ${JSON.stringify(counterexampleText)}. Replay: ${replayCommand}`,
+      `Property failed. Counterexample: ${JSON.stringify(counterexampleText)}. Replay: ${replayCommand}`
     );
     this.counterexample = result.counterexample;
     this.counterexampleText = counterexampleText;

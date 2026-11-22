@@ -3,7 +3,7 @@ import {
   formatSriHash,
   parseSriHash,
   sriHashAlgorithm,
-  sriHashDigest,
+  sriHashDigest
 } from "coolheaded/pin/sriHash.ts";
 import { assertEquals, assertThrows } from "@jsr/std__assert";
 import { assertProperty, defineReplayTarget } from "coolheadedTestSupport/fastCheck.ts";
@@ -15,7 +15,7 @@ const SHA512_LENGTH = 64;
 const MAX_BYTE = 255;
 const algorithmAndLength = fc.constantFrom(
   ["sha256", SHA256_LENGTH] as const,
-  ["sha512", SHA512_LENGTH] as const,
+  ["sha512", SHA512_LENGTH] as const
 );
 
 function base64(bytes: readonly number[]): string {
@@ -42,7 +42,7 @@ describe("SRI hash boundary", (): void => {
       `sha512-${sha256}`,
       `sha256- ${sha256}`,
       `sha256-${sha256} sha512-${sha512}`,
-      `sha256-${sha256}\n`,
+      `sha256-${sha256}\n`
     ]) {
       assertThrows((): void => {
         parseSriHash(value);
@@ -65,7 +65,7 @@ describe("SRI hash boundary", (): void => {
     assertThrows((): void => {
       formatSriHash(
         "toString",
-        Array.from({ length: SHA256_LENGTH }, (): number => 0),
+        Array.from({ length: SHA256_LENGTH }, (): number => 0)
       );
     }, InvalidSriHashError);
   });
@@ -81,9 +81,9 @@ Deno.test(roundtripName, (): void => {
         digestArbitrary(length).map(
           (digest: readonly number[]): readonly [typeof algorithm, readonly number[]] => [
             algorithm,
-            digest,
-          ],
-        ),
+            digest
+          ]
+        )
       ),
       ([algorithm, digest]): void => {
         const expected = `${algorithm}-${base64([...digest])}`;
@@ -94,8 +94,8 @@ Deno.test(roundtripName, (): void => {
         assertEquals(parsed, expected);
         assertEquals(sriHashAlgorithm(parsed), algorithm);
         assertEquals(sriHashDigest(parsed), [...digest]);
-      },
-    ),
+      }
+    )
   );
 });
 
@@ -110,21 +110,21 @@ Deno.test(wrongLengthName, (): void => {
           ["sha256", SHA256_LENGTH - 1] as const,
           ["sha256", SHA256_LENGTH + 1] as const,
           ["sha512", SHA512_LENGTH - 1] as const,
-          ["sha512", SHA512_LENGTH + 1] as const,
+          ["sha512", SHA512_LENGTH + 1] as const
         )
         .chain(([algorithm, length]) =>
           digestArbitrary(length).map(
             (digest: readonly number[]): readonly [typeof algorithm, readonly number[]] => [
               algorithm,
-              digest,
-            ],
-          ),
+              digest
+            ]
+          )
         ),
       ([algorithm, digest]): void => {
         assertThrows((): void => {
           formatSriHash(algorithm, [...digest]);
         }, InvalidSriHashError);
-      },
-    ),
+      }
+    )
   );
 });

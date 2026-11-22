@@ -3,7 +3,7 @@
 import type {
   CommandRequest,
   CommandResult,
-  CommandRunner,
+  CommandRunner
 } from "coolheaded/core/commandRunner.ts";
 
 interface RunOptions {
@@ -27,7 +27,7 @@ class CommandExitError extends Error {
     super(
       `${request.command.join(" ")} failed with exit ${result.code}${
         result.stderr.trim().length === 0 ? "" : `: ${result.stderr.trim()}`
-      }`,
+      }`
     );
     this.name = "CommandExitError";
     this.request = request;
@@ -46,7 +46,7 @@ async function writeStderr(text: string): Promise<void> {
 async function run(
   runner: CommandRunner,
   command: readonly string[],
-  options: RunOptions = {},
+  options: RunOptions = {}
 ): Promise<RunResult> {
   const [executable, ...args] = command;
   if (executable === undefined) {
@@ -56,13 +56,13 @@ async function run(
   const request = {
     command: [executable, ...args],
     ...(options.cwd === undefined ? {} : { cwd: options.cwd }),
-    ...(options.env === undefined ? {} : { env: options.env }),
+    ...(options.env === undefined ? {} : { env: options.env })
   } as const satisfies CommandRequest;
   const output = await runner.run(request);
   const result = {
     code: output.code,
     stderr: output.stderr.trim(),
-    stdout: output.stdout.trim(),
+    stdout: output.stdout.trim()
   };
 
   if ((options.check ?? true) && output.code !== 0) {
@@ -83,10 +83,10 @@ async function run(
 
 async function gitHasChanges(
   runner: CommandRunner,
-  paths: readonly string[] = [],
+  paths: readonly string[] = []
 ): Promise<boolean> {
   const result = await run(runner, ["git", "diff", "--quiet", ...paths], {
-    check: false,
+    check: false
   });
   return result.code !== 0;
 }
@@ -107,7 +107,7 @@ async function writeOutput(key: string, value: string): Promise<void> {
   await Deno.writeTextFile(
     outputPath,
     value.includes("\n") ? `${key}<<${delimiter}\n${value}\n${delimiter}\n` : `${key}=${value}\n`,
-    { append: true },
+    { append: true }
   );
 }
 
@@ -124,14 +124,14 @@ async function currentSystem(runner: CommandRunner): Promise<string> {
   const result = await run(
     runner,
     ["nix", "eval", "--impure", "--raw", "--expr", "builtins.currentSystem"],
-    { capture: true },
+    { capture: true }
   );
   return result.stdout;
 }
 
 function assertOnlyChangedFiles(
   files: readonly string[],
-  allowed: (file: string) => boolean,
+  allowed: (file: string) => boolean
 ): void {
   const unexpectedFiles = files.filter((file: string): boolean => !allowed(file));
   if (unexpectedFiles.length > 0) {
@@ -155,6 +155,6 @@ export {
   run,
   writeOutput,
   writeStderr,
-  writeStdout,
+  writeStdout
 };
 export type { RunResult };

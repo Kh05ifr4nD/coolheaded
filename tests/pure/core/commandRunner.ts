@@ -8,15 +8,15 @@ Deno.test("command runner matches environment structurally", async (): Promise<v
   const runner = new FakeCommandRunner([
     {
       request: { command: ["tool", "arg"], env: { ALPHA: "1", BETA: "2" } },
-      result: { code: 0, stderr: " warning \n", stdout: " value \n" },
-    },
+      result: { code: 0, stderr: " warning \n", stdout: " value \n" }
+    }
   ]);
   const result = await run(runner, ["tool", "arg"], {
     capture: true,
     env: Object.fromEntries([
       ["BETA", "2"],
-      ["ALPHA", "1"],
-    ]),
+      ["ALPHA", "1"]
+    ])
   });
 
   assertEquals(result, { code: 0, stderr: "warning", stdout: "value" });
@@ -25,9 +25,9 @@ Deno.test("command runner matches environment structurally", async (): Promise<v
       command: ["tool", "arg"],
       env: Object.fromEntries([
         ["BETA", "2"],
-        ["ALPHA", "1"],
-      ]),
-    },
+        ["ALPHA", "1"]
+      ])
+    }
   ]);
   runner.assertExhausted();
 });
@@ -46,7 +46,7 @@ Deno.test("process wrapper owns nonzero exit policy", async (): Promise<void> =>
   assertEquals(await run(unchecked, request.command, { check: false }), {
     code: 9,
     stderr: "raw stderr",
-    stdout: "raw stdout",
+    stdout: "raw stdout"
   });
   unchecked.assertExhausted();
 });
@@ -56,7 +56,7 @@ Deno.test("strict fake rejects unexpected and unconsumed calls", async (): Promi
   await assertRejects((): Promise<unknown> => unexpected.run({ command: ["unexpected"] }));
 
   const unconsumed = new FakeCommandRunner([
-    { request: { command: ["remaining"] }, result: success },
+    { request: { command: ["remaining"] }, result: success }
   ]);
   assertThrows((): void => {
     unconsumed.assertExhausted();

@@ -4,7 +4,7 @@ import {
   assertEquals,
   assertInstanceOf,
   assertRejects,
-  assertStrictEquals,
+  assertStrictEquals
 } from "@jsr/std__assert";
 import { Effect } from "effect";
 import { FakeCommandRunner } from "coolheadedTestSupport/commandRunner.ts";
@@ -33,7 +33,7 @@ const REGISTRY_REQUEST: HttpRequest = {
   headers: {},
   method: "GET",
   timeoutMs: REQUEST_TIMEOUT_MS,
-  url: REGISTRY_URL,
+  url: REGISTRY_URL
 };
 
 function response(): JsonResponse {
@@ -43,16 +43,16 @@ function response(): JsonResponse {
       headers: {},
       status: HTTP_OK,
       statusText: "OK",
-      url: REGISTRY_URL,
+      url: REGISTRY_URL
     },
-    value: { versions: { [VERSION]: { dist: { integrity: INTEGRITY } } } },
+    value: { versions: { [VERSION]: { dist: { integrity: INTEGRITY } } } }
   };
 }
 
 function workspaceEffect(
   packageJson: string,
   packageLock?: string,
-  expectedPackageJson = `{\n  "name": "example"\n}\n`,
+  expectedPackageJson = `{\n  "name": "example"\n}\n`
 ): (request: CommandRequest) => Promise<void> {
   return async (request: CommandRequest): Promise<void> => {
     const workspacePath = request.cwd;
@@ -72,7 +72,7 @@ function requests(
   repositoryRootPath: string,
   packageJson: string,
   packageLock?: string,
-  expectedPackageJson?: string,
+  expectedPackageJson?: string
 ): readonly ConstructorParameters<typeof FakeCommandRunner>[0][number][] {
   return [
     {
@@ -84,10 +84,10 @@ function requests(
           "--print-out-paths",
           "--inputs-from",
           repositoryRootPath,
-          "nixpkgs#prefetch-npm-deps",
-        ],
+          "nixpkgs#prefetch-npm-deps"
+        ]
       },
-      result: { ...COMMAND_OK, stdout: PREFETCH_OUT },
+      result: { ...COMMAND_OK, stdout: PREFETCH_OUT }
     },
     {
       assertRequest(request): void {
@@ -101,12 +101,12 @@ function requests(
             "-fsSL",
             `https://registry.npmjs.org/${PACKAGE_NAME}/-/example-${VERSION}.tgz`,
             "-o",
-            archivePath,
-          ],
+            archivePath
+          ]
         });
         assertEquals(archivePath.endsWith("/package.tgz"), true);
       },
-      result: COMMAND_OK,
+      result: COMMAND_OK
     },
     {
       assertRequest(request): void {
@@ -116,11 +116,11 @@ function requests(
         }
         assertEquals(request, {
           command: ["tar", "-xzf", `${workspacePath}/package.tgz`, "--strip-components=1"],
-          cwd: workspacePath,
+          cwd: workspacePath
         });
       },
       effect: workspaceEffect(packageJson),
-      result: COMMAND_OK,
+      result: COMMAND_OK
     },
     ...(packageLock === undefined
       ? []
@@ -146,13 +146,13 @@ function requests(
                   "--omit=dev",
                   "--no-audit",
                   "--no-fund",
-                  "--silent",
+                  "--silent"
                 ],
-                cwd: workspacePath,
+                cwd: workspacePath
               });
             },
             effect: workspaceEffect(packageJson, packageLock, expectedPackageJson),
-            result: COMMAND_OK,
+            result: COMMAND_OK
           },
           {
             assertRequest(request: CommandRequest): void {
@@ -161,13 +161,13 @@ function requests(
                 throw new TypeError("prefetch request requires package lock");
               }
               assertEquals(request, {
-                command: [`${PREFETCH_OUT}/bin/prefetch-npm-deps`, packageLockPath],
+                command: [`${PREFETCH_OUT}/bin/prefetch-npm-deps`, packageLockPath]
               });
               assertEquals(packageLockPath.endsWith("/package-lock.json"), true);
             },
-            result: { ...COMMAND_OK, stdout: VENDOR_HASH },
-          },
-        ]),
+            result: { ...COMMAND_OK, stdout: VENDOR_HASH }
+          }
+        ])
   ];
 }
 
@@ -179,13 +179,13 @@ Deno.test("npm tarball update writes sanitized lock and exact pin", async (): Pr
     '{"name":"example","os":["darwin"],"scripts":{"build":"false"},"devDependencies":{"x":"1"}}';
   await Deno.mkdir(packageDirectory, { recursive: true });
   const runner = new FakeCommandRunner(
-    requests(repositoryRootPath, packageJson, PACKAGE_LOCK, '{\n  "name": "example"\n}\n'),
+    requests(repositoryRootPath, packageJson, PACKAGE_LOCK, '{\n  "name": "example"\n}\n')
   );
   const json = strictJsonClient([
     {
       effect: (): Effect.Effect<ReturnType<typeof response>> => Effect.succeed(response()),
-      request: REGISTRY_REQUEST,
-    },
+      request: REGISTRY_REQUEST
+    }
   ]);
   try {
     await Effect.runPromise(
@@ -196,13 +196,13 @@ Deno.test("npm tarball update writes sanitized lock and exact pin", async (): Pr
         packageName: PACKAGE_NAME,
         runner,
         systems: ["aarch64-darwin"],
-        tarballBaseName: "example",
-      }),
+        tarballBaseName: "example"
+      })
     );
     assertEquals(await Deno.readTextFile(`${packageDirectory}/package-lock.json`), PACKAGE_LOCK);
     assertEquals(
       await Deno.readTextFile(`${packageDirectory}/pin.json`),
-      `{\n  "version": "${VERSION}",\n  "platformPackageHashes": {\n    "aarch64-darwin": "${INTEGRITY}"\n  },\n  "npmVendorHash": "${VENDOR_HASH}"\n}\n`,
+      `{\n  "version": "${VERSION}",\n  "platformPackageHashes": {\n    "aarch64-darwin": "${INTEGRITY}"\n  },\n  "npmVendorHash": "${VENDOR_HASH}"\n}\n`
     );
     const workspacePath = runner.calls()[2]?.cwd;
     assertEquals(runner.calls()[3]?.cwd, workspacePath);
@@ -226,8 +226,8 @@ Deno.test("npm tarball update preserves targets when npm lock prefetch fails", a
   const json = strictJsonClient([
     {
       effect: (): Effect.Effect<ReturnType<typeof response>> => Effect.succeed(response()),
-      request: REGISTRY_REQUEST,
-    },
+      request: REGISTRY_REQUEST
+    }
   ]);
   const runner = new FakeCommandRunner([
     {
@@ -239,11 +239,11 @@ Deno.test("npm tarball update preserves targets when npm lock prefetch fails", a
           "--print-out-paths",
           "--inputs-from",
           repositoryRootPath,
-          "nixpkgs#prefetch-npm-deps",
-        ],
+          "nixpkgs#prefetch-npm-deps"
+        ]
       },
-      result: failureResult,
-    },
+      result: failureResult
+    }
   ]);
   try {
     const error = await Effect.runPromise(
@@ -255,9 +255,9 @@ Deno.test("npm tarball update preserves targets when npm lock prefetch fails", a
           packageName: PACKAGE_NAME,
           runner,
           systems: ["aarch64-darwin"],
-          tarballBaseName: "example",
-        }),
-      ),
+          tarballBaseName: "example"
+        })
+      )
     );
     assertInstanceOf(error, UpdateError);
     assertEquals(error.message, "Failed to run nix: exit 23: prefetch failed");
@@ -289,13 +289,13 @@ Deno.test("npm tarball update removes selected runtime dependencies", async (): 
 `;
   await Deno.mkdir(packageDirectory, { recursive: true });
   const runner = new FakeCommandRunner(
-    requests(repositoryRootPath, packageJson, PACKAGE_LOCK, expectedPackageJson),
+    requests(repositoryRootPath, packageJson, PACKAGE_LOCK, expectedPackageJson)
   );
   const json = strictJsonClient([
     {
       effect: (): Effect.Effect<ReturnType<typeof response>> => Effect.succeed(response()),
-      request: REGISTRY_REQUEST,
-    },
+      request: REGISTRY_REQUEST
+    }
   ]);
   try {
     await Effect.runPromise(
@@ -307,8 +307,8 @@ Deno.test("npm tarball update removes selected runtime dependencies", async (): 
         removeDependencies: ["remove-me", "remove-me-too"],
         runner,
         systems: ["aarch64-darwin"],
-        tarballBaseName: "example",
-      }),
+        tarballBaseName: "example"
+      })
     );
     runner.assertExhausted();
     json.assertExhausted();
@@ -328,8 +328,8 @@ Deno.test("npm tarball update preserves targets after invalid package JSON", asy
   const json = strictJsonClient([
     {
       effect: (): Effect.Effect<JsonResponse> => Effect.succeed(response()),
-      request: REGISTRY_REQUEST,
-    },
+      request: REGISTRY_REQUEST
+    }
   ]);
   try {
     const error = await Effect.runPromise(
@@ -341,9 +341,9 @@ Deno.test("npm tarball update preserves targets after invalid package JSON", asy
           packageName: PACKAGE_NAME,
           runner,
           systems: ["aarch64-darwin"],
-          tarballBaseName: "example",
-        }),
-      ),
+          tarballBaseName: "example"
+        })
+      )
     );
     assertInstanceOf(error, SyntaxError);
     assertEquals(await Deno.readFile(`${packageDirectory}/pin.json`), PIN_SENTINEL);
@@ -370,8 +370,8 @@ Deno.test("npm tarball update preserves targets and JSON error identity", async 
   const json = strictJsonClient([
     {
       effect: (): Effect.Effect<never, typeof error> => Effect.fail(error),
-      request: REGISTRY_REQUEST,
-    },
+      request: REGISTRY_REQUEST
+    }
   ]);
   try {
     const failure = await Effect.runPromise(
@@ -383,9 +383,9 @@ Deno.test("npm tarball update preserves targets and JSON error identity", async 
           packageName: PACKAGE_NAME,
           runner,
           systems: ["aarch64-darwin"],
-          tarballBaseName: "example",
-        }),
-      ),
+          tarballBaseName: "example"
+        })
+      )
     );
     assertStrictEquals(failure, error);
     assertEquals(await Deno.readFile(`${packageDirectory}/pin.json`), pinContents);

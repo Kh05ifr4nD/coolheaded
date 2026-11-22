@@ -9,7 +9,7 @@ function npmRegistryPackageUrl(packageName: string): string {
 function npmScopedTarballUrl(
   packageName: string,
   tarballBaseName: string,
-  version: string,
+  version: string
 ): string {
   return `https://registry.npmjs.org/${packageName}/-/${tarballBaseName}-${version}.tgz`;
 }
@@ -20,7 +20,7 @@ function npmPlatformPackageVersion(version: string, suffix: string): string {
 
 function npmVersionIntegrity(
   metadata: NpmPackageMetadata,
-  version: string,
+  version: string
 ): Effect.Effect<string, InvalidNpmMetadataError> {
   const integrity = metadata.versions?.[version]?.dist?.integrity;
   if (typeof integrity !== "string" || integrity.length === 0) {
@@ -34,7 +34,7 @@ export {
   npmPlatformPackageVersion,
   npmRegistryPackageUrl,
   npmScopedTarballUrl,
-  npmVersionIntegrity,
+  npmVersionIntegrity
 };
 export { InvalidNpmMetadataError } from "coolheaded/npm/metadataError.ts";
 export type { NpmPackageMetadata } from "coolheaded/npm/metadata.ts";

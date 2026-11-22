@@ -1,6 +1,6 @@
 import type {
   InvalidPackageHashConfigError,
-  PackageHashConfig,
+  PackageHashConfig
 } from "coolheaded/pin/packageHashConfig.ts";
 import type { IsAny, IsExact, IsUnknown } from "./testingTypes.ts";
 import type { SriHash, parseSriHash } from "coolheaded/pin/sriHash.ts";
@@ -17,7 +17,7 @@ type NpmHashConfigEffect = ReturnType<typeof npmHashConfigForSystems>;
 
 assertType<"sha256-invalid" extends SriHash ? true : false>(false);
 assertType<"sha256-AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA=" extends SriHash ? true : false>(
-  false,
+  false
 );
 assertType<string extends SriHash ? true : false>(false);
 assertType<IsExact<ReturnType<typeof parseSriHash>, SriHash>>(true);

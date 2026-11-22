@@ -21,7 +21,7 @@ type ChangeEvent = Readonly<{
 
 function checksFromInput(value: string | undefined): readonly string[] {
   return [
-    ...new Set((value ?? "").split(" ").filter((name: string): boolean => name.length > 0)),
+    ...new Set((value ?? "").split(" ").filter((name: string): boolean => name.length > 0))
   ].toSorted();
 }
 
@@ -44,12 +44,12 @@ function selectBaselineRevision(eventName?: string, eventBefore?: string): strin
 async function checkDrvPaths(
   flakeRef: string,
   system: string,
-  runner: CommandRunner,
+  runner: CommandRunner
 ): Promise<CheckDrvPaths> {
   const result = await run(
     runner,
     ["nix", "eval", "--json", `${flakeRef}#checks.${system}`, "--apply", CHECK_DRV_PATHS_EXPR],
-    { capture: true },
+    { capture: true }
   );
   const value = JSON.parse(result.stdout);
   if (typeof value !== "object" || value === null || Array.isArray(value)) {
@@ -69,30 +69,30 @@ async function checkDrvPaths(
 
 async function checkDrvPathsBySystem(
   flakeRef: string,
-  runner: CommandRunner,
+  runner: CommandRunner
 ): Promise<CheckDrvPathsBySystem> {
   return Object.fromEntries(
     await Promise.all(
       SYSTEM_TARGETS.map(
         async (target: SystemTarget): Promise<readonly [string, CheckDrvPaths]> => [
           target.system,
-          await checkDrvPaths(flakeRef, target.system, runner),
-        ],
-      ),
-    ),
+          await checkDrvPaths(flakeRef, target.system, runner)
+        ]
+      )
+    )
   );
 }
 
 function availableChecksBySystem(
-  drvPathsBySystem: CheckDrvPathsBySystem,
+  drvPathsBySystem: CheckDrvPathsBySystem
 ): Readonly<Record<string, readonly string[]>> {
   return Object.fromEntries(
     Object.entries(drvPathsBySystem).map(
       (entry: readonly [string, CheckDrvPaths]): readonly [string, readonly string[]] => {
         const [system, drvPaths] = entry;
         return [system, Object.keys(drvPaths).toSorted()];
-      },
-    ),
+      }
+    )
   );
 }
 
@@ -104,19 +104,19 @@ function changedDerivationChecks(before: CheckDrvPaths, after: CheckDrvPaths): r
 
 function changedActivatedChecks(
   beforeBySystem: Readonly<CheckDrvPathsBySystem>,
-  afterBySystem: Readonly<CheckDrvPathsBySystem>,
+  afterBySystem: Readonly<CheckDrvPathsBySystem>
 ): readonly ActivatedCheck[] {
   return SYSTEM_TARGETS.flatMap((target: SystemTarget): readonly ActivatedCheck[] =>
     changedDerivationChecks(
       beforeBySystem[target.system] ?? {},
-      afterBySystem[target.system] ?? {},
-    ).map((name: string): ActivatedCheck => activatedCheck(name, target.runner, target.system)),
+      afterBySystem[target.system] ?? {}
+    ).map((name: string): ActivatedCheck => activatedCheck(name, target.runner, target.system))
   );
 }
 
 function missingChecks(
   requested: readonly string[],
-  availableBySystem: Readonly<Record<string, readonly string[]>>,
+  availableBySystem: Readonly<Record<string, readonly string[]>>
 ): readonly string[] {
   const available = new Set(Object.values(availableBySystem).flat());
   return requested.filter((name: string): boolean => !available.has(name));
@@ -124,7 +124,7 @@ function missingChecks(
 
 function buildMatrix(
   requested: readonly string[],
-  availableBySystem: Readonly<Record<string, readonly string[]>>,
+  availableBySystem: Readonly<Record<string, readonly string[]>>
 ): readonly ActivatedCheck[] {
   return SYSTEM_TARGETS.flatMap((target: SystemTarget): readonly ActivatedCheck[] => {
     const availableForSystem = availableBySystem[target.system];
@@ -159,7 +159,7 @@ function checkBelongsToPrefix(name: string, prefix: string): boolean {
 
 function checksFromChangedFiles(
   files: readonly string[],
-  availableBySystem: Readonly<Record<string, readonly string[]>>,
+  availableBySystem: Readonly<Record<string, readonly string[]>>
 ): readonly string[] {
   const available = [...new Set(Object.values(availableBySystem).flat())].toSorted();
   const prefixes = new Set<string>();
@@ -175,23 +175,23 @@ function checksFromChangedFiles(
   }
 
   const requested = available.filter((name: string): boolean =>
-    [...prefixes].some((prefix: string): boolean => checkBelongsToPrefix(name, prefix)),
+    [...prefixes].some((prefix: string): boolean => checkBelongsToPrefix(name, prefix))
   );
   const everyPrefixMatched = [...prefixes].every((prefix: string): boolean =>
-    requested.some((name: string): boolean => checkBelongsToPrefix(name, prefix)),
+    requested.some((name: string): boolean => checkBelongsToPrefix(name, prefix))
   );
   return everyPrefixMatched ? requested : available;
 }
 
 async function resolvedBaselineRevision(
   baselineRevision: string,
-  runner: CommandRunner,
+  runner: CommandRunner
 ): Promise<string | undefined> {
   try {
     const result = await run(
       runner,
       ["git", "rev-parse", "--verify", `${baselineRevision}^{commit}`],
-      { capture: true },
+      { capture: true }
     );
     return result.stdout.trim();
   } catch (error: unknown) {
@@ -206,31 +206,31 @@ async function checkedOutBaseChangedChecks(
   currentDrvPathsBySystem: CheckDrvPathsBySystem,
   availableBySystem: Readonly<Record<string, readonly string[]>>,
   baselineRevision: string,
-  runner: CommandRunner,
+  runner: CommandRunner
 ): Promise<readonly ActivatedCheck[]> {
   const resolvedRevision = await resolvedBaselineRevision(baselineRevision, runner);
   if (resolvedRevision === undefined) {
     return buildMatrix(
       [...new Set(Object.values(availableBySystem).flat())].toSorted(),
-      availableBySystem,
+      availableBySystem
     );
   }
 
   try {
     return changedActivatedChecks(
       await checkDrvPathsBySystem(localGitFlakeRef(resolvedRevision), runner),
-      currentDrvPathsBySystem,
+      currentDrvPathsBySystem
     );
   } catch (error: unknown) {
     const errorMessage = error instanceof Error ? error.message : String(error);
     const errorSummary = errorMessage.trim().split("\n").at(-1) ?? errorMessage;
     await writeStderr(
-      `Base check evaluation failed; falling back to changed-path impact: ${errorSummary}`,
+      `Base check evaluation failed; falling back to changed-path impact: ${errorSummary}`
     );
     const result = await run(
       runner,
       ["git", "diff", "--name-only", resolvedRevision, "HEAD", "--"],
-      { capture: true },
+      { capture: true }
     );
     const changedFiles = result.stdout
       .split("\n")
@@ -249,12 +249,12 @@ async function requestedActivatedChecks(
   activateAllChecks: string | undefined,
   availableBySystem: Readonly<Record<string, readonly string[]>>,
   currentDrvPathsBySystem: CheckDrvPathsBySystem,
-  runner: CommandRunner,
+  runner: CommandRunner
 ): Promise<readonly ActivatedCheck[]> {
   if (activateAllChecks === "true") {
     return buildMatrix(
       [...new Set(Object.values(availableBySystem).flat())].toSorted(),
-      availableBySystem,
+      availableBySystem
     );
   }
 
@@ -272,7 +272,7 @@ async function requestedActivatedChecks(
       currentDrvPathsBySystem,
       availableBySystem,
       selectBaselineRevision(event.name, event.before),
-      runner,
+      runner
     );
   }
 
@@ -286,7 +286,7 @@ async function discoverChangeImpact(runner: CommandRunner): Promise<void> {
   const eventBefore = Deno.env.get("GITHUB_EVENT_BEFORE");
   const event: ChangeEvent = {
     ...(eventBefore === undefined ? {} : { before: eventBefore }),
-    ...(eventName === undefined ? {} : { name: eventName }),
+    ...(eventName === undefined ? {} : { name: eventName })
   };
 
   const include = await requestedActivatedChecks(
@@ -295,7 +295,7 @@ async function discoverChangeImpact(runner: CommandRunner): Promise<void> {
     Deno.env.get("ACTIVATE_ALL_CHECKS"),
     availableBySystem,
     currentDrvPathsBySystem,
-    runner,
+    runner
   );
 
   await writeOutput("hasActivatedChecks", String(include.length > 0));
@@ -314,6 +314,6 @@ export {
   comparesCheckedOutBase,
   checksFromInput,
   requestedActivatedChecks,
-  selectBaselineRevision,
+  selectBaselineRevision
 };
 export { SYSTEM_TARGETS } from "coolheaded/system/target.ts";

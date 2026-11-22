@@ -18,11 +18,11 @@ describe("pin JSON", (): void => {
       platformPackageHashes: Object.fromEntries(
         SUPPORTED_SYSTEMS.map(
           (system) =>
-            [system, parseSriHash(`sha512-${"A".repeat(SHA512_BASE64_CONTENT_LENGTH)}==`)] as const,
-        ),
+            [system, parseSriHash(`sha512-${"A".repeat(SHA512_BASE64_CONTENT_LENGTH)}==`)] as const
+        )
       ),
       sourceHash: parseSriHash(`sha512-${"A".repeat(SHA512_BASE64_CONTENT_LENGTH)}==`),
-      version: "1.0.0",
+      version: "1.0.0"
     });
     const parsed: unknown = JSON.parse(serialized);
     if (typeof parsed !== "object" || parsed === null || Array.isArray(parsed)) {
@@ -36,7 +36,7 @@ describe("pin JSON", (): void => {
       "platformPackageHashes",
       "sourceHash",
       "cargoVendorHash",
-      "npmVendorHash",
+      "npmVendorHash"
     ]);
   });
 
@@ -44,7 +44,7 @@ describe("pin JSON", (): void => {
     const hash = parseSriHash(`sha256-${"A".repeat(SHA256_BASE64_CONTENT_LENGTH)}=`);
     const serialized = serializePinJson({
       platformPackageHashes: { "aarch64-darwin": hash },
-      version: "2.23.0",
+      version: "2.23.0"
     });
     const value: unknown = JSON.parse(serialized);
     const config = parsePackageHashConfig(value);

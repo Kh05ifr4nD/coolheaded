@@ -32,7 +32,7 @@ Deno.test(selectionName, (): void => {
         assertEquals(newerPinVersion(`${current}-alpha`, current), current);
         assertEquals(typeof newerPinVersion(current, `${current}-alpha`), "undefined");
         assertEquals(typeof newerPinVersion(`${current}+left`, `${current}+right`), "undefined");
-      },
-    ),
+      }
+    )
   );
 });

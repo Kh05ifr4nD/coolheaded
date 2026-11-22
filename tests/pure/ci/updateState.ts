@@ -4,13 +4,13 @@ import type {
   UpdateFailure,
   UpdateModel,
   UpdateReal,
-  UpdateState,
+  UpdateState
 } from "./updateStateContract.ts";
 import {
   InvalidFastCheckEnvironmentError,
   assertAsyncProperty,
   defineReplayTarget,
-  fastCheckConfig,
+  fastCheckConfig
 } from "coolheadedTestSupport/fastCheck.ts";
 import { assert, assertEquals, assertThrows } from "@jsr/std__assert";
 import fc from "fast-check";
@@ -29,7 +29,7 @@ function cell<Value>(initial: Value): Cell<Value> {
     },
     set(next: Value): void {
       value = next;
-    },
+    }
   };
 }
 
@@ -41,7 +41,7 @@ function log<Value>(initial: readonly Value[] = []): Log<Value> {
     },
     values(): readonly Value[] {
       return values;
-    },
+    }
   };
 }
 
@@ -50,14 +50,14 @@ function state(): { readonly model: UpdateModel; readonly real: UpdateReal } {
     model: {
       branch: cell(""),
       history: log<UpdateState>(["clean"]),
-      state: cell<UpdateState>("clean"),
+      state: cell<UpdateState>("clean")
     },
     real: {
       failure: cell<UpdateFailure | null>(null),
       observations: log(),
       operations: cell(0),
-      outcomes: log(),
-    },
+      outcomes: log()
+    }
   };
 }
 
@@ -65,7 +65,7 @@ function commandsReplayPath(path: string | null, args: readonly string[]): strin
   if (path === null) {
     if (args.length > 0) {
       throw new InvalidFastCheckEnvironmentError(
-        "Commands replay argument requires FAST_CHECK_PATH",
+        "Commands replay argument requires FAST_CHECK_PATH"
       );
     }
     return undefined;
@@ -78,20 +78,20 @@ function commandsReplayPath(path: string | null, args: readonly string[]): strin
     replayPath.includes("\0")
   ) {
     throw new InvalidFastCheckEnvironmentError(
-      "FAST_CHECK_PATH requires one non-empty commands replay argument",
+      "FAST_CHECK_PATH requires one non-empty commands replay argument"
     );
   }
   return replayPath;
 }
 
 function isReplayableCommands(
-  commands: Readonly<Iterable<fc.AsyncCommand<UpdateModel, UpdateReal>>>,
+  commands: Readonly<Iterable<fc.AsyncCommand<UpdateModel, UpdateReal>>>
 ): commands is ReplayableCommands {
   return "metadataForReplay" in commands && typeof commands.metadataForReplay === "function";
 }
 
 function replayableCommands(
-  commands: Readonly<Iterable<fc.AsyncCommand<UpdateModel, UpdateReal>>>,
+  commands: Readonly<Iterable<fc.AsyncCommand<UpdateModel, UpdateReal>>>
 ): ReplayableCommands {
   if (!isReplayableCommands(commands)) {
     throw new TypeError("fc.commands omitted replay metadata");
@@ -122,7 +122,7 @@ Deno.test("update control validates commands replay arguments", (): void => {
     ["0", []],
     ["0", [""]],
     ["0", ["invalid\0path"]],
-    ["0", ["one", "two"]],
+    ["0", ["one", "two"]]
   ] satisfies readonly (readonly [string | null, readonly string[]])[]) {
     assertThrows((): void => {
       commandsReplayPath(path, args);
@@ -147,7 +147,7 @@ Deno.test(testName, async (): Promise<void> => {
     fc.asyncProperty(
       updateCommands(requestedReplayPath),
       async (
-        commands: Readonly<Iterable<fc.AsyncCommand<UpdateModel, UpdateReal>>>,
+        commands: Readonly<Iterable<fc.AsyncCommand<UpdateModel, UpdateReal>>>
       ): Promise<void> => {
         const replayable = replayableCommands(commands);
         const current = state();
@@ -155,14 +155,14 @@ Deno.test(testName, async (): Promise<void> => {
         try {
           await fc.asyncModelRun(
             (): { readonly model: UpdateModel; readonly real: UpdateReal } => current,
-            commandList,
+            commandList
           );
         } finally {
           finalReplayArgument = replayArgument(replayable.metadataForReplay());
         }
         const observed = observedStates(
           current.real.observations.values(),
-          current.real.failure.get(),
+          current.real.failure.get()
         );
         assertEquals(observed, current.model.history.values());
         assertEquals(current.real.operations.get(), current.real.outcomes.values().length);
@@ -171,22 +171,22 @@ Deno.test(testName, async (): Promise<void> => {
           assertEquals(failure.command, "failure(commit)");
           assertEquals(current.model.state.get(), "stopped");
           assertEquals(failure.request, {
-            command: ["git", "commit", "--signoff", "-m", "update", "-m", "body"],
+            command: ["git", "commit", "--signoff", "-m", "update", "-m", "body"]
           });
           assertEquals(failure.result, { code: 1, stderr: "failed", stdout: "" });
           assertEquals(current.real.observations.values().slice(-failureObservationCount, -1), [
             {
               request: { command: ["git", "add", "--update"] },
-              result: { code: 0, stderr: "", stdout: "" },
+              result: { code: 0, stderr: "", stdout: "" }
             },
             {
               request: { command: ["git", "diff", "--cached", "--quiet"] },
-              result: { code: 1, stderr: "", stdout: "" },
-            },
+              result: { code: 1, stderr: "", stdout: "" }
+            }
           ]);
           assertEquals(current.real.observations.values().at(-1), {
             request: failure.request,
-            result: failure.result,
+            result: failure.result
           });
         }
         maximumOperations = Math.max(maximumOperations, current.real.operations.get());
@@ -197,8 +197,8 @@ Deno.test(testName, async (): Promise<void> => {
         for (const observedState of observed) {
           reachedStates.add(observedState);
         }
-      },
-    ),
+      }
+    )
   );
   if (config.path === undefined) {
     assert(maximumOperations > 2);
@@ -214,11 +214,11 @@ Deno.test(testName, async (): Promise<void> => {
       "failed",
       "prCreated",
       "prEdited",
-      "merged",
+      "merged"
     ];
     assertEquals(
       requiredStates.filter((candidate: UpdateState): boolean => !reachedStates.has(candidate)),
-      [],
+      []
     );
   }
 });

@@ -5,11 +5,11 @@ describe("pure runtime permissions", (): void => {
   it("denies filesystem, process, and network capabilities", async (): Promise<void> => {
     await assertRejects(
       (): Promise<string> => Deno.readTextFile("deno.jsonc"),
-      Deno.errors.NotCapable,
+      Deno.errors.NotCapable
     );
     await assertRejects(
       (): Promise<void> => Deno.writeTextFile(".permissionProbe", ""),
-      Deno.errors.NotCapable,
+      Deno.errors.NotCapable
     );
     await assertRejects(async (): Promise<void> => {
       await new Deno.Command("git").output();

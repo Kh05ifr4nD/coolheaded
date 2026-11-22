@@ -3,12 +3,12 @@ import {
   denoToolIdentity,
   digestFile,
   digestText,
-  toolIdentity,
+  toolIdentity
 } from "coolheaded/repo/layout/command.ts";
 import {
   conformanceViolation,
   inputDecodeError,
-  internalInvariantError,
+  internalInvariantError
 } from "coolheaded/repo/layout/model.ts";
 import type { RepositorySnapshot } from "coolheaded/repo/layout/types.ts";
 import { join } from "@jsr/std__path";
@@ -31,7 +31,7 @@ const GIT_MODES = {
   "100644": "file",
   "100755": "executable",
   "120000": "symlink",
-  "160000": "gitlink",
+  "160000": "gitlink"
 } as const satisfies Readonly<Record<string, GitNodeKind>>;
 
 function gitNodeKind(mode: string): GitNodeKind | undefined {
@@ -62,7 +62,7 @@ function validateGitPathNames(paths: readonly string[]): void {
     if (existingPath !== undefined && existingPath !== path) {
       throw inputDecodeError(
         "Git pathname",
-        `case-fold collision between ${existingPath} and ${path}`,
+        `case-fold collision between ${existingPath} and ${path}`
       );
     }
 
@@ -117,7 +117,7 @@ async function gitIndexEntriesFrom(repositoryRootPath: string): Promise<readonly
   const output = await commandOutput(
     "git",
     ["ls-files", "--full-name", "--stage", "-z", "--cached"],
-    repositoryRootPath,
+    repositoryRootPath
   );
   const entries = output
     .split("\0")
@@ -134,12 +134,12 @@ async function repositoryRoot(): Promise<string> {
 
 async function gitPathsFrom(
   repositoryRootPath: string,
-  args: readonly string[],
+  args: readonly string[]
 ): Promise<readonly string[]> {
   const output = await commandOutput(
     "git",
     ["ls-files", "--full-name", "-z", ...args],
-    repositoryRootPath,
+    repositoryRootPath
   );
 
   return gitPaths(output);
@@ -150,7 +150,7 @@ async function gitHead(repositoryRootPath: string): Promise<string> {
     "git",
     ["rev-parse", "--verify", "HEAD"],
     repositoryRootPath,
-    [0, 128],
+    [0, 128]
   );
   const head = output.trim();
   return head.length === 0 ? "(unborn)" : head;
@@ -172,7 +172,7 @@ async function enumerationDigest(enumeration: RepositoryEnumeration): Promise<st
 
 async function repositorySnapshot(
   repositoryRootPath: string,
-  enumeration: RepositoryEnumeration,
+  enumeration: RepositoryEnumeration
 ): Promise<RepositorySnapshot> {
   const [head, indexTree, layoutSha256, enumerationSha256, cue, deno, git] = await Promise.all([
     gitHead(repositoryRootPath),
@@ -181,7 +181,7 @@ async function repositorySnapshot(
     enumerationDigest(enumeration),
     toolIdentity("cue"),
     denoToolIdentity(),
-    toolIdentity("git"),
+    toolIdentity("git")
   ]);
 
   return {
@@ -189,7 +189,7 @@ async function repositorySnapshot(
     head,
     indexTree,
     layoutSha256,
-    tools: { cue, deno, git },
+    tools: { cue, deno, git }
   };
 }
 
@@ -199,6 +199,6 @@ export {
   gitPathsFrom,
   repositoryRoot,
   repositorySnapshot,
-  validateGitPathNames,
+  validateGitPathNames
 };
 export type { GitIndexEntry, RepositoryEnumeration };

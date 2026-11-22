@@ -2,7 +2,7 @@ import {
   UpdateError,
   commandOutput,
   runUpdateScript,
-  scriptPath,
+  scriptPath
 } from "coolheaded/core/updateScript.ts";
 import { Effect } from "effect";
 import { fetchJsonClient } from "coolheaded/core/fetchHttpClient.ts";
@@ -24,18 +24,18 @@ runUpdateScript(import.meta.url, (_args, runner) =>
       "--json",
       "--name",
       "harmonyOs-sans.zip",
-      `https://media.githubusercontent.com/media/${OWNER}/${REPO}/${rev}/${encodeURIComponent(ARCHIVE)}`,
+      `https://media.githubusercontent.com/media/${OWNER}/${REPO}/${rev}/${encodeURIComponent(ARCHIVE)}`
     ]);
     const hash = SRI_HASH_PATTERN.exec(prefetch)?.groups?.["hash"];
     if (hash === undefined) {
       return yield* Effect.fail(
-        new UpdateError(`Missing hash in nix prefetch output: ${prefetch}`),
+        new UpdateError(`Missing hash in nix prefetch output: ${prefetch}`)
       );
     }
     return yield* writePinJson(PIN_FILE_PATH, {
       packageHash: hash,
       rev,
-      version: `0-unstable-${date.slice(0, "YYYY-MM-DD".length)}`,
+      version: `0-unstable-${date.slice(0, "YYYY-MM-DD".length)}`
     });
-  }),
+  })
 );

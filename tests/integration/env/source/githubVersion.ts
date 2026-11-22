@@ -46,7 +46,7 @@ const INVALID_CONTINUATION_KINDS = [
   "resourceChange",
   "userinfo",
   "wrongPerPage",
-  "zeroId",
+  "zeroId"
 ] as const satisfies readonly InvalidContinuationKind[];
 const REQUEST_HEADERS = { accept: "application/vnd.github+json" };
 type ExpectedJsonRequest = Parameters<typeof strictJsonClient>[0][number];
@@ -59,7 +59,7 @@ function canonicalPageUrl(
   repositoryId: string,
   source: GitHubPageSource,
   page: number,
-  pageFirst = false,
+  pageFirst = false
 ): string {
   const query = pageFirst ? `page=${page}&per_page=100` : `per_page=100&page=${page}`;
   return `https://api.github.com/repositories/${repositoryId}/${source}?${query}`;
@@ -79,7 +79,7 @@ function request(url: string): HttpRequest {
     headers: REQUEST_HEADERS,
     method: "GET",
     timeoutMs: TIMEOUT_MS,
-    url,
+    url
   };
 }
 
@@ -87,7 +87,7 @@ function response(
   requestUrl: string,
   value: unknown,
   link?: string,
-  finalUrl: string = requestUrl,
+  finalUrl: string = requestUrl
 ): JsonResponse {
   return {
     response: {
@@ -95,9 +95,9 @@ function response(
       headers: link === undefined ? {} : { link },
       status: OK_STATUS,
       statusText: "OK",
-      url: finalUrl,
+      url: finalUrl
     },
-    value,
+    value
   };
 }
 
@@ -105,12 +105,12 @@ function plan(
   requestUrl: string,
   value: unknown,
   link?: string,
-  finalUrl?: string,
+  finalUrl?: string
 ): ExpectedJsonRequest {
   return {
     effect: (): Effect.Effect<JsonResponse> =>
       Effect.succeed(response(requestUrl, value, link, finalUrl)),
-    request: request(requestUrl),
+    request: request(requestUrl)
   };
 }
 
@@ -118,13 +118,13 @@ async function sourcePaginationFailure(
   source: GitHubPageSource,
   requestUrl: string,
   link: string | undefined,
-  finalUrl: string = requestUrl,
+  finalUrl: string = requestUrl
 ): Promise<VersionSourceError> {
   const fake = strictJsonClient([
-    plan(requestUrl, versionEntries(source, "1.0.0"), link, finalUrl),
+    plan(requestUrl, versionEntries(source, "1.0.0"), link, finalUrl)
   ]);
   const error = await Effect.runPromise(
-    Effect.flip(latestGitHubVersion({ owner: "example", repo: "tool", source }, fake.client)),
+    Effect.flip(latestGitHubVersion({ owner: "example", repo: "tool", source }, fake.client))
   );
   assertInstanceOf(error, VersionSourceError);
   assertEquals(error.kind, "pagination");
@@ -135,7 +135,7 @@ async function sourcePaginationFailure(
 
 async function paginationFailure(
   link: string | undefined,
-  finalUrl: string = FIRST_URL,
+  finalUrl: string = FIRST_URL
 ): Promise<VersionSourceError> {
   return await sourcePaginationFailure("tags", FIRST_URL, link, finalUrl);
 }
@@ -145,7 +145,7 @@ function invalidContinuationUrl(
   source: GitHubPageSource,
   repositoryId: string,
   page: number,
-  invalidPage: string,
+  invalidPage: string
 ): string {
   const path = `/repositories/${repositoryId}/${source}`;
   const query = `?per_page=100&page=${page}`;
@@ -202,11 +202,11 @@ function invalidContinuationUrl(
 Deno.test("GitHub versions follow a trusted relative next page", async (): Promise<void> => {
   const fake = strictJsonClient([
     plan(FIRST_URL, [{ name: "v1.0.0" }], `<?per_page=100&page=2>; rel="next"`),
-    plan(SECOND_URL, [{ name: "v2.0.0" }]),
+    plan(SECOND_URL, [{ name: "v2.0.0" }])
   ]);
   assertEquals(
     await Effect.runPromise(latestGitHubVersion({ owner: "example", repo: "tool" }, fake.client)),
-    "2.0.0",
+    "2.0.0"
   );
   fake.assertExhausted();
 });
@@ -216,8 +216,8 @@ Deno.test("GitHub releases support an explicit calendar version scheme", async (
     plan(RELEASES_URL, [
       { tag_name: "2026.06.09" },
       { tag_name: "2026.07.04" },
-      { tag_name: "2026.07.03" },
-    ]),
+      { tag_name: "2026.07.03" }
+    ])
   ]);
 
   assertEquals(
@@ -228,12 +228,12 @@ Deno.test("GitHub releases support an explicit calendar version scheme", async (
           repo: "tool",
           source: "releases",
           versionPattern: /^(?<version>\d{4}\.\d{2}\.\d{2})$/u,
-          versionScheme: calendarVersionScheme,
+          versionScheme: calendarVersionScheme
         },
-        fake.client,
-      ),
+        fake.client
+      )
     ),
-    "2026.07.04",
+    "2026.07.04"
   );
   fake.assertExhausted();
 });
@@ -244,14 +244,14 @@ for (const source of PAGE_SOURCES) {
     const canonicalUrl = canonicalPageUrl(CONTRACT_REPOSITORY_ID, source, 2);
     const fake = strictJsonClient([
       plan(firstUrl, versionEntries(source, "1.0.0"), `<${canonicalUrl}>; rel="next"`),
-      plan(canonicalUrl, versionEntries(source, "2.0.0")),
+      plan(canonicalUrl, versionEntries(source, "2.0.0"))
     ]);
 
     assertEquals(
       await Effect.runPromise(
-        latestGitHubVersion({ owner: CONTRACT_OWNER, repo: CONTRACT_REPO, source }, fake.client),
+        latestGitHubVersion({ owner: CONTRACT_OWNER, repo: CONTRACT_REPO, source }, fake.client)
       ),
-      "2.0.0",
+      "2.0.0"
     );
     assertEquals(fake.calls.length, 2);
     fake.assertExhausted();
@@ -266,7 +266,7 @@ Deno.test(canonicalContinuationName, async (): Promise<void> => {
       "tests/integration/env/source/githubVersion.ts",
       canonicalContinuationName,
       undefined,
-      ["GH_TOKEN", "GITHUB_TOKEN"],
+      ["GH_TOKEN", "GITHUB_TOKEN"]
     ),
     fc.asyncProperty(
       fc.constantFrom(...PAGE_SOURCES),
@@ -277,25 +277,25 @@ Deno.test(canonicalContinuationName, async (): Promise<void> => {
         source: GitHubPageSource,
         repositoryId: string,
         page: number,
-        pageFirst: boolean,
+        pageFirst: boolean
       ): Promise<void> => {
         const firstUrl = namedPageUrl(source);
         const canonicalUrl = canonicalPageUrl(repositoryId, source, page, pageFirst);
         const fake = strictJsonClient([
           plan(firstUrl, versionEntries(source, "1.0.0"), `<${canonicalUrl}>; rel="next"`),
-          plan(canonicalUrl, versionEntries(source, "9.0.0")),
+          plan(canonicalUrl, versionEntries(source, "9.0.0"))
         ]);
 
         assertEquals(
           await Effect.runPromise(
-            latestGitHubVersion({ owner: "example", repo: "tool", source }, fake.client),
+            latestGitHubVersion({ owner: "example", repo: "tool", source }, fake.client)
           ),
-          "9.0.0",
+          "9.0.0"
         );
         assertEquals(fake.calls.length, 2);
         fake.assertExhausted();
-      },
-    ),
+      }
+    )
   );
 });
 
@@ -307,7 +307,7 @@ Deno.test(rejectedContinuationName, async (): Promise<void> => {
       "tests/integration/env/source/githubVersion.ts",
       rejectedContinuationName,
       undefined,
-      ["GH_TOKEN", "GITHUB_TOKEN"],
+      ["GH_TOKEN", "GITHUB_TOKEN"]
     ),
     fc.asyncProperty(
       fc.constantFrom(...PAGE_SOURCES),
@@ -318,7 +318,7 @@ Deno.test(rejectedContinuationName, async (): Promise<void> => {
         source: GitHubPageSource,
         repositoryId: string,
         page: number,
-        invalidPage: string,
+        invalidPage: string
       ): Promise<void> => {
         const firstUrl = namedPageUrl(source);
         await Promise.all(
@@ -328,13 +328,13 @@ Deno.test(rejectedContinuationName, async (): Promise<void> => {
               source,
               repositoryId,
               page,
-              invalidPage,
+              invalidPage
             );
             await sourcePaginationFailure(source, firstUrl, `<${invalidUrl}>; rel="next"`);
-          }),
+          })
         );
-      },
-    ),
+      }
+    )
   );
 });
 
@@ -342,14 +342,14 @@ for (const [name, link] of [
   ["absent Link", undefined],
   [
     "terminal non-next Link",
-    `<${FIRST_URL}&page=1>; rel="prev", <${FIRST_URL}&page=1>; rel="first"`,
-  ],
+    `<${FIRST_URL}&page=1>; rel="prev", <${FIRST_URL}&page=1>; rel="first"`
+  ]
 ] as const) {
   Deno.test(`GitHub versions stop at ${name}`, async (): Promise<void> => {
     const fake = strictJsonClient([plan(FIRST_URL, [{ name: "v1.0.0" }], link)]);
     assertEquals(
       await Effect.runPromise(latestGitHubVersion({ owner: "example", repo: "tool" }, fake.client)),
-      "1.0.0",
+      "1.0.0"
     );
     fake.assertExhausted();
   });
@@ -361,7 +361,7 @@ for (const [name, link] of [
   ["duplicate next", `<${SECOND_URL}>; rel="next", <${SECOND_URL}>; rel="next"`],
   ["cross-origin next", `<https://example.com/repos/example/tool/tags>; rel="next"`],
   ["credential next", `<https://user@api.github.com/repos/example/tool/tags>; rel="next"`],
-  ["wrong-path next", `<https://api.github.com/repos/other/tool/tags>; rel="next"`],
+  ["wrong-path next", `<https://api.github.com/repos/other/tool/tags>; rel="next"`]
 ] as const) {
   Deno.test(`GitHub versions reject ${name}`, async (): Promise<void> => {
     await paginationFailure(link);
@@ -373,8 +373,8 @@ for (const [name, finalUrl, link] of [
   [
     "wrong-path final URL with terminal Link",
     "https://api.github.com/repos/other/tool/tags",
-    `<${FIRST_URL}>; rel="prev"`,
-  ],
+    `<${FIRST_URL}>; rel="prev"`
+  ]
 ] as const) {
   Deno.test(`GitHub versions reject ${name}`, async (): Promise<void> => {
     await paginationFailure(link, finalUrl);
@@ -385,10 +385,10 @@ Deno.test("GitHub versions reject pagination cycles", async (): Promise<void> =>
   const canonicalUrl = canonicalPageUrl("123", "tags", 2);
   const fake = strictJsonClient([
     plan(FIRST_URL, [{ name: "v1.0.0" }], `<${canonicalUrl}>; rel="next"`),
-    plan(canonicalUrl, [{ name: "v2.0.0" }], `<${canonicalUrl}>; rel="next"`),
+    plan(canonicalUrl, [{ name: "v2.0.0" }], `<${canonicalUrl}>; rel="next"`)
   ]);
   const error = await Effect.runPromise(
-    Effect.flip(latestGitHubVersion({ owner: "example", repo: "tool" }, fake.client)),
+    Effect.flip(latestGitHubVersion({ owner: "example", repo: "tool" }, fake.client))
   );
   assertInstanceOf(error, VersionSourceError);
   assertEquals(error.kind, "pagination");
@@ -401,10 +401,10 @@ Deno.test("GitHub versions reject a changed canonical repository id", async (): 
   const changedRepositoryUrl = canonicalPageUrl("456", "tags", 3);
   const fake = strictJsonClient([
     plan(FIRST_URL, [{ name: "v1.0.0" }], `<${secondUrl}>; rel="next"`),
-    plan(secondUrl, [{ name: "v2.0.0" }], `<${changedRepositoryUrl}>; rel="next"`),
+    plan(secondUrl, [{ name: "v2.0.0" }], `<${changedRepositoryUrl}>; rel="next"`)
   ]);
   const error = await Effect.runPromise(
-    Effect.flip(latestGitHubVersion({ owner: "example", repo: "tool" }, fake.client)),
+    Effect.flip(latestGitHubVersion({ owner: "example", repo: "tool" }, fake.client))
   );
   assertInstanceOf(error, VersionSourceError);
   assertEquals(error.kind, "pagination");
@@ -414,15 +414,15 @@ Deno.test("GitHub versions reject a changed canonical repository id", async (): 
 
 Deno.test("GitHub versions reject pagination beyond the page limit", async (): Promise<void> => {
   const pages = Array.from({ length: 10 }, (_value: undefined, index: number): string =>
-    index === 0 ? FIRST_URL : `${FIRST_URL}&page=${index + 1}`,
+    index === 0 ? FIRST_URL : `${FIRST_URL}&page=${index + 1}`
   );
   const fake = strictJsonClient(
     pages.map((url: string, index: number): ExpectedJsonRequest =>
-      plan(url, [{ name: `v1.0.${index}` }], `<${FIRST_URL}&page=${index + 2}>; rel="next"`),
-    ),
+      plan(url, [{ name: `v1.0.${index}` }], `<${FIRST_URL}&page=${index + 2}>; rel="next"`)
+    )
   );
   const error = await Effect.runPromise(
-    Effect.flip(latestGitHubVersion({ owner: "example", repo: "tool" }, fake.client)),
+    Effect.flip(latestGitHubVersion({ owner: "example", repo: "tool" }, fake.client))
   );
   assertInstanceOf(error, VersionSourceError);
   assertEquals(error.kind, "pagination");
@@ -431,13 +431,13 @@ Deno.test("GitHub versions reject pagination beyond the page limit", async (): P
 
 Deno.test("GitHub releases select tag_name instead of name", async (): Promise<void> => {
   const fake = strictJsonClient([
-    plan(RELEASES_URL, [{ name: "not-a-version", tag_name: "v2.0.0" }]),
+    plan(RELEASES_URL, [{ name: "not-a-version", tag_name: "v2.0.0" }])
   ]);
   assertEquals(
     await Effect.runPromise(
-      latestGitHubVersion({ owner: "example", repo: "tool", source: "releases" }, fake.client),
+      latestGitHubVersion({ owner: "example", repo: "tool", source: "releases" }, fake.client)
     ),
-    "2.0.0",
+    "2.0.0"
   );
   fake.assertExhausted();
 });
@@ -446,7 +446,7 @@ Deno.test("GitHub release preserves valid metadata", async (): Promise<void> => 
   const fake = strictJsonClient([plan(RELEASE_URL, { name: "Tool 2", tag_name: "v2.0.0" })]);
   assertEquals(await Effect.runPromise(gitHubRelease("example", "tool", "v2.0.0", fake.client)), {
     name: "Tool 2",
-    tagName: "v2.0.0",
+    tagName: "v2.0.0"
   });
   fake.assertExhausted();
 });
@@ -457,11 +457,11 @@ Deno.test("GitHub release rejects an untrusted final URL", async (): Promise<voi
       RELEASE_URL,
       { name: "Tool 2", tag_name: "v2.0.0" },
       undefined,
-      "https://example.com/repos/example/tool/releases/tags/v2.0.0",
-    ),
+      "https://example.com/repos/example/tool/releases/tags/v2.0.0"
+    )
   ]);
   const error = await Effect.runPromise(
-    Effect.flip(gitHubRelease("example", "tool", "v2.0.0", fake.client)),
+    Effect.flip(gitHubRelease("example", "tool", "v2.0.0", fake.client))
   );
   assertInstanceOf(error, VersionSourceError);
   assertEquals(error.kind, "pagination");

@@ -9,15 +9,15 @@ Deno.test("Deno command adapter preserves cwd environment and raw output", async
       command: [
         Deno.execPath(),
         "eval",
-        'console.log(Deno.cwd()); console.log(Deno.env.get("OVERLAY")); console.log(Deno.env.has("PATH") ? "has-path" : "no-path"); console.error("err"); Deno.exit(7)',
+        'console.log(Deno.cwd()); console.log(Deno.env.get("OVERLAY")); console.log(Deno.env.has("PATH") ? "has-path" : "no-path"); console.error("err"); Deno.exit(7)'
       ],
       cwd,
-      env: { OVERLAY: "value" },
+      env: { OVERLAY: "value" }
     });
     assertEquals(result, {
       code: 7,
       stderr: "err\n",
-      stdout: `${realCwd}\nvalue\nhas-path\n`,
+      stdout: `${realCwd}\nvalue\nhas-path\n`
     });
   } finally {
     await Deno.remove(cwd, { recursive: true });
@@ -28,7 +28,7 @@ Deno.test("Deno command adapter wraps start failures with exact request", async 
   const root = await Deno.makeTempDir();
   const request = {
     command: [Deno.execPath(), "eval", ""] as const,
-    cwd: `${root}/missing`,
+    cwd: `${root}/missing`
   };
   try {
     const error = await assertRejects((): Promise<unknown> => denoCommandRunner.run(request));

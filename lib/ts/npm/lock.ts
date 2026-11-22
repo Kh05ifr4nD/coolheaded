@@ -28,7 +28,7 @@ interface NpmTarballWorkspace {
 
 function prefetchNpmDepsOutPath(
   repositoryRootPath: string,
-  runner: CommandRunner,
+  runner: CommandRunner
 ): Effect.Effect<string, Error> {
   return commandOutput(runner, "nix", [
     "build",
@@ -36,7 +36,7 @@ function prefetchNpmDepsOutPath(
     "--print-out-paths",
     "--inputs-from",
     repositoryRootPath,
-    "nixpkgs#prefetch-npm-deps",
+    "nixpkgs#prefetch-npm-deps"
   ]);
 }
 
@@ -52,16 +52,16 @@ function prepareNpmTarballWorkspace(options: NpmTarballWorkspace): Effect.Effect
       "-fsSL",
       npmScopedTarballUrl(options.packageName, options.tarballBaseName, options.version),
       "-o",
-      archivePath,
+      archivePath
     ]),
     Effect.asVoid(
       commandOutput(
         options.runner,
         "tar",
         ["-xzf", archivePath, "--strip-components=1"],
-        options.workspacePath,
-      ),
-    ),
+        options.workspacePath
+      )
+    )
   );
 }
 
@@ -69,7 +69,7 @@ function generatedNpmPackageLockFromWorkspace(
   prefetchNpmDepsPath: string,
   workspacePath: string,
   prepareWorkspace: (workspacePath: string) => Effect.Effect<void, Error>,
-  runner: CommandRunner,
+  runner: CommandRunner
 ): Effect.Effect<GeneratedNpmPackageLock, Error> {
   return Effect.gen(function* generatedNpmPackageLockFromWorkspaceSteps(): Effect.fn.Return<
     GeneratedNpmPackageLock,
@@ -88,7 +88,7 @@ function generatedNpmPackageLockFromWorkspace(
 }
 
 function generatedNpmPackageLock(
-  options: NpmPackageLockUpdate,
+  options: NpmPackageLockUpdate
 ): Effect.Effect<GeneratedNpmPackageLock, Error> {
   return Effect.flatMap(
     prefetchNpmDepsOutPath(options.repositoryRootPath, options.runner),
@@ -101,10 +101,10 @@ function generatedNpmPackageLock(
             prefetchNpmDepsPath,
             workspacePath,
             options.prepareWorkspace,
-            options.runner,
-          ),
+            options.runner
+          )
       );
-    },
+    }
   );
 }
 

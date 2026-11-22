@@ -30,25 +30,25 @@ function replaceOnce(before, after) {
 replaceOnce(
   'async function maybeRunNpmInstall(cwd, runCommand, env, args = ["install"]) {',
   `async function maybeRunNpmInstall(cwd, runCommand, env, args = ["install"]) {
-  if (process.env.LAZYCODEX_AI_NIX_SKIP_CACHE_NPM === "1" && args.includes("--omit=dev")) return;`,
+  if (process.env.LAZYCODEX_AI_NIX_SKIP_CACHE_NPM === "1" && args.includes("--omit=dev")) return;`
 );
 replaceOnce(
   "async function maybeRunNpmSyncSkills(cwd, runCommand, env) {",
   `async function maybeRunNpmSyncSkills(cwd, runCommand, env) {
-  if (process.env.LAZYCODEX_AI_NIX_SKIP_CACHE_NPM === "1") return;`,
+  if (process.env.LAZYCODEX_AI_NIX_SKIP_CACHE_NPM === "1") return;`
 );
 
 replaceOnce(
   "    await copyDirectory(input.sourcePath, tempPath);",
-  "    await copyDirectory(input.sourcePath, tempPath);\n    await normalizeNixPluginPermissions(tempPath);",
+  "    await copyDirectory(input.sourcePath, tempPath);\n    await normalizeNixPluginPermissions(tempPath);"
 );
 replaceOnce(
   "    await rewriteCachedMcpManifest(tempPath, input.sourcePath);",
-  "    await normalizeNixPluginPermissions(tempPath);\n    await rewriteCachedMcpManifest(tempPath, input.sourcePath);",
+  "    await normalizeNixPluginPermissions(tempPath);\n    await rewriteCachedMcpManifest(tempPath, input.sourcePath);"
 );
 replaceOnce(
   "  await copyBundledMcpRuntimeDists({ pluginRoot: tempPath, sourceRoot: plugin.sourcePath });",
-  "  await normalizeNixPluginPermissions(tempPath);\n  await copyBundledMcpRuntimeDists({ pluginRoot: tempPath, sourceRoot: plugin.sourcePath });\n  await normalizeNixPluginPermissions(tempPath);\n  await normalizeNixPluginPermissions(targetPath);",
+  "  await normalizeNixPluginPermissions(tempPath);\n  await copyBundledMcpRuntimeDists({ pluginRoot: tempPath, sourceRoot: plugin.sourcePath });\n  await normalizeNixPluginPermissions(tempPath);\n  await normalizeNixPluginPermissions(targetPath);"
 );
 const delegatedFunction = /^function buildDelegatedOmoInvocation\(parsed\) \{[\s\S]*?^\}/gmu;
 if ([...source.matchAll(delegatedFunction)].length !== 1) {
@@ -69,7 +69,7 @@ source = source.replaceAll(
     if (parsed.repoRoot) args.push("--repo-root=" + parsed.repoRoot);
   } else args.push(...parsed.args);
   return { command: process.execPath, args, delegatesToOmo: true };
-}`,
+}`
 );
 
 const updateFunction = /^async function runLazyCodexManualUpdate\(input = \{\}\) \{[\s\S]*?^\}/gmu;
@@ -81,7 +81,7 @@ source = source.replaceAll(
   `async function runLazyCodexManualUpdate(input = {}) {
   (input.log ?? console.log)("LazyCodex is managed by Nix; update your flake input and rebuild.");
   return 0;
-}`,
+}`
 );
 
 source += `
@@ -111,8 +111,8 @@ nodeFs.writeFileSync(
   commentCheckerFile,
   commentChecker.replaceAll(
     resolver,
-    `function resolveCommentCheckerBinary2() { return ${javascriptString(`${packageRoot}/runtime/comment-checker`)}; }`,
-  ),
+    `function resolveCommentCheckerBinary2() { return ${javascriptString(`${packageRoot}/runtime/comment-checker`)}; }`
+  )
 );
 
 const manifestFile = `${packageRoot}/packages/omo-codex/plugin/.codex-plugin/plugin.json`;

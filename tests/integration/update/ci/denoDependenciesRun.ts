@@ -9,7 +9,7 @@ const buildCommand = [
   "build",
   `.#checks.${system}.denoDependencies`,
   "--no-link",
-  "--print-build-logs",
+  "--print-build-logs"
 ] as const;
 
 async function fixture(): Promise<{
@@ -48,29 +48,29 @@ Deno.test("Deno dependency update reports lock and snapshot changes after repair
         effect: (): Promise<void> =>
           Deno.writeTextFile(
             files.lock,
-            JSON.stringify({ specifiers: { "npm:effect@*": "1.1.0" } }),
+            JSON.stringify({ specifiers: { "npm:effect@*": "1.1.0" } })
           ),
         request: { command: ["deno", "install", "--frozen=false"] },
-        result: success,
+        result: success
       },
       {
         request: { command: ["git", "diff", "--quiet", "deno.lock"] },
-        result: { code: 1, stderr: "", stdout: "" },
+        result: { code: 1, stderr: "", stdout: "" }
       },
       {
         request: {
-          command: ["nix", "eval", "--impure", "--raw", "--expr", "builtins.currentSystem"],
+          command: ["nix", "eval", "--impure", "--raw", "--expr", "builtins.currentSystem"]
         },
-        result: { code: 0, stderr: "", stdout: system },
+        result: { code: 0, stderr: "", stdout: system }
       },
       {
         request: { command: buildCommand },
-        result: { code: 1, stderr: mismatch, stdout: "" },
+        result: { code: 1, stderr: mismatch, stdout: "" }
       },
       {
         request: { command: ["git", "diff", "--name-only"] },
-        result: { code: 0, stderr: "", stdout: `${files.lock}\n${files.snapshot}\n` },
-      },
+        result: { code: 0, stderr: "", stdout: `${files.lock}\n${files.snapshot}\n` }
+      }
     ]);
     await runDenoDependencyUpdate(runner, files.lock, files.snapshot);
     runner.assertExhausted();
@@ -90,26 +90,26 @@ Deno.test("Deno dependency update stops when lock and snapshot remain unchanged"
       { request: { command: ["deno", "install", "--frozen=false"] }, result: success },
       {
         request: { command: ["git", "diff", "--quiet", "deno.lock"] },
-        result: success,
+        result: success
       },
       {
         request: {
-          command: ["nix", "eval", "--impure", "--raw", "--expr", "builtins.currentSystem"],
+          command: ["nix", "eval", "--impure", "--raw", "--expr", "builtins.currentSystem"]
         },
-        result: { code: 0, stderr: "", stdout: system },
+        result: { code: 0, stderr: "", stdout: system }
       },
       {
         request: { command: buildCommand },
         result: {
           code: 1,
           stderr: "coolheaded-deno-dependencies\n got: sha256-old=",
-          stdout: "",
-        },
+          stdout: ""
+        }
       },
       {
         request: { command: ["git", "diff", "--quiet", files.snapshot] },
-        result: success,
-      },
+        result: success
+      }
     ]);
     await runDenoDependencyUpdate(runner, files.lock, files.snapshot);
     runner.assertExhausted();
@@ -127,15 +127,15 @@ Deno.test("Deno dependency update restores snapshot and writes no outputs on une
       { request: { command: ["deno", "install", "--frozen=false"] }, result: success },
       {
         request: { command: ["git", "diff", "--quiet", "deno.lock"] },
-        result: success,
+        result: success
       },
       {
         request: {
-          command: ["nix", "eval", "--impure", "--raw", "--expr", "builtins.currentSystem"],
+          command: ["nix", "eval", "--impure", "--raw", "--expr", "builtins.currentSystem"]
         },
-        result: { code: 0, stderr: "", stdout: system },
+        result: { code: 0, stderr: "", stdout: system }
       },
-      { request: { command: buildCommand }, result: success },
+      { request: { command: buildCommand }, result: success }
     ]);
     await assertRejects(() => runDenoDependencyUpdate(runner, files.lock, files.snapshot));
     runner.assertExhausted();

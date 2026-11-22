@@ -3,7 +3,7 @@ import {
   requiredToolPath,
   runGit,
   withTemporaryDirectory,
-  writeRepositoryFixture,
+  writeRepositoryFixture
 } from "./fixture.ts";
 import { assertEquals, assertRejects, assertThrows } from "@jsr/std__assert";
 import { describe, it } from "@jsr/std__testing/bdd";
@@ -21,7 +21,7 @@ async function layoutPathConforms(paths: readonly string[]): Promise<boolean> {
       cwd: REPOSITORY_ROOT_PATH,
       env: { PATH: Deno.env.get("PATH") ?? "" },
       stderr: "piped",
-      stdout: "piped",
+      stdout: "piped"
     }).output();
     return output.success;
   });
@@ -46,12 +46,12 @@ describe("tree conformance boundaries", (): void => {
     assertThrows(
       (): void => void layout(["tree/leaf.ts", "tree"]),
       Error,
-      "Git path conflicts with directory",
+      "Git path conflicts with directory"
     );
     assertThrows(
       (): void => void layout(["leaf.ts", "leaf.ts/child"]),
       Error,
-      "Git path conflicts with file",
+      "Git path conflicts with file"
     );
   });
 
@@ -61,7 +61,7 @@ describe("tree conformance boundaries", (): void => {
         files: [{ contents: "export {};\n", path: "tracked.ts" }],
         gitignore: "tracked.ts\n",
         pathFields: '\t"tracked.ts"?: #RegularFile',
-        requiredFields: '\t"tracked.ts"!: #RegularFile',
+        requiredFields: '\t"tracked.ts"!: #RegularFile'
       });
       await runGit(repositoryRoot, ["add", "-f", "tracked.ts"]);
 
@@ -72,7 +72,7 @@ describe("tree conformance boundaries", (): void => {
   it("rejects an extra visible file", async (): Promise<void> => {
     await withTemporaryDirectory(async (repositoryRoot: string): Promise<void> => {
       await writeRepositoryFixture(repositoryRoot, {
-        files: [{ contents: "export {};\n", path: "extra.ts" }],
+        files: [{ contents: "export {};\n", path: "extra.ts" }]
       });
 
       await assertRejects((): Promise<void> => checkLayout(repositoryRoot), Error, "extra.ts");
@@ -83,7 +83,7 @@ describe("tree conformance boundaries", (): void => {
     await withTemporaryDirectory(async (repositoryRoot: string): Promise<void> => {
       await writeRepositoryFixture(repositoryRoot, {
         pathFields: '\t"required.ts"?: #RegularFile',
-        requiredFields: '\t"required.ts"!: #RegularFile',
+        requiredFields: '\t"required.ts"!: #RegularFile'
       });
 
       await assertRejects((): Promise<void> => checkLayout(repositoryRoot), Error, "required.ts");

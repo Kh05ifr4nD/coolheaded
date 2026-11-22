@@ -109,53 +109,53 @@ function cleanupRuntimeBindings(file, source) {
     source,
     new RegExp(
       String.raw`^// packages/omo-codex/src/install/codex-cleanup\.ts\r?\nimport \{ lstat as (?<cleanupLstat>${identifier}),[^\r\n]* \} from "node:fs/promises";\r?\nimport \{[^\r\n]*\} from "node:os";\r?\nimport \{ isAbsolute as (?<cleanupIsAbsolute>${identifier}), join as (?<cleanupJoin>${identifier}), relative as (?<cleanupRelative>${identifier}), resolve as (?<cleanupResolve>${identifier}) \} from "node:path";`,
-      "mu",
-    ),
+      "mu"
+    )
   );
   const configImports = matchRuntimeGroups(
     file,
     source,
     new RegExp(
       String.raw`^// packages/omo-codex/src/install/codex-cleanup-config\.ts\r?\nimport \{ lstat as (?<configLstat>${identifier}), mkdir as (?<configMkdir>${identifier}), readFile as (?<configReadFile>${identifier}), writeFile as (?<configWriteFile>${identifier}) \} from "node:fs/promises";\r?\nimport \{ dirname as (?<configDirectoryName>${identifier}) \} from "node:path";`,
-      "mu",
-    ),
+      "mu"
+    )
   );
   const safetyImports = matchRuntimeGroups(
     file,
     source,
     new RegExp(
       String.raw`^// packages/omo-codex/src/install/codex-cleanup-safety\.ts\r?\nimport \{ dirname as ${identifier}, isAbsolute as ${identifier}, join as (?<safetyJoin>${identifier}), relative as ${identifier}, resolve as (?<safetyResolve>${identifier}) \} from "node:path";`,
-      "mu",
-    ),
+      "mu"
+    )
   );
   const configFunction = matchRuntimeGroups(
     file,
     source,
     new RegExp(
       String.raw`^function cleanupCodexLightConfigText\((?<configParameter>${identifier})\) \{`,
-      "mu",
-    ),
+      "mu"
+    )
   );
   const managedFunction = matchRuntimeGroups(
     file,
     source,
     new RegExp(
       String.raw`^function removeManagedAgentBlocks\((?<managedConfigParameter>${identifier})\) \{\r?\n  const managedAgentNames = new Set\((?<managedAgentNames>${identifier})\);`,
-      "mu",
-    ),
+      "mu"
+    )
   );
   const helperFunctions = matchRuntimeGroups(
     file,
     source,
-    /^function (?<formatBackupTimestamp>formatBackupTimestamp[0-9]*)\([^\r\n]*\) \{[\s\S]*?^async function configExists\([^\r\n]*\) \{[\s\S]*?^[ \t]+if \((?<nodeErrorCode>nodeErrorCode[0-9]*)\([^\r\n]*\) === "ENOENT"\)[\s\S]*?^async function (?<maybeLstat>maybeLstat[0-9]*)\(/mu,
+    /^function (?<formatBackupTimestamp>formatBackupTimestamp[0-9]*)\([^\r\n]*\) \{[\s\S]*?^async function configExists\([^\r\n]*\) \{[\s\S]*?^[ \t]+if \((?<nodeErrorCode>nodeErrorCode[0-9]*)\([^\r\n]*\) === "ENOENT"\)[\s\S]*?^async function (?<maybeLstat>maybeLstat[0-9]*)\(/mu
   );
   const cleanupFunctions = matchRuntimeGroups(
     file,
     source,
     new RegExp(
       String.raw`^async function removeManagedPathBestEffort\((?<cleanupPath>${identifier}), seams\) \{`,
-      "mu",
-    ),
+      "mu"
+    )
   );
 
   return {
@@ -177,7 +177,7 @@ function cleanupRuntimeBindings(file, source) {
     maybeLstat: runtimeGroup(helperFunctions, "maybeLstat"),
     nodeErrorCode: runtimeGroup(helperFunctions, "nodeErrorCode"),
     safetyJoin: runtimeGroup(safetyImports, "safetyJoin"),
-    safetyResolve: runtimeGroup(safetyImports, "safetyResolve"),
+    safetyResolve: runtimeGroup(safetyImports, "safetyResolve")
   };
 }
 
@@ -214,11 +214,11 @@ function hardenAtomicConfigWriter(file) {
   }
   const fragment = source.slice(start, end);
   const lstatAlias = /const linkStats = await (?<lstat>[A-Za-z0-9_]+)\(targetPath\);/u.exec(
-    fragment,
+    fragment
   );
   const pathAliases =
     /linkValue : (?<resolve>[A-Za-z0-9_]+)\((?<dirname>[A-Za-z0-9_]+)\(targetPath\), linkValue\);/u.exec(
-      fragment,
+      fragment
     );
   const writer = /await (?<writeFile>[A-Za-z0-9_]+)\(temporaryPath, data\);/u.exec(fragment);
   const lstat = lstatAlias?.groups?.lstat;
@@ -237,13 +237,13 @@ function hardenAtomicConfigWriter(file) {
     file,
     fragment,
     `await ${writeFile}(temporaryPath, data);`,
-    `await ${writeFile}(temporaryPath, data, { flag: "wx", mode: 0o600 });`,
+    `await ${writeFile}(temporaryPath, data, { flag: "wx", mode: 0o600 });`
   );
   hardened = replaceExactly(
     file,
     hardened,
     "  const writeTarget = await resolveSymlinkTarget(targetPath);",
-    "  const writeTarget = await validateNoSymlinkPath(targetPath);",
+    "  const writeTarget = await validateNoSymlinkPath(targetPath);"
   );
   const resolverStart = hardened.indexOf("async function resolveSymlinkTarget(targetPath) {");
   if (resolverStart === -1) {
@@ -271,7 +271,7 @@ function hardenAtomicConfigWriter(file) {
     const installer = source.slice(installerStart);
     const codexHomeLine =
       / {2}const codexHome = [A-Za-z0-9_]+\(options\.codexHome \?\? [^\n]+? \?\? (?<join>[A-Za-z0-9_]+)\([^\n]+? "\.codex"\)\);\n/u.exec(
-        installer,
+        installer
       );
     const join = codexHomeLine?.groups?.join;
     if (codexHomeLine?.index === undefined || join === undefined) {
@@ -298,37 +298,37 @@ function hardenCleanupConfig(file, initialSource, bindings) {
     file,
     source,
     `import { lstat as ${bindings.configLstat}, mkdir as ${bindings.configMkdir}, readFile as ${bindings.configReadFile}, writeFile as ${bindings.configWriteFile} } from "node:fs/promises";`,
-    `import { constants as codexConfigFsConstants } from "node:fs";\nimport { lstat as ${bindings.configLstat}, mkdir as ${bindings.configMkdir}, open as openCodexConfig, rename as renameCodexConfig, unlink as unlinkCodexConfig, writeFile as ${bindings.configWriteFile} } from "node:fs/promises";`,
+    `import { constants as codexConfigFsConstants } from "node:fs";\nimport { lstat as ${bindings.configLstat}, mkdir as ${bindings.configMkdir}, open as openCodexConfig, rename as renameCodexConfig, unlink as unlinkCodexConfig, writeFile as ${bindings.configWriteFile} } from "node:fs/promises";`
   );
   source = replaceExactly(
     file,
     source,
     `    nextConfig = removeTomlSections2(nextConfig, (header) => header === \`marketplaces.\${marketplace}\`);\n`,
-    "",
+    ""
   );
   source = replaceExactly(
     file,
     source,
     `  return pluginKey !== null && pluginKey.endsWith(\`@\${marketplace}\`);`,
-    `  return pluginKey === \`omo@\${marketplace}\`;`,
+    `  return pluginKey === \`omo@\${marketplace}\`;`
   );
   source = replaceExactly(
     file,
     source,
     `  return hookKey.slice(0, separator).endsWith(\`@\${marketplace}\`);`,
-    `  return hookKey.slice(0, separator) === \`omo@\${marketplace}\`;`,
+    `  return hookKey.slice(0, separator) === \`omo@\${marketplace}\`;`
   );
   source = replaceExactly(
     file,
     source,
     `function cleanupCodexLightConfigText(${bindings.configParameter}) {`,
-    `function cleanupCodexLightConfigText(${bindings.configParameter}, managedAgentPaths = []) {`,
+    `function cleanupCodexLightConfigText(${bindings.configParameter}, managedAgentPaths = []) {`
   );
   source = replaceExactly(
     file,
     source,
     "  nextConfig = removeManagedAgentBlocks(nextConfig);",
-    "  nextConfig = removeManagedAgentBlocks(nextConfig, managedAgentPaths);",
+    "  nextConfig = removeManagedAgentBlocks(nextConfig, managedAgentPaths);"
   );
   source = replaceRange(
     file,
@@ -381,13 +381,13 @@ async function cleanupCodexConfig(configPath, codexHome, now, managedAgentPaths)
   }
   return { changed: true, backupPath };
 }
-`,
+`
   );
   source = replaceExactly(
     file,
     source,
     "  const configCleanup = await cleanupCodexConfig(configPath, input.now);",
-    "  const configCleanup = await cleanupCodexConfig(configPath, codexHome, input.now, agentPaths);",
+    "  const configCleanup = await cleanupCodexConfig(configPath, codexHome, input.now, agentPaths);"
   );
   source = replaceExactly(
     file,
@@ -395,7 +395,7 @@ async function cleanupCodexConfig(configPath, codexHome, now, managedAgentPaths)
     `function removeManagedAgentBlocks(${bindings.managedConfigParameter}) {\n  const managedAgentNames = new Set(${bindings.managedAgentNames});`,
     `function removeManagedAgentBlocks(${bindings.managedConfigParameter}, managedAgentPaths) {
   const manifestAgentNames = managedAgentPaths.map((path7) => path7.split(/[\\\\/]/).pop()).filter((fileName) => fileName?.endsWith(".toml")).map((fileName) => fileName.slice(0, -".toml".length));
-  const managedAgentNames = new Set([...${bindings.managedAgentNames}, ...manifestAgentNames]);`,
+  const managedAgentNames = new Set([...${bindings.managedAgentNames}, ...manifestAgentNames]);`
   );
   return source;
 }
@@ -410,17 +410,17 @@ function hardenCleanupStatePaths(file, initialSource, bindings) {
   let source = initialSource;
   source = source.replaceAll(
     `${bindings.safetyResolve}(${bindings.safetyJoin}(codexHome, "plugins", "cache", "sisyphuslabs"))`,
-    `${bindings.safetyResolve}(${bindings.safetyJoin}(codexHome, "plugins", "cache", "sisyphuslabs", "omo"))`,
+    `${bindings.safetyResolve}(${bindings.safetyJoin}(codexHome, "plugins", "cache", "sisyphuslabs", "omo"))`
   );
   source = source.replaceAll(
     `${bindings.safetyResolve}(${bindings.safetyJoin}(codexHome, ".tmp", "marketplaces", "sisyphuslabs"))`,
-    `${bindings.safetyResolve}(${bindings.safetyJoin}(codexHome, ".tmp", "marketplaces", "sisyphuslabs", "plugins", "omo"))`,
+    `${bindings.safetyResolve}(${bindings.safetyJoin}(codexHome, ".tmp", "marketplaces", "sisyphuslabs", "plugins", "omo"))`
   );
   source = replaceExactly(
     file,
     source,
     `    ${bindings.cleanupJoin}(codexHome, "plugins", "cache", "sisyphuslabs"),\n    ${bindings.cleanupJoin}(codexHome, ".tmp", "marketplaces", "sisyphuslabs"),`,
-    `    ${bindings.cleanupJoin}(codexHome, "plugins", "cache", "sisyphuslabs", "omo"),\n    ${bindings.cleanupJoin}(codexHome, ".tmp", "marketplaces", "sisyphuslabs", "plugins", "omo"),`,
+    `    ${bindings.cleanupJoin}(codexHome, "plugins", "cache", "sisyphuslabs", "omo"),\n    ${bindings.cleanupJoin}(codexHome, ".tmp", "marketplaces", "sisyphuslabs", "plugins", "omo"),`
   );
   source = replaceExactly(
     file,
@@ -447,7 +447,7 @@ function hardenCleanupStatePaths(file, initialSource, bindings) {
   }
   return null;
 }
-async function removeManagedPathBestEffort(${bindings.cleanupPath}, seams) {`,
+async function removeManagedPathBestEffort(${bindings.cleanupPath}, seams) {`
   );
   source = replaceExactly(
     file,
@@ -460,7 +460,7 @@ async function removeManagedPathBestEffort(${bindings.cleanupPath}, seams) {`,
   }
   const removedOnFirstAttempt = await attemptRemove(${bindings.cleanupPath}, seams.codexHome);
   await seams.afterFirstAttempt?.();
-  const removedOnRetry = await attemptRemove(${bindings.cleanupPath}, seams.codexHome);`,
+  const removedOnRetry = await attemptRemove(${bindings.cleanupPath}, seams.codexHome);`
   );
   source = replaceExactly(
     file,
@@ -471,7 +471,7 @@ async function removeManagedPathBestEffort(${bindings.cleanupPath}, seams) {`,
     if (await validateManagedPathComponents(codexHome, ${bindings.cleanupPath}) !== null)
       return false;
     if (await ${bindings.cleanupLstat}(${bindings.cleanupPath}).catch(() => null) === null)
-      return false;`,
+      return false;`
   );
   return source;
 }
@@ -488,13 +488,13 @@ function hardenCleanupAgentPaths(file, initialSource, bindings) {
     file,
     source,
     "  if (await exists6(versionRoot)) {",
-    "  if (await validateManagedPathComponents(codexHome, versionRoot) === null && await exists6(versionRoot)) {",
+    "  if (await validateManagedPathComponents(codexHome, versionRoot) === null && await exists6(versionRoot)) {"
   );
   source = replaceExactly(
     file,
     source,
     `    for (const ${bindings.cleanupPath} of await readInstalledAgentManifest(manifestPath)) {`,
-    `    for (const ${bindings.cleanupPath} of await readInstalledAgentManifest(manifestPath, codexHome)) {`,
+    `    for (const ${bindings.cleanupPath} of await readInstalledAgentManifest(manifestPath, codexHome)) {`
   );
   source = replaceRange(
     file,
@@ -507,13 +507,13 @@ function hardenCleanupAgentPaths(file, initialSource, bindings) {
     return [];
   return ${bindings.managedAgentNames}.filter((agentName) => config.includes(\`config_file = \${JSON.stringify(\`./agents/\${agentName}.toml\`)}\`)).map((agentName) => ${bindings.cleanupJoin}(codexHome, "agents", \`\${agentName}.toml\`));
 }
-`,
+`
   );
   source = replaceExactly(
     file,
     source,
     "async function readInstalledAgentManifest(manifestPath) {\n  if (!await exists6(manifestPath))",
-    "async function readInstalledAgentManifest(manifestPath, codexHome) {\n  if (await validateManagedPathComponents(codexHome, manifestPath) !== null || !await exists6(manifestPath))",
+    "async function readInstalledAgentManifest(manifestPath, codexHome) {\n  if (await validateManagedPathComponents(codexHome, manifestPath) !== null || !await exists6(manifestPath))"
   );
   source = replaceExactly(
     file,
@@ -524,13 +524,13 @@ function hardenCleanupAgentPaths(file, initialSource, bindings) {
       skipped2.push(${bindings.cleanupPath});
       continue;
     }
-    const entryStat = await ${bindings.maybeLstat}(${bindings.cleanupPath});`,
+    const entryStat = await ${bindings.maybeLstat}(${bindings.cleanupPath});`
   );
   source = replaceExactly(
     file,
     source,
     `  return ${bindings.managedAgentNames}.some((agentName) => fileName === \`\${agentName}.toml\`);`,
-    '  return relativePath === fileName && fileName.endsWith(".toml");',
+    '  return relativePath === fileName && fileName.endsWith(".toml");'
   );
   return source;
 }
@@ -562,7 +562,7 @@ for (const file of [
   "dist/cli-node/index.js",
   "dist/cli/index.js",
   "packages/omo-codex/scripts/install-dist/install-local.mjs",
-  "packages/omo-codex/plugin/components/bootstrap/dist/cli.js",
+  "packages/omo-codex/plugin/components/bootstrap/dist/cli.js"
 ]) {
   hardenAtomicConfigWriter(joinPath(packageRoot, file));
 }

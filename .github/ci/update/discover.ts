@@ -53,7 +53,7 @@ function discoveryPlan(selection: Readonly<DiscoverySelection>): readonly Discov
       : []),
     ...(selection.denoDependencies
       ? ([{ kind: "denoDependencies" }] satisfies DiscoveryAction[])
-      : []),
+      : [])
   ];
 }
 
@@ -64,41 +64,41 @@ function updateLanes(
     readonly versionScheme: VersionSchemeName;
   }>[],
   flakeInputLanes: readonly Readonly<{ readonly currentVersion: string; readonly name: string }>[],
-  includeDenoDependencies: boolean,
+  includeDenoDependencies: boolean
 ): readonly UpdateLane[] {
   const updates = [
     ...packageLanes.map((item): UpdateLane => ({
       currentVersion: item.currentVersion,
       kind: "package",
       name: item.name,
-      versionScheme: item.versionScheme,
+      versionScheme: item.versionScheme
     })),
     ...flakeInputLanes.map((item): UpdateLane => ({
       currentVersion: item.currentVersion,
       kind: "flakeInput",
-      name: item.name,
+      name: item.name
     })),
     ...(includeDenoDependencies
       ? ([
-          { currentVersion: "deno.lock", kind: "denoDependencies", name: "denoDependencies" },
+          { currentVersion: "deno.lock", kind: "denoDependencies", name: "denoDependencies" }
         ] satisfies [UpdateLane])
-      : []),
+      : [])
   ];
 
   return updates.toSorted((left: UpdateLane, right: UpdateLane): number =>
     left.kind === right.kind
       ? left.name.localeCompare(right.name)
-      : left.kind.localeCompare(right.kind),
+      : left.kind.localeCompare(right.kind)
   );
 }
 
 async function discoverUpdateLanes(
   plan: readonly DiscoveryAction[],
-  runner: CommandRunner,
+  runner: CommandRunner
 ): Promise<readonly UpdateLane[]> {
   async function applyActions(
     remaining: readonly DiscoveryAction[],
-    state: Readonly<DiscoveryState>,
+    state: Readonly<DiscoveryState>
   ): Promise<Readonly<DiscoveryState>> {
     const [action, ...rest] = remaining;
     if (action === undefined) {
@@ -107,13 +107,13 @@ async function discoverUpdateLanes(
     if (action.kind === "package") {
       return applyActions(rest, {
         ...state,
-        packageLanes: await discoverPackage(runner, action.names),
+        packageLanes: await discoverPackage(runner, action.names)
       });
     }
     if (action.kind === "flakeInput") {
       return applyActions(rest, {
         ...state,
-        flakeInputLanes: flakeInputUpdates(await readJson("flake.lock"), action.names),
+        flakeInputLanes: flakeInputUpdates(await readJson("flake.lock"), action.names)
       });
     }
     return applyActions(rest, { ...state, includeDenoDependencies: true });
@@ -121,7 +121,7 @@ async function discoverUpdateLanes(
   const state = await applyActions(plan, {
     flakeInputLanes: [],
     includeDenoDependencies: false,
-    packageLanes: [],
+    packageLanes: []
   });
   return updateLanes(state.packageLanes, state.flakeInputLanes, state.includeDenoDependencies);
 }
@@ -133,9 +133,9 @@ async function main(): Promise<void> {
       flakeInputNames: filteredNames("INPUTS"),
       flakeInputs: enabled("UPDATE_FLAKE_INPUTS"),
       packageNames: filteredNames("PACKAGES"),
-      packages: enabled("UPDATE_PACKAGES"),
+      packages: enabled("UPDATE_PACKAGES")
     }),
-    denoCommandRunner,
+    denoCommandRunner
   );
   await writeOutput("matrix", JSON.stringify({ include }));
   await writeOutput("hasUpdates", String(include.length > 0));

@@ -6,7 +6,7 @@ type SriHash = `${SriAlgorithm}-${SriDigest}`;
 const MAX_BYTE = 255;
 const digestLengths: Readonly<Record<SriAlgorithm, number>> = {
   sha256: 32,
-  sha512: 64,
+  sha512: 64
 };
 
 class InvalidSriHashError extends Error {

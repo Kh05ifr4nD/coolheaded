@@ -9,25 +9,25 @@ import type {
   HttpTransportError,
   JsonClient,
   JsonClientError,
-  JsonResponse,
+  JsonResponse
 } from "coolheaded/core/httpClient.ts";
 import { Effect } from "effect";
 
 function httpStatusError<Response extends HttpResponse>(
   request: HttpRequest,
-  response: Response,
+  response: Response
 ): HttpStatusError & Readonly<{ readonly response: Response }> {
   return Object.assign(new Error(`HTTP ${response.status} from ${response.url}`), {
     _tag: "HttpStatusError",
     request,
-    response,
+    response
   } as const);
 }
 
 function httpTimeoutError(request: HttpRequest): HttpTimeoutError {
   return Object.assign(new Error(`Timed out fetching ${request.url}`), {
     _tag: "HttpTimeoutError",
-    request,
+    request
   } as const);
 }
 
@@ -35,20 +35,20 @@ function httpTransportError(request: HttpRequest, cause: unknown): HttpTransport
   return Object.assign(new Error(`Failed to fetch ${request.url}`), {
     _tag: "HttpTransportError",
     cause,
-    request,
+    request
   } as const);
 }
 
 function httpJsonError<Response extends HttpResponse>(
   request: HttpRequest,
   response: Response,
-  cause: unknown,
+  cause: unknown
 ): HttpJsonError & Readonly<{ readonly response: Response }> {
   return Object.assign(new Error(`Invalid JSON from ${response.url}`), {
     _tag: "HttpJsonError",
     cause,
     request,
-    response,
+    response
   } as const);
 }
 
@@ -65,13 +65,13 @@ function isHttpClientError(value: unknown): value is HttpClientError {
 }
 
 function responseHeaders(
-  headers: Readonly<InstanceType<typeof globalThis.Headers>>,
+  headers: Readonly<InstanceType<typeof globalThis.Headers>>
 ): Readonly<Record<string, string>> {
   return Object.fromEntries(
     [...headers.entries()].map(([name, value]: readonly [string, string]) => [
       name.toLowerCase(),
-      value,
-    ]),
+      value
+    ])
   );
 }
 
@@ -86,14 +86,14 @@ async function fetchResponse(request: HttpRequest): Promise<HttpResponse> {
     const response = await globalThis.fetch(request.url, {
       headers: request.headers,
       method: request.method,
-      signal: controller.signal,
+      signal: controller.signal
     });
     const httpResponse = {
       body: new Uint8Array(await response.arrayBuffer()),
       headers: responseHeaders(response.headers),
       status: response.status,
       statusText: response.statusText,
-      url: response.url,
+      url: response.url
     };
     if (!response.ok) {
       throw httpStatusError(request, httpResponse);
@@ -119,9 +119,9 @@ const fetchHttpClient: HttpClient = {
       catch(error: unknown): HttpClientError {
         return isHttpClientError(error) ? error : httpTransportError(request, error);
       },
-      try: (): Promise<HttpResponse> => fetchResponse(request),
+      try: (): Promise<HttpResponse> => fetchResponse(request)
     });
-  },
+  }
 };
 
 function jsonClient(httpClient: HttpClient): JsonClient {
@@ -130,17 +130,17 @@ function jsonClient(httpClient: HttpClient): JsonClient {
       return Effect.flatMap(
         httpClient.request(request),
         <Response extends HttpResponse>(
-          response: Response,
+          response: Response
         ): Effect.Effect<JsonResponse & Readonly<{ readonly response: Response }>, HttpJsonError> =>
           Effect.try({
             catch: (error: unknown): HttpJsonError => httpJsonError(request, response, error),
             try: (): JsonResponse & Readonly<{ readonly response: Response }> => ({
               response,
-              value: JSON.parse(new globalThis.TextDecoder().decode(response.body)),
-            }),
-          }),
+              value: JSON.parse(new globalThis.TextDecoder().decode(response.body))
+            })
+          })
       );
-    },
+    }
   };
 }
 
@@ -153,5 +153,5 @@ export {
   httpStatusError,
   httpTimeoutError,
   httpTransportError,
-  jsonClient,
+  jsonClient
 };

@@ -31,30 +31,30 @@ describe("npm lock platform pruning", (): void => {
         optionalDependencies: {
           "native-darwin-arm64": "1.0.0",
           "native-linux-arm64-musl": "1.0.0",
-          "native-win32-x64": "1.0.0",
+          "native-win32-x64": "1.0.0"
         },
         peerDependencies: { "native-win32-x64": "1.0.0" },
-        version: "1.0.0",
+        version: "1.0.0"
       },
       "node_modules/native-darwin-arm64": { cpu: ["arm64"], os: ["darwin"], version: "1.0.0" },
       "node_modules/native-linux-arm64-musl": {
         cpu: ["arm64"],
         libc: ["musl"],
         os: ["linux"],
-        version: "1.0.0",
+        version: "1.0.0"
       },
-      "node_modules/native-win32-x64": { cpu: ["x64"], os: ["win32"], version: "1.0.0" },
+      "node_modules/native-win32-x64": { cpu: ["x64"], os: ["win32"], version: "1.0.0" }
     });
     const result = supportedPackageLock(lock);
     assertEquals(packagePaths(result), [
       "",
       "node_modules/native",
-      "node_modules/native-darwin-arm64",
+      "node_modules/native-darwin-arm64"
     ]);
     assertEquals(packageEntry(result, "node_modules/native"), {
       optionalDependencies: { "native-darwin-arm64": "1.0.0" },
       peerDependencies: { "native-win32-x64": "1.0.0" },
-      version: "1.0.0",
+      version: "1.0.0"
     });
   });
 
@@ -66,8 +66,8 @@ describe("npm lock platform pruning", (): void => {
       "node_modules/win-only": {
         dependencies: { orphan: "1.0.0" },
         os: ["win32"],
-        version: "1.0.0",
-      },
+        version: "1.0.0"
+      }
     });
     assertEquals(packagePaths(supportedPackageLock(lock)), ["", "node_modules/kept"]);
   });
@@ -77,13 +77,13 @@ describe("npm lock platform pruning", (): void => {
       "": { dependencies: { parent: "1.0.0" } },
       "node_modules/parent": { dependencies: { child: "2.0.0" }, version: "1.0.0" },
       "node_modules/parent/node_modules/bundled": { inBundle: true, version: "1.0.0" },
-      "node_modules/parent/node_modules/child": { version: "2.0.0" },
+      "node_modules/parent/node_modules/child": { version: "2.0.0" }
     });
     assertEquals(packagePaths(supportedPackageLock(lock)), [
       "",
       "node_modules/parent",
       "node_modules/parent/node_modules/bundled",
-      "node_modules/parent/node_modules/child",
+      "node_modules/parent/node_modules/child"
     ]);
   });
 

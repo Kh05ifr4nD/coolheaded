@@ -8,7 +8,7 @@ describe("Git ignore boundary", (): void => {
     await withTemporaryDirectory(async (repositoryRoot: string): Promise<void> => {
       await writeRepositoryFixture(repositoryRoot, {
         files: [{ contents: "temporary\n", path: "hidden/garbage.ts" }],
-        gitignore: "hidden/\n",
+        gitignore: "hidden/\n"
       });
 
       await checkLayout(repositoryRoot);
@@ -19,7 +19,7 @@ describe("Git ignore boundary", (): void => {
     await withTemporaryDirectory(async (repositoryRoot: string): Promise<void> => {
       await writeRepositoryFixture(repositoryRoot, {
         files: [{ contents: "temporary\n", path: "hidden/garbage.ts" }],
-        gitignore: "hidden/\n",
+        gitignore: "hidden/\n"
       });
       await runGit(repositoryRoot, ["add", "-f", "hidden/garbage.ts"]);
 

@@ -4,7 +4,7 @@ import {
   httpStatusError,
   httpTimeoutError,
   httpTransportError,
-  jsonClient,
+  jsonClient
 } from "coolheaded/core/fetchHttpClient.ts";
 import { Effect } from "effect";
 import { strictHttpClient } from "coolheadedTestSupport/httpClient.ts";
@@ -16,7 +16,7 @@ const REQUEST = {
   headers: {},
   method: "GET",
   timeoutMs: TIMEOUT_MS,
-  url: "https://example.invalid/data",
+  url: "https://example.invalid/data"
 } as const;
 
 Deno.test("JSON client preserves response metadata with the decoded value", async (): Promise<void> => {
@@ -25,18 +25,18 @@ Deno.test("JSON client preserves response metadata with the decoded value", asyn
     headers: { "content-type": "application/json" },
     status: OK_STATUS,
     statusText: "OK",
-    url: REQUEST.url,
+    url: REQUEST.url
   } as const;
   const fake = strictHttpClient([
     {
       effect: (): Effect.Effect<typeof response> => Effect.succeed(response),
-      request: REQUEST,
-    },
+      request: REQUEST
+    }
   ]);
 
   assertEquals(await Effect.runPromise(jsonClient(fake.client).request(REQUEST)), {
     response,
-    value: { value: 1 },
+    value: { value: 1 }
   });
   fake.assertExhausted();
 });
@@ -47,13 +47,13 @@ Deno.test("JSON client fails invalid JSON as a typed failure", async (): Promise
     headers: {},
     status: OK_STATUS,
     statusText: "OK",
-    url: REQUEST.url,
+    url: REQUEST.url
   } as const;
   const fake = strictHttpClient([
     {
       effect: (): Effect.Effect<typeof response> => Effect.succeed(response),
-      request: REQUEST,
-    },
+      request: REQUEST
+    }
   ]);
   const exit = await Effect.runPromiseExit(jsonClient(fake.client).request(REQUEST));
 
@@ -86,7 +86,7 @@ Deno.test("JSON error construction preserves the original cause identity", (): v
     headers: {},
     status: OK_STATUS,
     statusText: "OK",
-    url: REQUEST.url,
+    url: REQUEST.url
   } as const;
   const error = httpJsonError(REQUEST, response, cause);
 
@@ -105,7 +105,7 @@ Deno.test("HTTP error factories preserve exact boundary fields", (): void => {
     headers: {},
     status: OK_STATUS,
     statusText: "OK",
-    url: REQUEST.url,
+    url: REQUEST.url
   };
   const status = httpStatusError(REQUEST, response);
   const timeout = httpTimeoutError(REQUEST);
@@ -130,8 +130,8 @@ Deno.test("JSON client preserves an HTTP failure object identity", async (): Pro
   const fake = strictHttpClient([
     {
       effect: (): Effect.Effect<never, typeof error> => Effect.fail(error),
-      request: REQUEST,
-    },
+      request: REQUEST
+    }
   ]);
   const received = await Effect.runPromise(Effect.flip(jsonClient(fake.client).request(REQUEST)));
 

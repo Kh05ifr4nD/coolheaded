@@ -20,7 +20,7 @@ describe("package update version gate", (): void => {
         assertVersionAdvanced("example", "1.0.0+build.1", "1.0.0+build.2");
       },
       UpdateError,
-      "without a version advance",
+      "without a version advance"
     );
   });
 
@@ -30,7 +30,7 @@ describe("package update version gate", (): void => {
         assertVersionAdvanced("example", "1.0.0", "1.0.0-rc.1");
       },
       UpdateError,
-      "without a version advance",
+      "without a version advance"
     );
   });
 
@@ -40,14 +40,14 @@ describe("package update version gate", (): void => {
         assertVersionAdvanced("example", "01.0.0", "1.0.1");
       },
       UpdateError,
-      "invalid current SemVer",
+      "invalid current SemVer"
     );
     assertThrows(
       (): void => {
         assertVersionAdvanced("example", "1.0.0", "1.0.1-");
       },
       UpdateError,
-      "produced invalid SemVer",
+      "produced invalid SemVer"
     );
   });
 });
@@ -59,9 +59,9 @@ describe("requested pin version validation", (): void => {
         requestedOrNewerPinVersion(
           ["1.0.0-"],
           (): Effect.Effect<string> => Effect.succeed("1.0.0"),
-          "./unused.json",
-        ),
-      ),
+          "./unused.json"
+        )
+      )
     );
     assertInstanceOf(error, UpdateError);
   });
@@ -75,9 +75,9 @@ describe("requested pin version validation", (): void => {
           requestedOrNewerPinVersion(
             [],
             (): Effect.Effect<string> => Effect.succeed("1.0.0"),
-            pinPath,
-          ),
-        ),
+            pinPath
+          )
+        )
       );
       assertInstanceOf(error, UpdateError);
     } finally {
@@ -94,9 +94,9 @@ describe("requested pin version validation", (): void => {
           requestedOrNewerPinVersion(
             [],
             (): Effect.Effect<string> => Effect.succeed("1.0.0-"),
-            pinPath,
-          ),
-        ),
+            pinPath
+          )
+        )
       );
       assertInstanceOf(error, UpdateError);
     } finally {

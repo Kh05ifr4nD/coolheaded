@@ -1,7 +1,7 @@
 import {
   CoveragePolicyError,
   evaluateCoverage,
-  sourceClassification,
+  sourceClassification
 } from "coolheadedCi/coveragePolicy.ts";
 import { assertEquals, assertInstanceOf, assertThrows } from "@jsr/std__assert";
 
@@ -10,12 +10,12 @@ type SourceCoverage = Parameters<typeof evaluateCoverage>[1][number];
 function source(
   path: string,
   lines: readonly [number, number],
-  branches: readonly [number, number],
+  branches: readonly [number, number]
 ): SourceCoverage {
   return {
     branches: { covered: branches[0], total: branches[1] },
     lines: { covered: lines[0], total: lines[1] },
-    path,
+    path
   };
 }
 
@@ -61,19 +61,19 @@ Deno.test("coverage policy accepts exact aggregate thresholds and zero branches"
       [PURE, ADAPTER, TYPE_ONLY, TYPE_ONLY_METADATA],
       [
         source(PURE, [PURE_LINES, TOTAL], [0, 0]),
-        source(ADAPTER, [ADAPTER_LINES, TOTAL], [ADAPTER_BRANCHES, TOTAL]),
-      ],
+        source(ADAPTER, [ADAPTER_LINES, TOTAL], [ADAPTER_BRANCHES, TOTAL])
+      ]
     ),
     {
       adapter: {
         branches: { covered: ADAPTER_BRANCHES, total: TOTAL },
-        lines: { covered: ADAPTER_LINES, total: TOTAL },
+        lines: { covered: ADAPTER_LINES, total: TOTAL }
       },
       pure: {
         branches: { covered: 0, total: 0 },
-        lines: { covered: PURE_LINES, total: TOTAL },
-      },
-    },
+        lines: { covered: PURE_LINES, total: TOTAL }
+      }
+    }
   );
 });
 
@@ -84,15 +84,15 @@ Deno.test("coverage policy rejects runtime coverage for type-only metadata", ():
       [
         source(PURE, [PURE_LINES, TOTAL], [0, 0]),
         source(ADAPTER, [ADAPTER_LINES, TOTAL], [ADAPTER_BRANCHES, TOTAL]),
-        source(TYPE_ONLY_METADATA, [1, 1], [0, 0]),
-      ],
+        source(TYPE_ONLY_METADATA, [1, 1], [0, 0])
+      ]
     );
   });
   assertInstanceOf(error, CoveragePolicyError);
   assertEquals(error.kind, "invalidClassification");
   assertEquals(error.details, {
     path: TYPE_ONLY_METADATA,
-    rule: "typeOnlyRuntimeRecord",
+    rule: "typeOnlyRuntimeRecord"
   });
 });
 
@@ -104,10 +104,10 @@ Deno.test("coverage policy uses aggregate counters without per-file thresholds",
       source(
         "lib/ts/npm/registry.ts",
         [PURE_AGGREGATE_LINES, PURE_AGGREGATE_TOTAL],
-        [PURE_AGGREGATE_BRANCHES, PURE_AGGREGATE_TOTAL],
+        [PURE_AGGREGATE_BRANCHES, PURE_AGGREGATE_TOTAL]
       ),
-      source(ADAPTER, [ADAPTER_LINES, TOTAL], [ADAPTER_BRANCHES, TOTAL]),
-    ],
+      source(ADAPTER, [ADAPTER_LINES, TOTAL], [ADAPTER_BRANCHES, TOTAL])
+    ]
   );
 });
 
@@ -117,8 +117,8 @@ Deno.test("coverage policy compares large safe counters exactly", (): void => {
     [PURE, ADAPTER],
     [
       source(PURE, [LARGE_PURE_LINES, total], [LARGE_PURE_BRANCHES, total]),
-      source(ADAPTER, [LARGE_ADAPTER_LINES, total], [LARGE_ADAPTER_BRANCHES, total]),
-    ],
+      source(ADAPTER, [LARGE_ADAPTER_LINES, total], [LARGE_ADAPTER_BRANCHES, total])
+    ]
   );
 });
 
@@ -128,46 +128,46 @@ for (const [name, inventory, records, kind] of [
     [PURE, ADAPTER],
     [
       source(PURE, [BELOW_PURE_LINES, PER_MILLE], [PURE_BRANCHES, TOTAL]),
-      source(ADAPTER, [ADAPTER_LINES, TOTAL], [ADAPTER_BRANCHES, TOTAL]),
+      source(ADAPTER, [ADAPTER_LINES, TOTAL], [ADAPTER_BRANCHES, TOTAL])
     ],
-    "threshold",
+    "threshold"
   ],
   [
     "just below adapter",
     [PURE, ADAPTER],
     [
       source(PURE, [PURE_LINES, TOTAL], [PURE_BRANCHES, TOTAL]),
-      source(ADAPTER, [BELOW_ADAPTER_LINES, PER_MILLE], [ADAPTER_BRANCHES, TOTAL]),
+      source(ADAPTER, [BELOW_ADAPTER_LINES, PER_MILLE], [ADAPTER_BRANCHES, TOTAL])
     ],
-    "threshold",
+    "threshold"
   ],
   [
     "missing pure",
     [ADAPTER],
     [source(ADAPTER, [ADAPTER_LINES, TOTAL], [ADAPTER_BRANCHES, TOTAL])],
-    "missingCategory",
+    "missingCategory"
   ],
   [
     "missing adapter",
     [PURE],
     [source(PURE, [PURE_LINES, TOTAL], [PURE_BRANCHES, TOTAL])],
-    "missingCategory",
+    "missingCategory"
   ],
   [
     "unloaded",
     [PURE, ADAPTER],
     [source(PURE, [PURE_LINES, TOTAL], [PURE_BRANCHES, TOTAL])],
-    "unloadedSources",
+    "unloadedSources"
   ],
   [
     "unclassified",
     [PURE, ADAPTER, "lib/ts/newRuntime.ts"],
     [
       source(PURE, [PURE_LINES, TOTAL], [PURE_BRANCHES, TOTAL]),
-      source(ADAPTER, [ADAPTER_LINES, TOTAL], [ADAPTER_BRANCHES, TOTAL]),
+      source(ADAPTER, [ADAPTER_LINES, TOTAL], [ADAPTER_BRANCHES, TOTAL])
     ],
-    "unclassifiedSources",
-  ],
+    "unclassifiedSources"
+  ]
 ] as const) {
   Deno.test(`coverage policy rejects ${name}`, (): void => {
     const error = assertThrows((): void => {
@@ -184,24 +184,24 @@ for (const [name, inventory, records] of [
     [PURE, ADAPTER],
     [
       source(PURE, [Number.MAX_SAFE_INTEGER + 1, Number.MAX_SAFE_INTEGER + 1], [0, 0]),
-      source(ADAPTER, [ADAPTER_LINES, TOTAL], [ADAPTER_BRANCHES, TOTAL]),
-    ],
+      source(ADAPTER, [ADAPTER_LINES, TOTAL], [ADAPTER_BRANCHES, TOTAL])
+    ]
   ],
   [
     "negative source counters",
     [PURE, ADAPTER],
     [
       source(PURE, [-1, TOTAL], [0, 0]),
-      source(ADAPTER, [ADAPTER_LINES, TOTAL], [ADAPTER_BRANCHES, TOTAL]),
-    ],
+      source(ADAPTER, [ADAPTER_LINES, TOTAL], [ADAPTER_BRANCHES, TOTAL])
+    ]
   ],
   [
     "covered greater than total",
     [PURE, ADAPTER],
     [
       source(PURE, [OVER_TOTAL, TOTAL], [0, 0]),
-      source(ADAPTER, [ADAPTER_LINES, TOTAL], [ADAPTER_BRANCHES, TOTAL]),
-    ],
+      source(ADAPTER, [ADAPTER_LINES, TOTAL], [ADAPTER_BRANCHES, TOTAL])
+    ]
   ],
   [
     "invalid operands cancelling to valid aggregate",
@@ -209,8 +209,8 @@ for (const [name, inventory, records] of [
     [
       source(PURE, [-1, TOTAL], [0, 0]),
       source("lib/ts/npm/registry.ts", [CANCELLING_COVERED, TOTAL], [0, 0]),
-      source(ADAPTER, [ADAPTER_LINES, TOTAL], [ADAPTER_BRANCHES, TOTAL]),
-    ],
+      source(ADAPTER, [ADAPTER_LINES, TOTAL], [ADAPTER_BRANCHES, TOTAL])
+    ]
   ],
   [
     "aggregate overflow",
@@ -218,9 +218,9 @@ for (const [name, inventory, records] of [
     [
       source(PURE, [Number.MAX_SAFE_INTEGER, Number.MAX_SAFE_INTEGER], [0, 0]),
       source("lib/ts/npm/registry.ts", [1, 1], [0, 0]),
-      source(ADAPTER, [ADAPTER_LINES, TOTAL], [ADAPTER_BRANCHES, TOTAL]),
-    ],
-  ],
+      source(ADAPTER, [ADAPTER_LINES, TOTAL], [ADAPTER_BRANCHES, TOTAL])
+    ]
+  ]
 ] as const) {
   Deno.test(`coverage policy rejects ${name}`, (): void => {
     const error = assertThrows((): void => {
