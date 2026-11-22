@@ -16,6 +16,20 @@ const SHA512_LINUX_X64 = parseSriHash(
 );
 
 describe("npm platform hashes", (): void => {
+  it("accepts a package published for a single platform", async (): Promise<void> => {
+    const config = await Effect.runPromise(
+      npmHashConfigForSystems(
+        { versions: { "1.0.0-darwin-arm64": { dist: { integrity: SHA512_DARWIN } } } },
+        "1.0.0",
+        { "aarch64-darwin": "darwin-arm64" },
+      ),
+    );
+    assertEquals(config, {
+      platformPackageHashes: { "aarch64-darwin": SHA512_DARWIN },
+      version: "1.0.0",
+    });
+  });
+
   it("maps platform suffixes to integrity hashes through Effect", async (): Promise<void> => {
     const hashes = await Effect.runPromise(
       npmHashesForSystems(

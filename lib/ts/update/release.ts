@@ -6,10 +6,10 @@ import type {
 } from "coolheaded/core/httpClient.ts";
 import { UpdateError, updateNewerPinVersion } from "coolheaded/core/updateScript.ts";
 import { Effect } from "effect";
+import type { SupportedSystem } from "coolheaded/system/target.ts";
 import type { VersionScheme } from "coolheaded/core/version.ts";
 import { formatSriHash } from "coolheaded/pin/sriHash.ts";
-import { parsePackageHashConfig } from "coolheaded/pin/packageHashConfig.ts";
-import { systemRecord } from "coolheaded/system/target.ts";
+import { packageHashConfig } from "coolheaded/pin/packageHashConfig.ts";
 import { writePackageHashConfig } from "coolheaded/pin/json.ts";
 
 const HEX_BYTE_WIDTH = 2;
@@ -17,11 +17,12 @@ const HEX_RADIX = 16;
 const REQUEST_TIMEOUT_MS = 30_000;
 
 type ReleaseHashSource = "sha256Digest" | "sha256Sum";
+type PackageHashConfig = Effect.Effect.Success<ReturnType<typeof packageHashConfig>>;
+type InvalidPackageHashConfigError = Effect.Effect.Error<ReturnType<typeof packageHashConfig>>;
 type SriHash = ReturnType<typeof formatSriHash>;
-type SupportedSystem = Parameters<Parameters<typeof systemRecord>[0]>[0];
-type PackageHashConfig = ReturnType<typeof parsePackageHashConfig>;
-type ReleaseTargets = Readonly<Record<SupportedSystem, string>>;
-type ReleaseUrls = Readonly<Record<SupportedSystem, string>>;
+type ReleaseTargets = Readonly<Partial<Record<SupportedSystem, string>>>;
+type ReleaseUrls = Readonly<Partial<Record<SupportedSystem, string>>>;
+type ReleaseHashError = HttpClientError | InvalidPackageHashConfigError | UpdateError;
 
 interface ReleaseHashUpdateOptions<LatestVersionError extends Error> {
   readonly args: readonly string[];
@@ -84,7 +85,14 @@ function releaseUrlsFromTargets(
   targets: ReleaseTargets,
   urlForTarget: (target: string) => string,
 ): ReleaseUrls {
-  return systemRecord((system: SupportedSystem): string => urlForTarget(targets[system]));
+  return Object.fromEntries(
+    Object.entries(targets).map(
+      ([system, target]: readonly [string, string]): readonly [string, string] => [
+        system,
+        urlForTarget(target),
+      ],
+    ),
+  );
 }
 
 function fetchSha256SumHash(
@@ -140,10 +148,18 @@ function releaseHashes(
   urls: ReleaseUrls,
   source: ReleaseHashSource,
   httpClient: Readonly<HttpClient>,
-): Effect.Effect<Readonly<Record<SupportedSystem, SriHash>>, HttpClientError | UpdateError> {
+): Effect.Effect<
+  Readonly<Partial<Record<SupportedSystem, SriHash>>>,
+  HttpClientError | UpdateError
+> {
   return Effect.all(
-    systemRecord((system: SupportedSystem): Effect.Effect<SriHash, HttpClientError | UpdateError> =>
-      hashForUrl(source, urls[system], httpClient),
+    Object.fromEntries(
+      Object.entries(urls).map(
+        ([system, url]: readonly [string, string]): readonly [
+          string,
+          Effect.Effect<SriHash, HttpClientError | UpdateError>,
+        ] => [system, hashForUrl(source, url, httpClient)],
+      ),
     ),
   );
 }
@@ -153,22 +169,22 @@ function releaseHashConfig(
   urls: ReleaseUrls,
   source: ReleaseHashSource,
   httpClient: Readonly<HttpClient>,
-): Effect.Effect<PackageHashConfig, HttpClientError | UpdateError> {
-  return Effect.map(
+): Effect.Effect<PackageHashConfig, ReleaseHashError> {
+  return Effect.flatMap(
     releaseHashes(urls, source, httpClient),
-    (platformPackageHashes: Readonly<Record<SupportedSystem, SriHash>>): PackageHashConfig =>
-      parsePackageHashConfig({ platformPackageHashes, version }),
+    (platformPackageHashes: Readonly<Partial<Record<SupportedSystem, SriHash>>>) =>
+      packageHashConfig({ platformPackageHashes, version }),
   );
 }
 
 function releaseHashUpdateProgram<LatestVersionError extends Error>(
   options: ReleaseHashUpdateOptions<LatestVersionError>,
-): Effect.Effect<void, HttpClientError | LatestVersionError | UpdateError> {
+): Effect.Effect<void, LatestVersionError | ReleaseHashError> {
   return updateNewerPinVersion(
     options.args,
     options.latestVersion,
     options.pinFilePath,
-    (version: string): Effect.Effect<void, HttpClientError | UpdateError> =>
+    (version: string): Effect.Effect<void, ReleaseHashError> =>
       Effect.flatMap(
         releaseHashConfig(
           version,

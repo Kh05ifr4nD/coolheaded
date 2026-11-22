@@ -10,7 +10,7 @@ const RELEASE_ASSETS = {
   "aarch64-darwin": "cass-darwin-arm64.tar.gz",
   "aarch64-linux": "cass-linux-arm64.tar.gz",
   "x86_64-linux": "cass-linux-amd64.tar.gz",
-} as const satisfies Readonly<Record<SupportedSystem, string>>;
+} as const satisfies Readonly<Partial<Record<SupportedSystem, string>>>;
 
 runUpdateScript(import.meta.url, (args) =>
   checksumManifestUpdateProgram({

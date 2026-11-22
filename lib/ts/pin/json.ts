@@ -3,7 +3,7 @@ import type { PackageHashConfig } from "coolheaded/pin/packageHashConfig.ts";
 import { SUPPORTED_SYSTEMS } from "coolheaded/system/target.ts";
 import { writeTextFile } from "coolheaded/core/updateScript.ts";
 
-type SupportedSystem = (typeof SUPPORTED_SYSTEMS)[number];
+type PinSystem = (typeof SUPPORTED_SYSTEMS)[number];
 
 const JSON_INDENT = 2;
 const PACKAGE_VERSION_FIELD = "version";
@@ -46,7 +46,7 @@ interface PinJsonConfig {
   readonly cargoVendorHash?: string;
   readonly npmVendorHash?: string;
   readonly packageHash?: string;
-  readonly platformPackageHashes?: Readonly<Record<SupportedSystem, string>>;
+  readonly platformPackageHashes?: Readonly<Partial<Record<PinSystem, string>>>;
   readonly rev?: string;
   readonly sourceHash?: string;
   readonly version: string;

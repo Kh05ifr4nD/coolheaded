@@ -1,9 +1,10 @@
+import { assertEquals, assertInstanceOf } from "@jsr/std__assert";
 import { describe, it } from "@jsr/std__testing/bdd";
 import { npmPackageHashConfig, npmPlatformPackageHashConfig } from "coolheaded/npm/packageHash.ts";
 import { Effect } from "effect";
 import { InvalidPackageHashConfigError } from "coolheaded/pin/packageHashConfig.ts";
 import type { JsonResponse } from "coolheaded/core/httpClient.ts";
-import { assertInstanceOf } from "@jsr/std__assert";
+import { parseSriHash } from "coolheaded/pin/sriHash.ts";
 import { strictJsonClient } from "coolheadedTestSupport/httpClient.ts";
 
 const HTTP_OK = 200;
@@ -14,8 +15,9 @@ const REQUEST = {
   timeoutMs: REQUEST_TIMEOUT_MS,
   url: "https://registry.npmjs.org/example",
 } as const;
-const SHA512_LINUX_ARM =
-  "sha512-AgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAg==";
+const SHA512_LINUX_ARM = parseSriHash(
+  "sha512-AgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAg==",
+);
 const SHA512_LINUX_X64 =
   "sha512-AwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAw==";
 
@@ -33,6 +35,36 @@ function metadata(value: unknown): JsonResponse {
 }
 
 describe("npm package hash boundaries", (): void => {
+  it("generates only explicitly requested platform hashes", async (): Promise<void> => {
+    const strict = strictJsonClient([
+      {
+        effect: (): Effect.Effect<JsonResponse> =>
+          Effect.succeed(
+            metadata({
+              versions: { "1.0.0": { dist: { integrity: SHA512_LINUX_ARM } } },
+            }),
+          ),
+        request: REQUEST,
+      },
+    ]);
+    const config = await Effect.runPromise(
+      npmPackageHashConfig({
+        jsonClient: strict.client,
+        packageName: "example",
+        systems: ["aarch64-linux", "aarch64-darwin"],
+        version: "1.0.0",
+      }),
+    );
+    assertEquals(config, {
+      platformPackageHashes: {
+        "aarch64-darwin": SHA512_LINUX_ARM,
+        "aarch64-linux": SHA512_LINUX_ARM,
+      },
+      version: "1.0.0",
+    });
+    strict.assertExhausted();
+  });
+
   it("fails malformed same-package integrity as typed config error", async (): Promise<void> => {
     const strict = strictJsonClient([
       {
@@ -46,7 +78,14 @@ describe("npm package hash boundaries", (): void => {
       },
     ]);
     const error = await Effect.runPromise(
-      Effect.flip(npmPackageHashConfig("example", "1.0.0", strict.client)),
+      Effect.flip(
+        npmPackageHashConfig({
+          jsonClient: strict.client,
+          packageName: "example",
+          systems: ["aarch64-darwin"],
+          version: "1.0.0",
+        }),
+      ),
     );
     assertInstanceOf(error, InvalidPackageHashConfigError);
     strict.assertExhausted();

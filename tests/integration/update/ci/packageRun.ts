@@ -6,6 +6,7 @@ import { runPackage } from "coolheadedCi/update/run/package.ts";
 const success = { code: 0, stderr: "", stdout: "" };
 const name = "example";
 const system = "x86_64-linux";
+const packageSystem = "aarch64-darwin";
 const updateCommand = [
   "deno",
   "run",
@@ -20,9 +21,21 @@ const allowedFilesExpression = `
 let
   config = builtins.fromJSON (builtins.getEnv "PACKAGE_UPDATE_CONFIG");
   flake = builtins.getFlake (toString ./.);
-  package = builtins.getAttr config.name flake.packages.\${config.system};
+  systems = builtins.attrNames flake.packages;
+  availableSystems = builtins.filter (
+    system: builtins.hasAttr config.name flake.packages.\${system}
+  ) systems;
+  system =
+    if builtins.elem config.currentSystem availableSystems then
+      config.currentSystem
+    else
+      builtins.head availableSystems;
+  package = builtins.getAttr config.name flake.packages.\${system};
 in
-  package.passthru.updateAllowedFiles or []
+  {
+    inherit system;
+    updateAllowedFiles = package.passthru.updateAllowedFiles or [];
+  }
 `;
 
 async function outputFixture(): Promise<{
@@ -62,9 +75,13 @@ function changedPrefix(files: string): ConstructorParameters<typeof FakeCommandR
     {
       request: {
         command: ["nix", "eval", "--json", "--impure", "--expr", allowedFilesExpression],
-        env: { PACKAGE_UPDATE_CONFIG: JSON.stringify({ name, system }) },
+        env: { PACKAGE_UPDATE_CONFIG: JSON.stringify({ currentSystem: system, name }) },
       },
-      result: { code: 0, stderr: "", stdout: "[]" },
+      result: {
+        code: 0,
+        stderr: "",
+        stdout: JSON.stringify({ system: packageSystem, updateAllowedFiles: [] }),
+      },
     },
     {
       request: { command: ["git", "diff", "--name-only"] },
@@ -91,7 +108,7 @@ Deno.test("package update stops without evaluation when updater changes nothing"
 
 Deno.test("package update validates changes and version before publishing outputs", async () => {
   const fixture = await outputFixture();
-  const attr = `.#packages.${system}.${JSON.stringify(name)}`;
+  const attr = `.#packages.${packageSystem}.${JSON.stringify(name)}`;
   try {
     const runner = new FakeCommandRunner([
       ...changedPrefix(`packages/${name}/pin.json\n`),
@@ -131,7 +148,7 @@ Deno.test("package update writes no success output for unrelated changes", async
 
 Deno.test("package update rejects a nonadvanced version before success outputs", async () => {
   const fixture = await outputFixture();
-  const attr = `.#packages.${system}.${JSON.stringify(name)}`;
+  const attr = `.#packages.${packageSystem}.${JSON.stringify(name)}`;
   try {
     const runner = new FakeCommandRunner([
       ...changedPrefix(`packages/${name}/pin.json\n`),
