@@ -263,8 +263,8 @@ function defineChangedFilesTests(): void {
   it("falls back to checks owned by changed packages and home modules", (): void => {
     const available = {
       "aarch64-darwin": [
-        "codex",
-        "codexHomeModule",
+        "lazyCodexAi",
+        "lazyCodexAiHomeModule",
         "minerU",
         "minerUFull",
         "minerUTorch",
@@ -272,7 +272,7 @@ function defineChangedFilesTests(): void {
         "paseoHomeModule",
         "unrelated"
       ],
-      "aarch64-linux": ["codex", "codexDaemon", "paseo", "unrelated"]
+      "aarch64-linux": ["lazyCodexAi", "paseo", "unrelated"]
     };
 
     assertEquals(
@@ -280,17 +280,16 @@ function defineChangedFilesTests(): void {
         [
           ".github/ci/impact.ts",
           "layout.cue",
-          "homeModules/codex.nix",
+          "homeModules/lazyCodexAi.nix",
           "packages/minerU/package.nix",
           "packages/paseo/check.nix",
-          "tests/changeImpact.ts"
+          "tests/pure/ci/changeImpact.ts"
         ],
         available
       ),
       [
-        "codex",
-        "codexDaemon",
-        "codexHomeModule",
+        "lazyCodexAi",
+        "lazyCodexAiHomeModule",
         "minerU",
         "minerUFull",
         "minerUTorch",
