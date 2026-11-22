@@ -11,7 +11,7 @@ let
   cfg = config.programs.lazyCodexAi;
   statePackage = "state/lazycodex-ai-package";
   stateInstallFingerprint = "state/lazycodex-ai-install-fingerprint";
-  codexHome = "${config.home.homeDirectory}/.codex";
+  codexHome = config.home.sessionVariables.CODEX_HOME or "${config.home.homeDirectory}/.codex";
   pluginManifest =
     if cfg.package ? version then
       "${codexHome}/plugins/cache/sisyphuslabs/omo/${cfg.package.version}/.codex-plugin/plugin.json"
@@ -34,8 +34,6 @@ let
   '';
 in
 {
-  imports = [ (import ./codex.nix { inherit self; }) ];
-
   options.programs.lazyCodexAi = {
     enable = lib.mkEnableOption "LazyCodex AI";
 
@@ -64,8 +62,9 @@ in
         Whether the installer writes its autonomous Codex permission defaults.
         Null omits both CLI flags and follows the packaged LazyCodex behavior;
         true passes --codex-autonomous; false passes --no-codex-autonomous.
-        Values declared through programs.codex.settings are reconciled after
-        installation and therefore remain authoritative.
+        Values declared through programs.codex.settings are merged after
+        installation by Home Manager's codexMutableSettings activation and
+        therefore remain authoritative.
       '';
     };
 
@@ -85,7 +84,7 @@ in
     {
       home.activation.lazyCodexAi = {
         after = [ "linkGeneration" ];
-        before = [ "codexConfig" ];
+        before = [ "codexMutableSettings" ];
         data =
           if cfg.enable then
             withIsolatedProject ''
@@ -132,6 +131,7 @@ in
 
       programs.codex = {
         enable = lib.mkDefault true;
+        mutableSettings = lib.mkDefault true;
         settings = lib.mkIf (cfg.context7 != null) {
           plugins."omo@sisyphuslabs".mcp_servers.context7.enabled = lib.mkDefault cfg.context7;
         };
