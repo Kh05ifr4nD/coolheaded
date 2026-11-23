@@ -28,8 +28,8 @@ let
     import ./checks.nix {
       inherit inputs lib pkgs;
       packages = packages // {
-        dejaVu = packages.dejaVu // {
-          meta = packages.dejaVu.meta // {
+        hackMd = packages.hackMd // {
+          meta = packages.hackMd.meta // {
             inherit license;
           };
         };
@@ -39,16 +39,16 @@ let
     license: (builtins.tryEval (builtins.attrNames (checksWithLicense license))).success;
 in
 assert lib.assertMsg (
-  consumer.packages.${system}.dejaVu.drvPath == packages.dejaVu.drvPath
+  consumer.packages.${system}.hackMd.drvPath == packages.hackMd.drvPath
 ) "package consumption must be independent of development inputs";
 assert lib.assertMsg (
-  (consumer.overlays.default pkgs pkgs).coolheaded.dejaVu.drvPath == packages.dejaVu.drvPath
+  (consumer.overlays.default pkgs pkgs).coolheaded.hackMd.drvPath == packages.hackMd.drvPath
 ) "overlay consumption must be independent of development inputs";
 assert lib.assertMsg (
   builtins.attrNames consumer.homeModules == builtins.attrNames inputs.self.homeModules
 ) "Home Manager module discovery must be independent of development inputs";
 assert lib.assertMsg (
-  isolatedPackages.dejaVu.drvPath == packages.dejaVu.drvPath
+  isolatedPackages.hackMd.drvPath == packages.hackMd.drvPath
 ) "package consumption must be independent of unrelated packages";
 assert lib.assertMsg (acceptsLicense [
   lib.licenses.mit
