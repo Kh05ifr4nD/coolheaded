@@ -1,7 +1,7 @@
 {
-  "version": "2.24.1",
+  "version": "2.24.2",
   "platformPackageHashes": {
-    "aarch64-darwin": "sha512-2bjwjUiliF1YzTCZ1SS/43Ge6ySLmjXHwpptQkZIfSC1cG+Qs5SmvLG5SQKL7fgNEW7rHGOeP+DLlwTfh5qV3A=="
+    "aarch64-darwin": "sha512-0ZCrHzv8CpD9ogBoZmIja5OJOT50pWZOuTng1m0vBfSUdX/19sJyU3TXHzVZfLZqSY/t1RNjoHr5i0MzuISrKQ=="
   },
-  "npmVendorHash": "sha256-F6W88wKd+2JbRq3hYl5oXTALoUGjQgU/2JkHfrqGIQQ="
+  "npmVendorHash": "sha256-/TcKSqit62bbdOdKop1K1rCbsaEqlIjp6crsvWhUVkE="
 }
