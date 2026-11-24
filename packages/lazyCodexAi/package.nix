@@ -25,6 +25,7 @@ let
   packageName = "lazycodex-ai";
   packageRoot = "${placeholder "out"}/libexec/lazycodex-ai";
   nodeExecutable = "${nodejs}/bin/node";
+  astGrepExecutable = lib.getExe ast-grep;
   nodePath = lib.makeBinPath [
     nodejs
     ast-grep
@@ -89,13 +90,13 @@ packageLib.mkNpmTarballPackage {
 
     LAZYCODEX_PLUGIN_ROOT="$packageRoot/packages/omo-codex/plugin" \
     LAZYCODEX_NODE_EXECUTABLE="${nodeExecutable}" \
-    LAZYCODEX_SG_EXECUTABLE="${ast-grep}/bin/sg" \
+    LAZYCODEX_SG_EXECUTABLE="${astGrepExecutable}" \
       "${nodeExecutable}" ${./script/rewriteOmoPluginRuntimeJson.mjs}
 
     makeWrapper "${nodejs}/bin/node" "$out/bin/lazycodex-ai" \
       --add-flags "$packageRoot/packages/omo-codex/scripts/install-local.mjs" \
       --set LAZYCODEX_AI_NIX_SKIP_CACHE_NPM 1 \
-      --set OMO_AST_GREP_SG_PATH "${ast-grep}/bin/sg" \
+      --set OMO_AST_GREP_SG_PATH "${astGrepExecutable}" \
       --prefix PATH : "${nodePath}"
 
     runHook postInstall

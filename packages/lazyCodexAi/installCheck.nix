@@ -106,7 +106,7 @@
     "${nodeExecutable}" --input-type=module <<'NODE'
   import assert from "node:assert/strict";
   import { execFileSync, spawn } from "node:child_process";
-  import { readFileSync } from "node:fs";
+  import { accessSync, constants, readFileSync } from "node:fs";
   import { once } from "node:events";
   import { pathToFileURL } from "node:url";
   const plugin = process.env.PLUGIN_ROOT;
@@ -142,7 +142,9 @@
       for (const entry of entries) {
         for (const action of entry.hooks) {
           assert(action.command.includes(${builtins.toJSON nodeExecutable}));
-          assert(action.command.includes("OMO_AST_GREP_SG_PATH="));
+          const astGrep = /^OMO_AST_GREP_SG_PATH=(\S+) /.exec(action.command);
+          assert(astGrep, "hook must configure an ast-grep executable");
+          accessSync(astGrep[1], constants.X_OK);
         }
       }
     }
