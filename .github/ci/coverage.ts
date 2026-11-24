@@ -171,13 +171,13 @@ function recordCounters(record: Readonly<MutableRecord>): SourceCoverage {
 
 function parseLcov(input: string, repositoryRoot: string): readonly SourceCoverage[] {
   const records: SourceCoverage[] = [];
-  let current: MutableRecord | undefined = undefined;
+  let current: MutableRecord | null = null;
   for (const line of input.split(/\r?\n/u).filter((value) => value.length > 0 && value !== "TN:")) {
     const separator = line.indexOf(":");
     const field = separator === -1 ? line : line.slice(0, separator);
     const value = separator === -1 ? "" : line.slice(separator + 1);
     if (field === "SF") {
-      rejectMalformed(current !== undefined, { field });
+      rejectMalformed(current !== null, { field });
       const path = normalizedSource(value, repositoryRoot);
       if (records.some((record) => record.path === path)) {
         throw new CoverageInputError("duplicateSource", { path });
@@ -191,18 +191,18 @@ function parseLcov(input: string, repositoryRoot: string): readonly SourceCovera
         summaries: new Map()
       };
     } else if (field === "end_of_record") {
-      if (current === undefined || value.length > 0) {
+      if (current === null || value.length > 0) {
         malformed({ field });
       }
       records.push(recordCounters(current));
-      current = undefined;
-    } else if (current === undefined) {
+      current = null;
+    } else if (current === null) {
       malformed({ field, value });
     } else {
       parseRecordField(current, field, value);
     }
   }
-  if (current !== undefined) {
+  if (current !== null) {
     malformed({ path: current.path });
   }
   return records;
